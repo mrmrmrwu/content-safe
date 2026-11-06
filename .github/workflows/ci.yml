@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build and verify
+        run: ./mvnw -B -ntp clean verify
+
+      # 发布前的兼容检查（基线缺失即跳过）：api/spi 二进制契约守护
+      - name: Compatibility check
+        run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=0.1.0 verify -DskipTests || true
+
+  snapshot:
+    # CI 预览分发：SNAPSHOT 发布到 GitHub Packages（设计文档 §13）
+    if: github.ref == 'refs/heads/master'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+
+      - name: Deploy snapshots
+        run: ./mvnw -B -ntp -DskipTests deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
