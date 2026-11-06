@@ -1,0 +1,16 @@
+{
+  "log_id": 1916000000000000002,
+  "conclusion": "疑似",
+  "conclusionType": 3,
+  "data": [
+    {
+      "type": 12,
+      "subType": 1,
+      "msg": "存在广告信息",
+      "probability": 0.72,
+      "hits": [
+        {"words": ["低价促销"]}
+      ]
+    }
+  ]
+}

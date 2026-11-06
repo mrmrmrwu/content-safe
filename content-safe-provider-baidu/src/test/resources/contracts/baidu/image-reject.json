@@ -1,0 +1,13 @@
+{
+  "log_id": 1916000000000000005,
+  "conclusion": "不合规",
+  "conclusionType": 2,
+  "data": [
+    {
+      "type": 2,
+      "subType": 0,
+      "msg": "存在色情内容不合规",
+      "probability": 0.96
+    }
+  ]
+}

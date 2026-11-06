@@ -280,6 +280,30 @@ content.safe:
           operation: CreateImageModerationAsyncTask
           mode: ASYNC_QUERY
           enabled: false
+    baidu:                          # T-015 已落地（内容审核平台 v2，自研 HTTP 客户端，无官方 SDK）
+      enabled: false
+      api-key: xxx                  # 缺省回退环境变量 CONTENT_SAFE_BAIDU_AK
+      secret-key: xxx               # 缺省回退 CONTENT_SAFE_BAIDU_SK
+      scenes:                       # 业务场景 code → 策略中心 strategyId（空字符串 = 默认策略）
+        comment: "101"
+        avatar: ""
+      extra:                        # 可选：HTTP 超时与 baseUrl 覆盖
+        connectTimeoutMs: "3000"
+        readTimeoutMs: "10000"
+      # --- 以下为规划形态，T-015 尚未落地 ---
+      credentials:
+        type: static                # 规划：static / secret-manager
+      plans:
+        text-sync:
+          product: content-censor
+          api-version: "v2"
+          operation: TextCensor
+          mode: SYNC
+        image-sync:
+          product: content-censor
+          api-version: "v2"
+          operation: ImageCensor
+          mode: SYNC
 
   route:
     default-policy: PRIORITY

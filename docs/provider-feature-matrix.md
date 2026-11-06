@@ -65,6 +65,33 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 
 BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code → BizType 映射，云厂商标识不进 api/core（铁律 §5.3）。信息来源：腾讯云 TMS/IMS 官方文档（cloud.tencent.com，查阅日期 2026-11-06）。
 
+## baidu（content-safe-provider-baidu，T-015）
+
+无官方现代 SDK（`com.baidu.aip:java-sdk` 停留在 4.16.18 / ~2022），**自研 HTTP 客户端**（JDK HttpClient + Gson，均为 optional 依赖）。接口为内容审核平台 v2（text_censor/img_censor user_defined）。
+
+| 能力 | 状态 | 说明 |
+| --- | --- | --- |
+| 文本同步审核 | ✅ | form 参数 `text`，≤20000 字节（UTF-8） |
+| 图片同步审核 | ✅ | URL（`imgUrl`）/ base64（`image`）/ bytes（内部转 base64）三通道；base64 后 ≤4MB |
+| 策略中心 | ✅ | `scenes.<sceneCode>` = 策略中心 strategyId（数字）；空字符串走账号默认策略 |
+| access_token 管理 | ✅ | client_credentials 本地缓存（30 天，提前 5 分钟刷新）；110/111 错误自动失效重取并重试一次 |
+| 批量审核 | ❌ | 单次单条 |
+| 异步查询 / 回调 | ❌ | v2 接口为同步模型 |
+| GIF 动图 | ⏳ | `imgType=1` 参数未透传（按静态图处理） |
+| suggestion 映射 | ✅ | conclusionType 1→PASS、2→REJECT、3→REVIEW、4→ERROR（审核失败是业务结论，ok 保持 true） |
+| 用户内容安全 | ✅ | 命中词 hits[].words 进 `hit.evidence`（由 core EvidenceRedactor 脱敏）；`raw` 只放 `{log_id}` |
+
+### 限额（`BaiduLimits`，声明值，以官方文档为准）
+
+| 项 | 文本 | 图片 |
+| --- | --- | --- |
+| 单条大小 | 20000 字节（UTF-8） | base64 后 ≤4MB |
+| 默认 QPS | 200 | 50 |
+
+### strategyId 说明
+
+strategyId 为百度内容审核平台"策略中心"创建的策略 ID（数字字符串）。业务侧只配场景 code → strategyId 映射；值为空字符串表示不传 strategyId、走账号默认策略。错误码 18/19 为限流、110/111 为 token 问题。信息来源：百度智能云内容审核官方文档（cloud.baidu.com/doc/ANTIPORN，查阅日期 2026-11-06）。
+
 ## huawei / volcengine / 数美
 
 ⏳ 未实现（规划见 docs/content-safe-starter-design.md §8）。

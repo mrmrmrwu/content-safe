@@ -114,7 +114,27 @@ content:
 
 能力：文本（≤10000 字符，经 Base64 传输）、图片（URL ≤30MB / base64 ≤10MB）、GIF 截帧、AIGC 识别。
 
-### 3.3 凭证解析链
+### 3.3 百度智能云（content-safe-provider-baidu）
+
+```yaml
+content:
+  safe:
+    providers:
+      baidu:
+        enabled: true
+        api-key: xxx                  # 缺省回退 CONTENT_SAFE_BAIDU_AK
+        secret-key: xxx               # 缺省回退 CONTENT_SAFE_BAIDU_SK
+        scenes:
+          comment: "101"              # 业务场景 → 策略中心 strategyId；空字符串 = 默认策略
+          avatar: ""                  # 不传 strategyId，走账号默认策略
+        extra:
+          connectTimeoutMs: "3000"    # 可选：HTTP 连接/读取超时
+          readTimeoutMs: "10000"
+```
+
+无官方 SDK，模块内置 JDK HttpClient 自研客户端；access_token 自动获取与缓存（30 天，遇 110/111 自动重取重试一次）。能力：文本（≤20000 字节）、图片（URL / base64 ≤4MB）。strategyId 在内容审核平台"策略中心"创建。
+
+### 3.4 凭证解析链
 
 每个 provider 的凭证按以下顺序解析，全部缺失则启动 fail-fast（`CONFIG_INVALID`）：
 

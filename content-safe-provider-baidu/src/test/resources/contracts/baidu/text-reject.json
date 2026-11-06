@@ -1,0 +1,16 @@
+{
+  "log_id": 1916000000000000003,
+  "conclusion": "不合规",
+  "conclusionType": 2,
+  "data": [
+    {
+      "type": 1,
+      "subType": 2,
+      "msg": "存在政治敏感不合规",
+      "probability": 0.98,
+      "hits": [
+        {"words": ["敏感词甲", "敏感词乙"]}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.wrqtec</groupId>
+        <artifactId>content-safe-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>content-safe-provider-baidu</artifactId>
+    <name>content-safe-provider-baidu</name>
+    <description>Baidu intelligent cloud content moderation provider (text/image sync).
+        Self-developed HTTP client, no vendor SDK.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-model</artifactId>
+        </dependency>
+
+        <!-- 自研 HTTP 客户端（JDK HttpClient），仅需 Gson 做 JSON 解析；optional 不进入使用方编译期传递依赖 -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

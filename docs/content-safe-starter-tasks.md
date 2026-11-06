@@ -33,7 +33,7 @@
 | T-012 | starter 健康与指标 | HealthIndicator/Metrics | P0 | T-011 | Actuator 暴露，health 不重远程调用 |
 | T-013 | provider-aliyun | text/image operation | P0 | T-003/T-006 | 契约测试与限制校验通过 |
 | T-014 | provider-tencent | tms/ims operation | P1 | T-013 | BizType/Type/GIF/OCR 映射通过 |
-| T-015 | provider-baidu | text/image operation | P1 | T-013 | access_token 与策略映射通过 |
+| T-015 | provider-baidu | text/image operation | P1 | T-013 | access_token 与策略映射通过 ✅ |
 | T-016 | provider-volcengine | veImageX/risk operation | P2 | T-013 | product split 与回调通过 |
 | T-017 | provider-shumei | text/image operation | P2 | T-013 | tokenId/finalResult/riskSource 映射通过 |
 | T-018 | async task store | 内存实现 + SPI | P1 | T-003 | save/find/markDone/markFailed |

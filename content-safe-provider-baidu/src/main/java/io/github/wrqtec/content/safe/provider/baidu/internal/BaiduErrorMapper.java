@@ -1,0 +1,76 @@
+package io.github.wrqtec.content.safe.provider.baidu.internal;
+
+import java.util.Set;
+import java.util.regex.Pattern;
+
+import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+
+/**
+ * 百度错误映射：error_code 与异常 → {@link ProviderCallException}
+ *
+ * <p>错误码语义（https://cloud.baidu.com/doc/ANTIPORN，2026-11-06 调研）：
+ * <ul>
+ *   <li>18 Open api qps request limit reached / 19 Open api total request limit reached：限流，对端可重试</li>
+ *   <li>110 Access token invalid / 111 Access token expired：token 问题，由客户端失效重取重试一次</li>
+ * </ul>
+ *
+ * @author L.David
+ */
+public final class BaiduErrorMapper {
+
+    /** 对端限流错误码（18/19），建议调用方退避重试 */
+    private static final Set<Integer> THROTTLED_CODES = Set.of(18, 19);
+
+    /** token 无效/过期错误码（触发 token 失效重取） */
+    private static final Set<Integer> TOKEN_CODES = Set.of(110, 111);
+
+    /** 长 token 掩码（签名材料、access_token 等） */
+    private static final Pattern LONG_TOKEN = Pattern.compile("[A-Za-z0-9+/=_\\-.]{16,}");
+
+    /** message 截断长度 */
+    private static final int MAX_MESSAGE_LENGTH = 120;
+
+    private BaiduErrorMapper() {
+    }
+
+    /**
+     * token 类错误码（110/111）
+     */
+    public static boolean isTokenError(Integer errorCode) {
+        return errorCode != null && TOKEN_CODES.contains(errorCode);
+    }
+
+    /**
+     * 业务响应断言：error_code 非空 → 抛 {@link ProviderCallException}
+     *
+     * @param response 已解析响应
+     * @return 原响应（链式调用）
+     */
+    public static BaiduCensorResponse assertSuccess(BaiduCensorResponse response) {
+        if (response.isSuccess()) {
+            return response;
+        }
+        throw new ProviderCallException(
+                "baidu censor rejected: error_code=" + response.getErrorCode()
+                        + " error_msg=" + sanitize(response.getErrorMsg()));
+    }
+
+    /**
+     * 底层异常 → {@link ProviderCallException}（脱敏）
+     */
+    public static ProviderCallException fromException(Exception e) {
+        return new ProviderCallException(
+                "baidu censor call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()), e);
+    }
+
+    /**
+     * 脱敏：长 token 掩码 + 截断
+     */
+    public static String sanitize(String message) {
+        if (message == null) {
+            return "";
+        }
+        String masked = LONG_TOKEN.matcher(message).replaceAll("***");
+        return masked.length() <= MAX_MESSAGE_LENGTH ? masked : masked.substring(0, MAX_MESSAGE_LENGTH) + "...";
+    }
+}

@@ -25,6 +25,7 @@
         <module>content-safe-core</module>
         <module>content-safe-provider-aliyun</module>
         <module>content-safe-provider-tencent</module>
+        <module>content-safe-provider-baidu</module>
         <module>content-safe-spring-boot-starter</module>
         <module>content-safe-bom</module>
         <module>samples</module>
@@ -84,6 +85,11 @@
             </dependency>
             <dependency>
                 <groupId>io.github.wrqtec</groupId>
+                <artifactId>content-safe-provider-baidu</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wrqtec</groupId>
                 <artifactId>content-safe-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -100,6 +106,13 @@
                 <groupId>com.tencentcloudapi</groupId>
                 <artifactId>tencentcloud-sdk-java</artifactId>
                 <version>${tencentcloud-sdk.version}</version>
+            </dependency>
+
+            <!-- 百度接入为自研 HTTP 客户端，仅依赖 Gson 解析（optional） -->
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>${gson.version}</version>
             </dependency>
 
             <dependency>
