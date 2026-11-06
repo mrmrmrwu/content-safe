@@ -1,1 +1,2 @@
 io.github.wrqtec.content.safe.starter.config.ContentSafeAutoConfiguration
+io.github.wrqtec.content.safe.starter.actuator.ContentSafeActuatorAutoConfiguration
