@@ -7,11 +7,13 @@ import java.util.stream.Collectors;
 
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
+import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.CallbackVerifyException;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.CallbackDeadLetterEvent;
+import io.github.wrqtec.content.safe.model.event.ReviewEvent;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
@@ -102,6 +104,11 @@ public class CallbackDispatcher {
                     boolean done = taskStore.markTerminal(task.taskId(), TaskStatus.SUCCEEDED, parsed.result());
                     if (done) {
                         listener.onEvent(new AuditEvent(task.scene(), parsed.result(), null));
+                        if (parsed.result() != null
+                                && parsed.result().suggestion() == RiskSuggestion.REVIEW) {
+                            listener.onEvent(new ReviewEvent(task.scene(), parsed.result().dataId(),
+                                    parsed.result(), null));
+                        }
                     }
                 });
         return parsed;

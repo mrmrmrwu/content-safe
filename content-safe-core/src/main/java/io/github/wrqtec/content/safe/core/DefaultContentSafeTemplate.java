@@ -9,7 +9,10 @@ import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
+import io.github.wrqtec.content.safe.api.ReviewResolution;
 import io.github.wrqtec.content.safe.api.RiskHit;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
+import io.github.wrqtec.content.safe.api.enums.ReviewDecision;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.AllProvidersFailedException;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
@@ -22,6 +25,7 @@ import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderDegradedEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderThrottledEvent;
+import io.github.wrqtec.content.safe.model.event.ReviewEvent;
 import io.github.wrqtec.content.safe.model.event.RiskHitEvent;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
@@ -34,6 +38,7 @@ import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import io.github.wrqtec.content.safe.spi.AuditRouter;
 import io.github.wrqtec.content.safe.spi.AuditTaskStore;
 import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
+import io.github.wrqtec.content.safe.spi.ReviewResultSink;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -56,6 +61,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private final AuditListener listener;
     private final List<EvidenceRedactor> redactors;
     private final AuditTaskStore taskStore;
+    private final ReviewResultSink reviewSink;
     private final CallbackDispatcher callbackDispatcher;
 
     /**
@@ -78,6 +84,25 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                                       List<EvidenceRedactor> redactors,
                                       AuditTaskStore taskStore,
                                       CallbackDispatcher callbackDispatcher) {
+        this(sceneRegistry, providers, router, breakers, limiters, listener,
+                redactors, taskStore, null, callbackDispatcher);
+    }
+
+    /**
+     * @param reviewSink 人审终态回写出口，可为 null（仅做终态归一与事件发布）
+     * @see #DefaultContentSafeTemplate(SceneRegistry, List, AuditRouter, CircuitBreakerRegistry,
+     * RateLimiterRegistry, AuditListener, List, AuditTaskStore, CallbackDispatcher)
+     */
+    public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
+                                      List<AuditOperationProvider> providers,
+                                      AuditRouter router,
+                                      CircuitBreakerRegistry breakers,
+                                      RateLimiterRegistry limiters,
+                                      AuditListener listener,
+                                      List<EvidenceRedactor> redactors,
+                                      AuditTaskStore taskStore,
+                                      ReviewResultSink reviewSink,
+                                      CallbackDispatcher callbackDispatcher) {
         this.sceneRegistry = Asserts.notNull(sceneRegistry, "sceneRegistry");
         this.providers = providers == null ? List.of() : List.copyOf(providers);
         this.router = Asserts.notNull(router, "router");
@@ -86,6 +111,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         this.listener = Asserts.notNull(listener, "listener");
         this.redactors = redactors == null ? List.of() : List.copyOf(redactors);
         this.taskStore = Asserts.notNull(taskStore, "taskStore");
+        this.reviewSink = reviewSink;
         this.callbackDispatcher = callbackDispatcher;
     }
 
@@ -210,6 +236,25 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         return callbackDispatcher.dispatch(callback);
     }
 
+    @Override
+    public AuditResult resolveReview(ReviewResolution resolution) {
+        Asserts.notNull(resolution, "resolution");
+        AuditResult manualResult = manualResultOf(resolution);
+        if (reviewSink != null) {
+            // 回写先行：sink 失败在任务终态迁移前暴露，业务可整体重试
+            reviewSink.resolve(resolution);
+        }
+        if (resolution.taskId() != null) {
+            AuditTask task = taskStore.find(resolution.taskId())
+                    .orElseThrow(() -> new InvalidRequestException("unknown taskId: " + resolution.taskId()));
+            if (!taskStore.markTerminal(resolution.taskId(), TaskStatus.SUCCEEDED, manualResult)) {
+                throw new InvalidRequestException("task already terminal: " + resolution.taskId());
+            }
+        }
+        publishAuditEvents(resolution.scene(), manualResult);
+        return manualResult;
+    }
+
     private List<AuditOperation> candidates(SceneDefinition scene) {
         return providers.stream()
                 .flatMap(p -> p.operations(scene).stream())
@@ -243,11 +288,26 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 result.service(), result.cost(), result.raw());
     }
 
+    /** 决议 -> 终态结果：source=MANUAL、finalResult=true，回链机审 dataId 供业务对账 */
+    private AuditResult manualResultOf(ReviewResolution resolution) {
+        return AuditResult.builder()
+                .ok(true)
+                .suggestion(resolution.decision() == ReviewDecision.APPROVE
+                        ? RiskSuggestion.PASS : RiskSuggestion.REJECT)
+                .finalResult(true)
+                .source(AuditSource.MANUAL)
+                .dataId(resolution.dataId())
+                .build();
+    }
+
     private void publishAuditEvents(String scene, AuditResult result) {
         listener.onEvent(new AuditEvent(scene, result, null));
         if (!result.pass() && !result.hits().isEmpty()
                 && result.suggestion() != RiskSuggestion.ERROR) {
             listener.onEvent(new RiskHitEvent(scene, result.dataId(), result.hits(), null));
+        }
+        if (result.suggestion() == RiskSuggestion.REVIEW) {
+            listener.onEvent(new ReviewEvent(scene, result.dataId(), result, null));
         }
     }
 }

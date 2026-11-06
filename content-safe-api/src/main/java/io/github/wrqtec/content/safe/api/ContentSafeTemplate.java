@@ -1,5 +1,7 @@
 package io.github.wrqtec.content.safe.api;
 
+import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+
 /**
  * 内容安全统一门面，业务方注入后直接使用：
  *
@@ -47,6 +49,20 @@ public interface ContentSafeTemplate {
      * @return 回调处理结果
      */
     CallbackResult handleCallback(CallbackRequest callback);
+
+    /**
+     * 人审终态回写：把机审 {@code REVIEW} 结论归一为终态结果
+     * （source=MANUAL、finalResult=true、suggestion=PASS/REJECT 对应决议）。
+     * taskId 存在时同步迁移异步任务终态并发布 {@code AuditEvent}；
+     * 注入 {@code ReviewResultSink} 时先回写后迁移
+     *
+     * @param resolution 人审决议
+     * @return 归一化终态结果
+     * @throws io.github.wrqtec.content.safe.api.exception.InvalidRequestException taskId 未知或任务已终态
+     */
+    default AuditResult resolveReview(ReviewResolution resolution) {
+        throw new UnsupportedFeatureException("resolveReview is not supported by this template");
+    }
 
     /**
      * 文本审核便捷方法

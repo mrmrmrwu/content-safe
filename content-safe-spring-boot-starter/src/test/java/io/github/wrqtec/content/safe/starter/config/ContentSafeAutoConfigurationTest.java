@@ -2,9 +2,15 @@ package io.github.wrqtec.content.safe.starter.config;
 
 import java.util.Map;
 
+import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
+import io.github.wrqtec.content.safe.api.ReviewResolution;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
+import io.github.wrqtec.content.safe.api.enums.ReviewDecision;
+import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
+import io.github.wrqtec.content.safe.core.DefaultContentSafeTemplate;
 import io.github.wrqtec.content.safe.core.SceneRegistry;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
@@ -13,6 +19,7 @@ import io.github.wrqtec.content.safe.spi.AuditRouter;
 import io.github.wrqtec.content.safe.spi.AuditTaskStore;
 import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
+import io.github.wrqtec.content.safe.spi.ReviewResultSink;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -69,6 +76,32 @@ class ContentSafeAutoConfigurationTest {
     }
 
     @Test
+    void reviewSinkInjectedIntoTemplateWhenPresent() {
+        runner.withUserConfiguration(ReviewSinkConfiguration.class)
+                .run(context -> {
+                    assertThat(context).hasSingleBean(ReviewResultSink.class);
+                    // DefaultContentSafeTemplate 持有的 sink 即业务 Bean（值相等而非代理）
+                    DefaultContentSafeTemplate template =
+                            (DefaultContentSafeTemplate) context.getBean(ContentSafeTemplate.class);
+                    assertThat(template).hasFieldOrPropertyWithValue("reviewSink",
+                            context.getBean(ReviewResultSink.class));
+                });
+    }
+
+    @Test
+    void templateResolvesReviewWithoutSinkBean() {
+        runner.run(context -> {
+            ContentSafeTemplate template = context.getBean(ContentSafeTemplate.class);
+            // 未注入 sink 也可人审终态归一（仅不回写）
+            AuditResult manual = template.resolveReview(ReviewResolution.of(
+                    "nickname", "d-1", null, ReviewDecision.APPROVE, "alice", null));
+            assertThat(manual.suggestion()).isEqualTo(RiskSuggestion.PASS);
+            assertThat(manual.source()).isEqualTo(AuditSource.MANUAL);
+            assertThat(manual.finalResult()).isTrue();
+        });
+    }
+
+    @Test
     void unknownArbitrationPolicyFailsStartup() {
         runner.withPropertyValues("content.safe.defaults.arbitration=NOPE")
                 .run(context -> {
@@ -112,6 +145,16 @@ class ContentSafeAutoConfigurationTest {
                 public boolean verify(CallbackRequest request, String secret, Map<String, String> ext) {
                     return true;
                 }
+            };
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    static class ReviewSinkConfiguration {
+
+        @Bean
+        ReviewResultSink reviewResultSink() {
+            return resolution -> {
             };
         }
     }

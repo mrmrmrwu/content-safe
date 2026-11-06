@@ -17,5 +17,8 @@ public enum AuditSource {
     ASYNC_CALLBACK,
 
     /** 多供应商仲裁聚合 */
-    ARBITRATION
+    ARBITRATION,
+
+    /** 人工复核终态回写（resolveReview） */
+    MANUAL
 }

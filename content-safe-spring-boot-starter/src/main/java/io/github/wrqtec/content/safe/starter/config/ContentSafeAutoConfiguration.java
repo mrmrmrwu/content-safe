@@ -21,6 +21,7 @@ import io.github.wrqtec.content.safe.spi.AuditTaskStore;
 import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
+import io.github.wrqtec.content.safe.spi.ReviewResultSink;
 import io.github.wrqtec.content.safe.spi.SceneDefinitionProvider;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -175,9 +176,10 @@ public class ContentSafeAutoConfiguration {
                                                    CompositeAuditListener listener,
                                                    ObjectProvider<EvidenceRedactor> redactors,
                                                    AuditTaskStore taskStore,
+                                                   ObjectProvider<ReviewResultSink> reviewSinks,
                                                    ObjectProvider<CallbackDispatcher> callbackDispatcher) {
         return new DefaultContentSafeTemplate(sceneRegistry, providers.orderedStream().toList(), router,
                 breakers, limiters, listener, redactors.orderedStream().toList(), taskStore,
-                callbackDispatcher.getIfAvailable());
+                reviewSinks.getIfAvailable(), callbackDispatcher.getIfAvailable());
     }
 }
