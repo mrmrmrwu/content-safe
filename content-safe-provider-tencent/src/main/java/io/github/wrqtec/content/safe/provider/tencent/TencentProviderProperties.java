@@ -11,8 +11,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 腾讯云内容安全提供者配置
  *
  * <p>图片输入通道：URL / Base64 / bytes 全支持（用户决策 2026-11-06）；
- * AIGC 识别通过 {@code aigcScenes} 独立配置（Type=IMAGE_AIGC），
- * 不与普通审核场景混用 BizType
+ * AIGC 识别双通道：配置期经 {@code aigcScenes} 独立场景（文本 Type=TEXT_AIGC、
+ * 图片 Type=IMAGE_AIGC），请求期经 {@code AuditOptions#enableAigcDetect} 开关
+ * 在普通场景上切换 Type，两类场景不混用 BizType
  *
  * @author L.David
  */
@@ -41,7 +42,7 @@ public class TencentProviderProperties {
     /** 场景 code → TMS/IMS BizType（普通审核） */
     private Map<String, String> scenes = new LinkedHashMap<>();
 
-    /** 场景 code → IMS BizType（AIGC 识别，Type=IMAGE_AIGC，仅 IMAGE 场景生效） */
+    /** 场景 code → TMS/IMS BizType（AIGC 识别专用场景：文本 Type=TEXT_AIGC、图片 Type=IMAGE_AIGC） */
     private Map<String, String> aigcScenes = new LinkedHashMap<>();
 
     /** 透传扩展配置（如 gifInterval、gifMaxFrames、connectTimeoutMs、readTimeoutMs） */

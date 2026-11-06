@@ -62,16 +62,25 @@ class TencentAuditOperationProviderTest {
     }
 
     @Test
-    void aigcSceneOnlyAppliesToImage() {
+    void aigcSceneAppliesToTextAndImage() {
         properties.getAigcScenes().put("ai-art", "biz-aigc");
         List<AuditOperation> imageOps =
                 provider.operations(SceneDefinition.of("ai-art", ContentType.IMAGE, Severity.MEDIUM));
         assertThat(imageOps).hasSize(1);
         assertThat(imageOps.get(0)).isInstanceOf(TencentImageModerationOperation.class);
+        assertThat(imageOps.get(0).capabilities().aigcDetect()).isTrue();
 
         List<AuditOperation> textOps =
                 provider.operations(SceneDefinition.of("ai-art", ContentType.TEXT, Severity.MEDIUM));
-        assertThat(textOps).isEmpty();
+        assertThat(textOps).hasSize(1);
+        assertThat(textOps.get(0)).isInstanceOf(TencentTextModerationOperation.class);
+        assertThat(textOps.get(0).capabilities().aigcDetect()).isTrue();
+
+        // 普通场景操作同样声明 aigcDetect（请求期开关可切换 Type）
+        properties.getScenes().put("comment", "biz-comment");
+        List<AuditOperation> normalOps =
+                provider.operations(SceneDefinition.of("comment", ContentType.TEXT, Severity.MEDIUM));
+        assertThat(normalOps.get(0).capabilities().aigcDetect()).isTrue();
     }
 
     @Test

@@ -28,6 +28,9 @@ public final class TencentProviderConstants {
     /** IMS 审核类型：AIGC 内容识别 */
     public static final String IMAGE_TYPE_AIGC = "IMAGE_AIGC";
 
+    /** TMS 审核类型：AIGC 生成内容识别（Type=TEXT_AIGC，与内容检测同一接口） */
+    public static final String TEXT_TYPE_AIGC = "TEXT_AIGC";
+
     private TencentProviderConstants() {
     }
 }

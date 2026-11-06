@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.model;
 
+import io.github.wrqtec.content.safe.api.AuditOptions;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
@@ -39,6 +40,26 @@ class AuditCapabilitiesTest {
     void nullRequestRejected() {
         AuditCapabilities caps = AuditCapabilities.builder().contentTypes(ContentType.TEXT).build();
         assertThrows(InvalidRequestException.class, () -> caps.supports(null));
+    }
+
+    @Test
+    void aigcSwitchRequiresCapability() {
+        AuditCapabilities plain = AuditCapabilities.builder()
+                .contentTypes(ContentType.TEXT).sync(true).build();
+        AuditCapabilities aigc = AuditCapabilities.builder()
+                .contentTypes(ContentType.TEXT).sync(true).aigcDetect(true).build();
+        AuditRequest aigcOn = AuditRequest.builder()
+                .scene("s")
+                .type(ContentType.TEXT)
+                .content(ContentRef.text("你好"))
+                .options(AuditOptions.defaults().withAigcDetect(true))
+                .build();
+
+        assertFalse(plain.supports(aigcOn));
+        assertTrue(aigc.supports(aigcOn));
+        // 开关关闭或缺省不触发门控
+        assertTrue(plain.supports(AuditRequest.text("s", "你好")));
+        assertTrue(aigc.supports(AuditRequest.text("s", "你好")));
     }
 
     @Test

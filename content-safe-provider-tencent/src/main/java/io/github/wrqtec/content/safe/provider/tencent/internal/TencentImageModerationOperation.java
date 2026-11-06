@@ -17,6 +17,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
+import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import lombok.extern.slf4j.Slf4j;
 
@@ -60,6 +61,7 @@ public class TencentImageModerationOperation implements AuditOperation {
                 .url(true)
                 .base64(true)
                 .bytes(true)
+                .aigcDetect(true)
                 .maxUrlSize(TencentLimits.maxUrlBytes())
                 .maxBase64Size(TencentLimits.maxBase64Bytes())
                 .build();
@@ -88,8 +90,11 @@ public class TencentImageModerationOperation implements AuditOperation {
         if (request.dataId() != null) {
             sdkRequest.setDataId(request.dataId());
         }
-        if (type != null) {
-            sdkRequest.setType(type);
+        String effectiveType = request.options().enableAigcDetect() == Boolean.TRUE
+                ? TencentProviderConstants.IMAGE_TYPE_AIGC
+                : type;
+        if (effectiveType != null) {
+            sdkRequest.setType(effectiveType);
         }
         if (gifInterval != null) {
             sdkRequest.setInterval(gifInterval.longValue());

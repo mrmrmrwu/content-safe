@@ -12,6 +12,7 @@ import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
+import io.github.wrqtec.content.safe.provider.aliyun.AliyunProviderConstants;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,6 +46,17 @@ class AliyunImageModerationOperationTest {
         assertThat(operation.capabilities().url()).isTrue();
         assertThat(operation.capabilities().base64()).isFalse();
         assertThat(operation.capabilities().bytes()).isFalse();
+        assertThat(operation.capabilities().aigcDetect()).isFalse();
+    }
+
+    @Test
+    void aigcServiceDeclaresCapability() {
+        ProviderPlan aigcPlan = new ProviderPlan("aliyun", "green-cip", "2022-03-02",
+                "ImageModeration", AliyunProviderConstants.SERVICE_AIGC_DETECTOR,
+                AuditMode.SYNC, AliyunLimits.imageSync(), null);
+        AliyunImageModerationOperation aigcOperation =
+                new AliyunImageModerationOperation(aigcPlan, invoker, new AliyunAuditResultNormalizer());
+        assertThat(aigcOperation.capabilities().aigcDetect()).isTrue();
     }
 
     @Test

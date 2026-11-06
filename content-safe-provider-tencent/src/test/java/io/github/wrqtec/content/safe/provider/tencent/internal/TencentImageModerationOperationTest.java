@@ -5,6 +5,7 @@ import java.util.Base64;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationRequest;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationResponse;
+import io.github.wrqtec.content.safe.api.AuditOptions;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
@@ -15,6 +16,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.tencent.TencentAuditOperationProvider;
+import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -48,6 +50,7 @@ class TencentImageModerationOperationTest {
         assertThat(operation.capabilities().url()).isTrue();
         assertThat(operation.capabilities().base64()).isTrue();
         assertThat(operation.capabilities().bytes()).isTrue();
+        assertThat(operation.capabilities().aigcDetect()).isTrue();
     }
 
     @Test
@@ -78,6 +81,24 @@ class TencentImageModerationOperationTest {
         ArgumentCaptor<ImageModerationRequest> captor = ArgumentCaptor.forClass(ImageModerationRequest.class);
         verify(invoker).imageModeration(captor.capture());
         assertThat(captor.getValue().getType()).isEqualTo("IMAGE_AIGC");
+    }
+
+    @Test
+    void aigcOptionOverridesConfiguredType() throws Exception {
+        TencentImageModerationOperation configured = new TencentImageModerationOperation(
+                plan, TencentProviderConstants.IMAGE_TYPE_IMAGE, null, null, invoker, normalizer);
+        when(invoker.imageModeration(any())).thenReturn(passResponse());
+        AuditRequest request = AuditRequest.builder()
+                .scene("ugc-image")
+                .type(ContentType.IMAGE)
+                .content(ContentRef.url("https://example.com/c.jpg"))
+                .options(AuditOptions.defaults().withAigcDetect(true))
+                .build();
+        configured.audit(request);
+
+        ArgumentCaptor<ImageModerationRequest> captor = ArgumentCaptor.forClass(ImageModerationRequest.class);
+        verify(invoker).imageModeration(captor.capture());
+        assertThat(captor.getValue().getType()).isEqualTo(TencentProviderConstants.IMAGE_TYPE_AIGC);
     }
 
     @Test

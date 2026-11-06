@@ -22,6 +22,22 @@ public final class AliyunProviderConstants {
     /** 图片同步检测操作名 */
     public static final String OPERATION_IMAGE_MODERATION = "ImageModeration";
 
+    /** AIGC 检测 service 码（来源：help.aliyun.com/doc-detail/2642717，查阅 2026-11-06） */
+    public static final String SERVICE_AIGC_DETECTOR = "aigcDetector";
+
+    /** AIGC 检测增强版 service 码（来源同上） */
+    public static final String SERVICE_AIGC_DETECTOR_FULL = "aigcDetectorFull";
+
+    /**
+     * 判断 service 是否为 AIGC 检测类 service 码
+     *
+     * @param service TextModeration/ImageModeration 的 Service 参数
+     * @return true 表示该 service 为 AIGC 检测
+     */
+    public static boolean isAigcService(String service) {
+        return SERVICE_AIGC_DETECTOR.equals(service) || SERVICE_AIGC_DETECTOR_FULL.equals(service);
+    }
+
     private AliyunProviderConstants() {
     }
 }

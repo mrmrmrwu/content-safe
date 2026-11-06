@@ -41,7 +41,9 @@ public record AuditCapabilities(
     }
 
     /**
-     * 能力校验：内容类型 + 内容引用方式
+     * 能力校验：内容类型 + 内容引用方式 + 审核选项。选项校验为单向门控：
+     * 请求显式开启 AIGC 识别（{@code options.enableAigcDetect == TRUE}）时，
+     * 仅声明了 {@code aigcDetect} 能力的操作可路由；开关关闭或缺省不影响任何操作
      *
      * @param request 审核请求，不得为 null
      * @return true 表示该能力组合支持处理此请求
@@ -50,6 +52,9 @@ public record AuditCapabilities(
     public boolean supports(AuditRequest request) {
         Asserts.notNull(request, "request");
         if (!contentTypes.contains(request.type())) {
+            return false;
+        }
+        if (request.options().enableAigcDetect() == Boolean.TRUE && !aigcDetect) {
             return false;
         }
         return switch (request.content().type()) {

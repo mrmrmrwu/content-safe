@@ -17,6 +17,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
+import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,15 +35,26 @@ public class TencentTextModerationOperation implements AuditOperation {
     private final AuditCapabilities capabilities;
     private final TencentClientInvoker invoker;
     private final TencentAuditResultNormalizer normalizer;
+    private final String type;
 
-    public TencentTextModerationOperation(ProviderPlan plan, TencentClientInvoker invoker,
+    /**
+     * 构造文本同步审核操作
+     *
+     * @param plan       操作计划（service 为 BizType）
+     * @param type       TMS 审核类型（{@code TEXT_AIGC} 为 AIGC 识别，null 走默认内容检测）
+     * @param invoker    SDK 调用器
+     * @param normalizer 结果归一器
+     */
+    public TencentTextModerationOperation(ProviderPlan plan, String type, TencentClientInvoker invoker,
                                           TencentAuditResultNormalizer normalizer) {
         this.plan = Asserts.notNull(plan, "plan");
+        this.type = type;
         this.invoker = Asserts.notNull(invoker, "invoker");
         this.normalizer = Asserts.notNull(normalizer, "normalizer");
         this.capabilities = AuditCapabilities.builder()
                 .contentTypes(ContentType.TEXT)
                 .sync(true)
+                .aigcDetect(true)
                 .build();
     }
 
@@ -71,6 +83,12 @@ public class TencentTextModerationOperation implements AuditOperation {
         TextModerationRequest sdkRequest = new TextModerationRequest();
         sdkRequest.setContent(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)));
         sdkRequest.setBizType(plan.service());
+        String effectiveType = request.options().enableAigcDetect() == Boolean.TRUE
+                ? TencentProviderConstants.TEXT_TYPE_AIGC
+                : type;
+        if (effectiveType != null) {
+            sdkRequest.setType(effectiveType);
+        }
         if (request.dataId() != null) {
             sdkRequest.setDataId(request.dataId());
         }

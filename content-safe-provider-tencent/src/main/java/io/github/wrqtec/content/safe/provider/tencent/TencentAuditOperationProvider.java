@@ -62,8 +62,12 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
         }
         Map<String, String> aigcScenes = properties.getAigcScenes();
         String aigcBizType = aigcScenes.get(scene.code());
-        if (aigcBizType != null && !aigcBizType.isBlank() && ContentType.IMAGE == scene.type()) {
-            return buildOperation(scene, aigcBizType, TencentProviderConstants.IMAGE_TYPE_AIGC);
+        if (aigcBizType != null && !aigcBizType.isBlank()
+                && (ContentType.TEXT == scene.type() || ContentType.IMAGE == scene.type())) {
+            return buildOperation(scene, aigcBizType,
+                    ContentType.TEXT == scene.type()
+                            ? TencentProviderConstants.TEXT_TYPE_AIGC
+                            : TencentProviderConstants.IMAGE_TYPE_AIGC);
         }
         log.debug("tencent provider skip scene={} type={} (no BizType mapping)", scene.code(), scene.type());
         return List.of();
@@ -74,7 +78,7 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
             case TEXT -> {
                 ProviderPlan plan = syncPlan(TencentProviderConstants.OPERATION_TEXT_MODERATION,
                         bizType, TencentLimits.textSync());
-                return List.of(new TencentTextModerationOperation(plan, invoker, normalizer));
+                return List.of(new TencentTextModerationOperation(plan, type, invoker, normalizer));
             }
             case IMAGE -> {
                 ProviderPlan plan = syncPlan(TencentProviderConstants.OPERATION_IMAGE_MODERATION,

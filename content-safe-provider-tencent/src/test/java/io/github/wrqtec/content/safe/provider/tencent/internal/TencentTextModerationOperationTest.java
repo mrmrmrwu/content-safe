@@ -8,6 +8,7 @@ import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.tms.v20201229.models.TextModerationRequest;
 import com.tencentcloudapi.tms.v20201229.models.TextModerationResponse;
 import io.github.wrqtec.content.safe.api.AuditContext;
+import io.github.wrqtec.content.safe.api.AuditOptions;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
@@ -18,6 +19,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.tencent.TencentAuditOperationProvider;
+import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -42,12 +44,52 @@ class TencentTextModerationOperationTest {
             "TextModeration", "comment", new OperationLimits(null, null, null, 10000, 0, false));
 
     private final TencentTextModerationOperation operation =
-            new TencentTextModerationOperation(plan, invoker, normalizer);
+            new TencentTextModerationOperation(plan, null, invoker, normalizer);
 
     @Test
     void declaresTextSyncCapabilities() {
         assertThat(operation.capabilities().contentTypes()).containsExactly(ContentType.TEXT);
         assertThat(operation.capabilities().sync()).isTrue();
+        assertThat(operation.capabilities().aigcDetect()).isTrue();
+    }
+
+    @Test
+    void aigcOptionSwitchesRequestType() throws Exception {
+        TextModerationResponse response = new TextModerationResponse();
+        response.setRequestId("req-aigc");
+        response.setSuggestion("Pass");
+        when(invoker.textModeration(any())).thenReturn(response);
+
+        AuditRequest request = AuditRequest.builder()
+                .scene("comment")
+                .type(ContentType.TEXT)
+                .content(ContentRef.text("疑似AI生成"))
+                .options(AuditOptions.defaults().withAigcDetect(true))
+                .build();
+        operation.audit(request);
+
+        ArgumentCaptor<TextModerationRequest> captor = ArgumentCaptor.forClass(TextModerationRequest.class);
+        verify(invoker).textModeration(captor.capture());
+        assertThat(captor.getValue().getType()).isEqualTo(TencentProviderConstants.TEXT_TYPE_AIGC);
+    }
+
+    @Test
+    void configuredTypeAppliesWithoutOption() throws Exception {
+        TextModerationResponse response = new TextModerationResponse();
+        response.setRequestId("req-cfg");
+        response.setSuggestion("Pass");
+        when(invoker.textModeration(any())).thenReturn(response);
+        TencentTextModerationOperation configured =
+                new TencentTextModerationOperation(plan, TencentProviderConstants.TEXT_TYPE_AIGC,
+                        invoker, normalizer);
+
+        configured.audit(AuditRequest.text("comment", "普通文本"));
+
+        ArgumentCaptor<TextModerationRequest> captor = ArgumentCaptor.forClass(TextModerationRequest.class);
+        verify(invoker).textModeration(captor.capture());
+        assertThat(captor.getValue().getType()).isEqualTo(TencentProviderConstants.TEXT_TYPE_AIGC);
+        // 未配置 type 且开关关闭时不设置 Type（走默认内容检测）
+        assertThat(captor.getValue().getBizType()).isEqualTo("comment");
     }
 
     @Test

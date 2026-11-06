@@ -11,6 +11,7 @@ import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
+import io.github.wrqtec.content.safe.provider.aliyun.AliyunProviderConstants;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +44,28 @@ class AliyunTextModerationOperationTest {
         assertThat(operation.capabilities().contentTypes()).containsExactly(ContentType.TEXT);
         assertThat(operation.capabilities().sync()).isTrue();
         assertThat(operation.capabilities().url()).isFalse();
+        assertThat(operation.capabilities().aigcDetect()).isFalse();
+    }
+
+    @Test
+    void aigcServiceDeclaresCapabilityAndSwitchGatesRouting() {
+        ProviderPlan aigcPlan = new ProviderPlan("aliyun", "green-cip", "2022-03-02",
+                "TextModeration", AliyunProviderConstants.SERVICE_AIGC_DETECTOR,
+                AuditMode.SYNC, AliyunLimits.textSync(), null);
+        AliyunTextModerationOperation aigcOperation =
+                new AliyunTextModerationOperation(aigcPlan, invoker, new AliyunAuditResultNormalizer());
+        assertThat(aigcOperation.capabilities().aigcDetect()).isTrue();
+        assertThat(AliyunProviderConstants.isAigcService(AliyunProviderConstants.SERVICE_AIGC_DETECTOR_FULL)).isTrue();
+        assertThat(AliyunProviderConstants.isAigcService("comment_detection")).isFalse();
+
+        AuditRequest aigcOn = AuditRequest.builder()
+                .scene("aigc-text").type(ContentType.TEXT)
+                .content(io.github.wrqtec.content.safe.api.ContentRef.text("疑似AI生成文本"))
+                .options(io.github.wrqtec.content.safe.api.AuditOptions.defaults().withAigcDetect(true))
+                .build();
+        assertThat(aigcOperation.capabilities().supports(aigcOn)).isTrue();
+        // 普通 service 操作被 AIGC 开关门控排除
+        assertThat(operation.capabilities().supports(aigcOn)).isFalse();
     }
 
     @Test

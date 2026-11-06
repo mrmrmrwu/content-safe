@@ -14,6 +14,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
+import io.github.wrqtec.content.safe.provider.aliyun.AliyunProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,6 +44,7 @@ public class AliyunTextModerationOperation implements AuditOperation {
         this.capabilities = AuditCapabilities.builder()
                 .contentTypes(ContentType.TEXT)
                 .sync(true)
+                .aigcDetect(AliyunProviderConstants.isAigcService(plan.service()))
                 .build();
     }
 
