@@ -1,0 +1,20 @@
+{
+  "RequestId": "req-img-pass",
+  "BizType": "avatar",
+  "Suggestion": "Pass",
+  "Label": "Normal",
+  "SubLabel": "",
+  "Score": 0,
+  "LabelResults": [
+    {
+      "Scene": "Porn",
+      "Suggestion": "Pass",
+      "Label": "Normal",
+      "SubLabel": "",
+      "Score": 0,
+      "Details": []
+    }
+  ],
+  "ObjectResults": [],
+  "OcrResults": []
+}

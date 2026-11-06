@@ -1,0 +1,22 @@
+{
+  "RequestId": "req-text-review",
+  "BizType": "comment",
+  "Suggestion": "Review",
+  "Label": "Abuse",
+  "SubLabel": "AbuseMedium",
+  "Score": 55,
+  "Keywords": ["敏感词甲"],
+  "DetailResults": [
+    {
+      "Label": "Abuse",
+      "Suggestion": "Review",
+      "Keywords": ["敏感词甲"],
+      "Score": 55,
+      "LibType": 1,
+      "LibId": "1001",
+      "LibName": "默认库",
+      "SubLabel": "AbuseMedium"
+    }
+  ],
+  "DataId": "d-002"
+}

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.wrqtec</groupId>
+        <artifactId>content-safe-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>content-safe-provider-tencent</artifactId>
+    <name>content-safe-provider-tencent</name>
+    <description>Tencent Cloud TMS/IMS (Content Moderation) provider: text/image sync audit operations.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <!-- 腾讯云内容安全 SDK 总包（含 tms/ims）：optional，不进入使用方编译期传递依赖（CLAUDE.md §3 铁律 4） -->
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <!-- 仅自动装配辅助使用，optional 不传使用者（CLAUDE.md §3 铁律 4） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- 契约样本（src/test/resources/contracts/）解析 -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

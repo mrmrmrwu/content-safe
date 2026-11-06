@@ -1,0 +1,36 @@
+{
+  "RequestId": "req-img-review",
+  "BizType": "ugc-image",
+  "Suggestion": "Review",
+  "Label": "Porn",
+  "SubLabel": "SexyBehavior",
+  "Score": 60,
+  "LabelResults": [
+    {
+      "Scene": "Porn",
+      "Suggestion": "Review",
+      "Label": "Porn",
+      "SubLabel": "SexyBehavior",
+      "Score": 60,
+      "Details": [
+        {
+          "Id": 1,
+          "Name": "SexyBehavior",
+          "Score": 60
+        }
+      ]
+    }
+  ],
+  "ObjectResults": [],
+  "OcrResults": [
+    {
+      "Scene": "OCR",
+      "Suggestion": "Pass",
+      "Label": "Normal",
+      "SubLabel": "",
+      "Score": 0,
+      "Text": "hello world",
+      "Details": []
+    }
+  ]
+}

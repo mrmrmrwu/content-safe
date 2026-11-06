@@ -1,0 +1,33 @@
+package io.github.wrqtec.content.safe.provider.tencent;
+
+/**
+ * 腾讯云内容安全提供者常量
+ *
+ * @author L.David
+ */
+public final class TencentProviderConstants {
+
+    /** 提供者标识 */
+    public static final String PROVIDER = "tencent";
+
+    /** 产品标识（文本 TMS / 图片 IMS 共用一次声明，API 版本各异） */
+    public static final String PRODUCT = "tencentcloud-cms";
+
+    /** API 版本（TMS/IMS 均 2020-12-29） */
+    public static final String API_VERSION = "2020-12-29";
+
+    /** 文本同步审核操作（TMS） */
+    public static final String OPERATION_TEXT_MODERATION = "TextModeration";
+
+    /** 图片同步审核操作（IMS） */
+    public static final String OPERATION_IMAGE_MODERATION = "ImageModeration";
+
+    /** IMS 审核类型：默认（综合识别） */
+    public static final String IMAGE_TYPE_IMAGE = "IMAGE";
+
+    /** IMS 审核类型：AIGC 内容识别 */
+    public static final String IMAGE_TYPE_AIGC = "IMAGE_AIGC";
+
+    private TencentProviderConstants() {
+    }
+}

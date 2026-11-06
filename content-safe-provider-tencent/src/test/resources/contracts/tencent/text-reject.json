@@ -1,0 +1,11 @@
+{
+  "RequestId": "req-text-reject",
+  "BizType": "comment",
+  "Suggestion": "Block",
+  "Label": "Porn",
+  "SubLabel": "PornHigh",
+  "Score": 95,
+  "Keywords": ["敏感词乙"],
+  "DetailResults": [],
+  "DataId": "d-003"
+}

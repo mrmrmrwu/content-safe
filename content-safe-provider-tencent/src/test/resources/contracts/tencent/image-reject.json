@@ -1,0 +1,34 @@
+{
+  "RequestId": "req-img-reject",
+  "BizType": "ugc-image",
+  "Suggestion": "Block",
+  "Label": "Terrorism",
+  "SubLabel": "Weapon",
+  "Score": 95,
+  "LabelResults": [],
+  "ObjectResults": [
+    {
+      "Scene": "Terrorism",
+      "Suggestion": "Block",
+      "Label": "Terrorism",
+      "SubLabel": "Weapon",
+      "Score": 95,
+      "Names": ["Gun"],
+      "Details": [
+        {
+          "Id": 1,
+          "Name": "Gun",
+          "Value": "Gun",
+          "Score": 95,
+          "Location": {
+            "X": 10.0,
+            "Y": 20.0,
+            "Width": 100.0,
+            "Height": 50.0
+          }
+        }
+      ]
+    }
+  ],
+  "OcrResults": []
+}

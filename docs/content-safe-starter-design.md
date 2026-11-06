@@ -243,6 +243,41 @@ content.safe:
           operation: ImageAsyncScan
           mode: ASYNC_CALLBACK
           enabled: false
+    tencent:                        # T-014 已落地（TMS TextModeration / IMS ImageModeration，2020-12-29）
+      enabled: false
+      secret-id: xxx                # 缺省回退环境变量 CONTENT_SAFE_TENCENT_AK
+      secret-key: xxx               # 缺省回退 CONTENT_SAFE_TENCENT_SK
+      # session-token: 可选（临时凭证），缺省回退 CONTENT_SAFE_TENCENT_STSTOKEN
+      region: ap-guangzhou          # endpoint 推导 tms/ims.<region>.tencentcloudapi.com
+      scenes:                       # 业务场景 code → BizType（只进 provider）
+        comment: your-comment-biztype
+        avatar: your-avatar-biztype
+      aigc-scenes:                  # AIGC 识别（Type=IMAGE_AIGC，仅 IMAGE 场景生效）
+        ai-art: your-aigc-biztype
+      extra:                        # 可选：GIF 截帧与 SDK 读超时
+        gifInterval: "2"
+        gifMaxFrames: "5"
+        readTimeoutSeconds: "10"
+      # --- 以下为规划形态，T-014 尚未落地 ---
+      credentials:
+        type: static                # 规划：static / sts / secret-manager
+      plans:
+        text-sync:
+          product: tms
+          api-version: "2020-12-29"
+          operation: TextModeration
+          mode: SYNC
+        image-sync:
+          product: ims
+          api-version: "2020-12-29"
+          operation: ImageModeration
+          mode: SYNC
+        image-async:                # 待 T-019（CreateImageModerationAsyncTask）
+          product: ims
+          api-version: "2020-12-29"
+          operation: CreateImageModerationAsyncTask
+          mode: ASYNC_QUERY
+          enabled: false
 
   route:
     default-policy: PRIORITY
