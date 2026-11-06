@@ -1,0 +1,3 @@
+{"schemaVersion":1,"scenes":[
+  {"code":"product_title","type":"TEXT","defaultSeverity":"low","description":"商品标题"}
+]}
