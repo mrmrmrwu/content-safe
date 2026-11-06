@@ -26,6 +26,7 @@
         <module>content-safe-provider-aliyun</module>
         <module>content-safe-provider-tencent</module>
         <module>content-safe-provider-baidu</module>
+        <module>content-safe-provider-volcengine</module>
         <module>content-safe-spring-boot-starter</module>
         <module>content-safe-bom</module>
         <module>samples</module>
@@ -43,6 +44,7 @@
         <lombok.version>1.18.36</lombok.version>
         <aliyun-green.version>3.6.6</aliyun-green.version>
         <tencentcloud-sdk.version>3.2.52</tencentcloud-sdk.version>
+        <volc-sdk.version>1.0.290</volc-sdk.version>
         <gson.version>2.11.0</gson.version>
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -90,6 +92,11 @@
             </dependency>
             <dependency>
                 <groupId>io.github.wrqtec</groupId>
+                <artifactId>content-safe-provider-volcengine</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wrqtec</groupId>
                 <artifactId>content-safe-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -106,6 +113,13 @@
                 <groupId>com.tencentcloudapi</groupId>
                 <artifactId>tencentcloud-sdk-java</artifactId>
                 <version>${tencentcloud-sdk.version}</version>
+            </dependency>
+
+            <!-- 火山引擎内容安全 SDK 总包（optional，不进入使用方编译期传递依赖） -->
+            <dependency>
+                <groupId>com.volcengine</groupId>
+                <artifactId>volc-sdk-java</artifactId>
+                <version>${volc-sdk.version}</version>
             </dependency>
 
             <!-- 百度接入为自研 HTTP 客户端，仅依赖 Gson 解析（optional） -->

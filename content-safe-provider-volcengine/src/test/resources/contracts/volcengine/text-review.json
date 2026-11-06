@@ -1,0 +1,34 @@
+{
+  "responseMetadata": {
+    "requestId": "req-text-review-001",
+    "action": "TextRisk",
+    "version": "2022-01-26",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-text-review-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "decision": "suspect",
+      "decisionDetail": "suspected abuse",
+      "result": [
+        {
+          "label": "abuse",
+          "subLabel": "insult",
+          "decision": "suspect",
+          "contexts": [
+            {
+              "matchedWords": ["命中词甲"],
+              "libName": "default",
+              "positions": [
+                {"startPos": 2, "endPos": 5}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

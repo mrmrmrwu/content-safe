@@ -1,0 +1,27 @@
+{
+  "responseMetadata": {
+    "requestId": "req-image-reject-001",
+    "action": "ImageContentRiskV2",
+    "version": "2021-11-29",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-image-reject-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "dataId": "d-image-reject",
+      "decision": "reject",
+      "ocrText": "违规文字图片",
+      "results": [
+        {
+          "label": "porn",
+          "subLabel": "male_hot",
+          "decision": "reject",
+          "detail": ["porn_region_1", "porn_region_2"]
+        }
+      ]
+    }
+  }
+}

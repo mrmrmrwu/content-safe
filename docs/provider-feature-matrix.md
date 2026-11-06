@@ -92,6 +92,44 @@ BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code 
 
 strategyId 为百度内容审核平台"策略中心"创建的策略 ID（数字字符串）。业务侧只配场景 code → strategyId 映射；值为空字符串表示不传 strategyId、走账号默认策略。错误码 18/19 为限流、110/111 为 token 问题。信息来源：百度智能云内容审核官方文档（cloud.baidu.com/doc/ANTIPORN，查阅日期 2026-11-06）。
 
-## huawei / volcengine / 数美
+## volcengine（content-safe-provider-volcengine，T-016）
+
+SDK：`com.volcengine:volc-sdk-java:1.0.290`（总包，optional 依赖）。产品线为内容安全/风控
+（host `riskcontrol.volcengineapi.com`，签名 service `BusinessSecurity`，region `cn-north-1`）。
+接口契约来源：官方 Java SDK 1.0.290 与官方 Python SDK
+`volcengine/content_security/ContentSecurityService.py`（查阅日期 2026-11-06）；
+请求 envelope 为 `{AppId, Service, Parameters}`（Parameters 为 JSON 字符串，键名由所配
+Service 的控制台文档定义，不进公共抽象）。
+
+| 能力 | 状态 | 说明 |
+| --- | --- | --- |
+| 文本同步检测（TextRisk，Version 2022-01-26） | ✅ | `scenes.<sceneCode>` = Service 标识；文本原文写入 `extra.parameters-text-key` 指定键 |
+| 图片同步检测（ImageContentRiskV2，Version 2021-11-29） | ✅ | URL 原文 / base64 / bytes 三通道写入 `extra.parameters-image-key` 指定键（V1 已被官方标记 deprecated） |
+| app-id | ✅ | `extra.app-id`（整型，控制台申请），装配期 fail-fast 校验 |
+| decision 映射 | ✅ | pass→PASS、suspect→REVIEW、reject→REJECT（大小写不敏感）；缺失/未知值保守回退 REVIEW；完整枚举以官方文档为准 |
+| 文本命中词 | ✅ | contexts.matchedWords（用户内容片段）只进 `hit.raw`，不进 evidence/labels |
+| OCR 文本 / 帧签名 URL | ✅ 安全处理 | `data.ocrText` 与 `frames[].url` 为用户内容/签名 URL，一律丢弃不透传 |
+| 异步检测（AsyncImageRisk + GetImageResult） | ⏳ | SDK 有建模，待 v1.1 |
+| veImageX 智能审核（CreateImageContentTask） | ⏳ | 异步任务制产品线，待 v1.1 |
+| 新版文本（TextSliceRisk，2022-11-07） | ⏳ | 官方标注 TextRisk 的替代品，待 v1.1 评估切换 |
+| 批量审核 | ❌ | envelope 单条载荷，`maxBatchSize=1` |
+| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 延伸任务 |
+| 用户内容安全 | ✅ | matchedWords/ocrText 均不进 evidence/raw 之外的字段与日志 |
+
+### 限额（`VolcengineLimits`，声明值，以官方文档/控制台为准）
+
+| 项 | 文本 | 图片 |
+| --- | --- | --- |
+| 批量 | 单次单条 | 单次单条 |
+| 超时 | SDK ServiceInfo 默认 5 秒（connect/socket） | 同左 |
+| QPS / 大小 | 未声明（官方公开文档无确定配额，配额随账号与服务配置变化） | 未声明 |
+
+### 约束说明
+
+SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，凭证经 setter 注入；
+同进程多账号需自行隔离。parameters 内层键名（`parameters-text-key` / `parameters-image-key`）
+由使用方按其 Service 的控制台文档显式配置，缺失即装配期 fail-fast（经 FailureAnalyzer 输出可读报告）。
+
+## huawei / 数美
 
 ⏳ 未实现（规划见 docs/content-safe-starter-design.md §8）。

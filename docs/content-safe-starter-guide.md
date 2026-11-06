@@ -134,7 +134,32 @@ content:
 
 无官方 SDK，模块内置 JDK HttpClient 自研客户端；access_token 自动获取与缓存（30 天，遇 110/111 自动重取重试一次）。能力：文本（≤20000 字节）、图片（URL / base64 ≤4MB）。strategyId 在内容审核平台"策略中心"创建。
 
-### 3.4 凭证解析链
+### 3.4 火山引擎（content-safe-provider-volcengine）
+
+```yaml
+content:
+  safe:
+    providers:
+      volcengine:
+        enabled: true
+        ak: xxx                       # 缺省回退 CONTENT_SAFE_VOLCENGINE_AK
+        sk: xxx                       # 缺省回退 CONTENT_SAFE_VOLCENGINE_SK
+        scenes:
+          nickname: "svc-nickname"    # 业务场景 → 内容安全 Service 标识（控制台申请）
+          avatar: "svc-avatar"
+        extra:
+          app-id: "6801"              # 必填：内容安全控制台应用 ID（整型）
+          parameters-text-key: "text"   # 必填：文本在 parameters 内层 JSON 的键名
+          parameters-image-key: "image" # 必填：图片在 parameters 内层 JSON 的键名
+```
+
+基于官方 SDK `com.volcengine:volc-sdk-java`（optional）。能力：文本检测（TextRisk）、
+图片检测（ImageContentRiskV2，URL / base64 / bytes）。decision 归一：pass→PASS、
+suspect→REVIEW、reject→REJECT，未知值保守回退 REVIEW；命中词与 OCR 文本按安全约束
+只进 raw 或丢弃。parameters 内层键名由所配 Service 的控制台文档定义（见
+[provider-feature-matrix.md](provider-feature-matrix.md) volcengine 节），缺失即启动 fail-fast。
+
+### 3.5 凭证解析链
 
 每个 provider 的凭证按以下顺序解析，全部缺失则启动 fail-fast（`CONFIG_INVALID`）：
 

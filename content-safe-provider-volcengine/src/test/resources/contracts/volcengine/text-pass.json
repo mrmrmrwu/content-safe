@@ -1,0 +1,19 @@
+{
+  "responseMetadata": {
+    "requestId": "req-text-pass-001",
+    "action": "TextRisk",
+    "version": "2022-01-26",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-text-pass-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "decision": "pass",
+      "decisionDetail": "risk free",
+      "result": []
+    }
+  }
+}

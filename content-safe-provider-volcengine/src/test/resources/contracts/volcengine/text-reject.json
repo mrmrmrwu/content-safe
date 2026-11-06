@@ -1,0 +1,26 @@
+{
+  "responseMetadata": {
+    "requestId": "req-text-reject-001",
+    "action": "TextRisk",
+    "version": "2022-01-26",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-text-reject-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "decision": "reject",
+      "decisionDetail": "porn detected",
+      "result": [
+        {
+          "label": "porn",
+          "subLabel": "adult",
+          "decision": "reject",
+          "contexts": []
+        }
+      ]
+    }
+  }
+}

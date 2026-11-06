@@ -1,0 +1,19 @@
+{
+  "responseMetadata": {
+    "requestId": "req-image-pass-001",
+    "action": "ImageContentRiskV2",
+    "version": "2021-11-29",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-image-pass-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "dataId": "d-image-pass",
+      "decision": "pass",
+      "results": []
+    }
+  }
+}
