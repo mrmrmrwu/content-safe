@@ -24,3 +24,5 @@ failover events: 2 (primary degraded, requests served by fake-secondary)
 > mock 规则：`fake-primary`（order=0）每次调用都抛 `ProviderCallException` 模拟故障；
 > `fake-secondary`（order=10）正常工作，文本包含"违禁"即判 REJECT。
 > 无任何真实云调用，无需配置密钥。
+> 日志中还会出现 core 打印的 `WARN provider fake-primary:textScan degraded ... fail over to next`
+> 与 Spring Boot 启动横幅，属预期输出。

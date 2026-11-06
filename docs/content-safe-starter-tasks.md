@@ -40,8 +40,8 @@
 | T-019 | callback verifier | 阿里云/腾讯/数美/火山实现 | P1 | T-018 | 验签失败死信，重复回调幂等 |
 | T-020 | credentials provider | static/STS/CAM/KMS 抽象 | P0 | T-003 | 密钥不进日志，可替换实现 |
 | T-021 | error catalog + failure analyzer | 错误码与启动诊断 | P1 | T-013 | 配置错误可读提示 |
-| T-022 | samples | basic/routing-failover/async-callback | P0 | M2 | README 可复现 |
-| T-023 | 文档 | quick start/config reference/guides/FAQ | P0 | M4 | 含限制、合规、Feature Matrix |
+| T-022 | samples | basic/routing-failover/async-callback ✅ | P0 | M2 | README 可复现 |
+| T-023 | 文档 | quick start/config reference/guides/FAQ ✅ | P0 | M4 | 含限制、合规、Feature Matrix |
 | T-024 | 发布流水线 | GPG/SBOM/Central/GitHub Packages | P0 | M4 | artifacts 发布与校验 |
 | T-025 | 兼容与 deprecation policy | 文档 + japicmp/revapi | P1 | M4 | CI 检查 api/spi 破坏变更 |
 
