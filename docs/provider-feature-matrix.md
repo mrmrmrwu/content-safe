@@ -130,6 +130,49 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 同进程多账号需自行隔离。parameters 内层键名（`parameters-text-key` / `parameters-image-key`）
 由使用方按其 Service 的控制台文档显式配置，缺失即装配期 fail-fast（经 FailureAnalyzer 输出可读报告）。
 
-## huawei / 数美
+## shumei（content-safe-provider-shumei，T-017）
+
+无官方维护的现代 Java SDK，**自研 HTTP 客户端**（JDK HttpClient + Gson，均为 optional
+依赖）。产品线为数美天净风控同步接口：文本 `POST https://api-text-{region}.fengkongcloud.com/text/v4`、
+图片 `POST https://api-img-{region}.fengkongcloud.com/image/v4`。接口契约来源：官方 API 文档
+仓库 github.com/ishumei/api-doc（V4 目录《智能文本识别产品API文档-同步》《智能图片识别产品API文档-同步单张》）
+与 help.ishumei.com 在线文档（查阅日期 2026-11-06）。
+
+| 能力 | 状态 | 说明 |
+| --- | --- | --- |
+| 文本同步检测（text/v4） | ✅ | `scenes.<sceneCode>` = eventId；`extra.text-type` 覆盖默认 TEXTRISK |
+| 图片同步检测（image/v4） | ✅ | URL / base64 / bytes（自动编码）三通道；`extra.image-type` 覆盖默认组合值 |
+| app-id | ✅ | `content.safe.providers.shumei.app-id`（数美控制台 appid），装配期 fail-fast |
+| eventId | ✅ | `scenes.<sceneCode>` 的映射值即 eventId，与数美控制台事件约定一致，仅透传不校验 |
+| region | ✅ | `region` 属性默认 `sh`（文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp）；`extra.text-base-url` / `extra.image-base-url` 可整体覆盖 |
+| riskLevel 映射 | ✅ | PASS/REVIEW/REJECT（大小写不敏感）；缺失/未知值保守回退 REVIEW |
+| 命中标签 | ✅ | allLabels[].riskLabel1/2/3 → `labelPath` + `labels`，probability(0~1) → ZERO_TO_ONE；条目缺 riskDetail 时回落根级 riskDetail |
+| 命中词 | ✅ | riskDetail.matchedLists[].words[]（用户内容片段）只进 `hit.raw.matchedWords`，不进 evidence/labels |
+| 风险来源 | ✅ | riskDetail.riskSource（1000/1001/1002）进 `hit.raw` |
+| 打码文本 / 联系方式 / 人脸 | ✅ 安全处理 | auxInfo.filteredText、contactResult、faces 人名等用户内容一律丢弃不透传 |
+| tokenId | ✅ | 解析链 context.userId → dataId → 随机 UUID（官方建议无 uid 时用唯一数据标识） |
+| 动图截帧（interval/maxFrame） | ✅ | 经场景 ext 传入，与保留键撞名装配期 fail-fast |
+| 异步检测 / 流式 | ⏳ | 待 v1.1 |
+| 批量审核 | ❌ | 单条载荷，`maxBatchSize=1` |
+| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 延伸任务 |
+| 用户内容安全 | ✅ | matchedWords 不进 raw 之外的字段与日志；riskSegments/faces/auxInfo 整体不透传 |
+
+### 限额（`ShumeiLimits`，声明值，以官方文档为准）
+
+| 项 | 文本 | 图片 |
+| --- | --- | --- |
+| 批量 | 单次单条 | 单次单条 |
+| 超时 | 5 秒（extra.connect-timeout-ms 默认 3000 / read-timeout-ms 默认 5000） | 同左 |
+| 字数 / 体积 | 文本 ≤1 万字；data 整体 ≤1MB（官方约束） | 官方未声明单图大小上限 |
+
+### 约束说明
+
+数美仅单凭证 `accessKey`（不走 AK/SK 双要素），凭证解析链为：显式配置
+`content.safe.providers.shumei.access-key` → 自定义 `CredentialsProvider`（provider=`shumei`）→
+环境变量 `CONTENT_SAFE_SHUMEI_AK`。文本接口官方建议超时 1 秒，默认放宽到 5 秒以覆盖弱网；
+返回码 1901 为 QPS 超限、1902 参数不合法、1903 服务失败、1905 字数超限、9101 无权限、
+1911（图片）下载失败，统一映射 ProviderCallException（message 脱敏，不含原文）。
+
+## huawei
 
 ⏳ 未实现（规划见 docs/content-safe-starter-design.md §8）。

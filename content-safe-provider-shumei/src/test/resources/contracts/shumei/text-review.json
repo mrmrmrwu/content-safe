@@ -1,0 +1,24 @@
+{
+  "code": 1100,
+  "message": "成功",
+  "requestId": "b71aec6fa11fd02d226fb384968fe02",
+  "riskLevel": "REVIEW",
+  "riskLabel1": "ad",
+  "riskLabel2": "ad",
+  "riskLabel3": "ad",
+  "riskDescription": "广告:广告:广告",
+  "riskDetail": {},
+  "finalResult": 1,
+  "resultType": 0,
+  "allLabels": [
+    {
+      "probability": 1,
+      "riskLevel": "REVIEW",
+      "riskLabel1": "ad",
+      "riskLabel2": "ad",
+      "riskLabel3": "ad",
+      "riskDescription": "广告:广告:广告",
+      "riskDetail": {}
+    }
+  ]
+}

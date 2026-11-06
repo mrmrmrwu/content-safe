@@ -43,6 +43,7 @@
         <module>content-safe-provider-tencent</module>
         <module>content-safe-provider-baidu</module>
         <module>content-safe-provider-volcengine</module>
+        <module>content-safe-provider-shumei</module>
         <module>content-safe-spring-boot-starter</module>
         <module>content-safe-bom</module>
         <module>samples</module>
@@ -123,6 +124,11 @@
             <dependency>
                 <groupId>io.github.wrqtec</groupId>
                 <artifactId>content-safe-provider-volcengine</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wrqtec</groupId>
+                <artifactId>content-safe-provider-shumei</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

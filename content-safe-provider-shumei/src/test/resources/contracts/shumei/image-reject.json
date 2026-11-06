@@ -1,0 +1,45 @@
+{
+  "code": 1100,
+  "message": "成功",
+  "requestId": "ea4d1b9ia11fd02d226fb384968fe05",
+  "riskLevel": "REJECT",
+  "riskLabel1": "polity",
+  "riskLabel2": "politician",
+  "riskLabel3": " politician_face",
+  "riskDescription": "涉政识别:敏感人物:敏感人物人脸",
+  "riskDetail": {
+    "riskSource": 1002,
+    "faces": [
+      {
+        "id": 101,
+        "name": "***",
+        "probability": 0.988
+      }
+    ],
+    "face_num": 1,
+    "person_num": 1,
+    "face_ratio": 0.25
+  },
+  "allLabels": [
+    {
+      "probability": 0.988,
+      "riskLevel": "REJECT",
+      "riskLabel1": "polity",
+      "riskLabel2": "politician",
+      "riskLabel3": " politician_face",
+      "riskDescription": "涉政识别:敏感人物:敏感人物人脸",
+      "riskDetail": {
+        "riskSource": 1002,
+        "faces": [
+          {
+            "id": 101,
+            "name": "***",
+            "probability": 0.988
+          }
+        ]
+      }
+    }
+  ],
+  "finalResult": 1,
+  "resultType": 0
+}

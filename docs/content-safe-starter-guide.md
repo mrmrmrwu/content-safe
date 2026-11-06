@@ -85,8 +85,8 @@ content:
           comment: comment_detection  # 业务场景 → 阿里云 serviceCode
           avatar: baselineCheck
         extra:
-          connectTimeoutMs: "3000"    # 可选，HTTP 超时（毫秒）
-          readTimeoutMs: "5000"
+          connect-timeout-ms: "3000"    # 可选，HTTP 超时（毫秒）
+          read-timeout-ms: "5000"
 ```
 
 能力：文本（URL/base64 不支持，仅原文 ≤600 字）、图片（仅公网 URL，≤20MB，总像素 ≤2.5 亿）。
@@ -128,8 +128,8 @@ content:
           comment: "101"              # 业务场景 → 策略中心 strategyId；空字符串 = 默认策略
           avatar: ""                  # 不传 strategyId，走账号默认策略
         extra:
-          connectTimeoutMs: "3000"    # 可选：HTTP 连接/读取超时
-          readTimeoutMs: "10000"
+          connect-timeout-ms: "3000"  # 可选：HTTP 连接/读取超时
+          read-timeout-ms: "10000"
 ```
 
 无官方 SDK，模块内置 JDK HttpClient 自研客户端；access_token 自动获取与缓存（30 天，遇 110/111 自动重取重试一次）。能力：文本（≤20000 字节）、图片（URL / base64 ≤4MB）。strategyId 在内容审核平台"策略中心"创建。
@@ -159,12 +159,34 @@ suspect→REVIEW、reject→REJECT，未知值保守回退 REVIEW；命中词与
 只进 raw 或丢弃。parameters 内层键名由所配 Service 的控制台文档定义（见
 [provider-feature-matrix.md](provider-feature-matrix.md) volcengine 节），缺失即启动 fail-fast。
 
-### 3.5 凭证解析链
+### 3.5 数美（content-safe-provider-shumei）
+
+```yaml
+content:
+  safe:
+    providers:
+      shumei:
+        enabled: true
+        access-key: xxx               # 缺省回退 CONTENT_SAFE_SHUMEI_AK（数美仅单凭证 accessKey）
+        app-id: "default"             # 必填：数美控制台 appid
+        region: sh                    # 可选：默认 sh（文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp）
+        scenes:
+          comment: "text"             # 业务场景 → 数美 eventId（与控制台事件约定一致）
+          avatar: "image"
+```
+
+无官方现代 SDK，模块内置 JDK HttpClient 自研客户端。能力：文本（text/v4，≤1 万字）、
+图片（image/v4，URL / base64 / bytes）。riskLevel 归一：PASS/REVIEW/REJECT，未知值
+保守回退 REVIEW；命中词（matchedLists）只进 `hit.raw`，打码文本/联系方式/人脸等用户
+内容一律不透传。检测类型与动图截帧参数可经 `extra.text-type` / `extra.image-type` /
+场景 ext 配置（见 [provider-feature-matrix.md](provider-feature-matrix.md) shumei 节）。
+
+### 3.6 凭证解析链
 
 每个 provider 的凭证按以下顺序解析，全部缺失则启动 fail-fast（`CONFIG_INVALID`）：
 
 1. 用户自定义 `CredentialsProvider` Bean（`provider()` 匹配者优先）；
-2. yml 直接配置（`ak`/`sk`、`secret-id`/`secret-key`）；
+2. yml 直接配置（`ak`/`sk`、`secret-id`/`secret-key`、`access-key`）；
 3. 环境变量 `CONTENT_SAFE_<PROVIDER>_AK` / `_SK` / `_STSTOKEN`。
 
 ## 4. 治理配置

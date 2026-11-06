@@ -1,0 +1,66 @@
+{
+  "code": 1100,
+  "message": "成功",
+  "requestId": "c82bdf7ga11fd02d226fb384968fe03",
+  "riskLevel": "REJECT",
+  "riskLabel1": "ad",
+  "riskLabel2": "jiahaoyou",
+  "riskLabel3": "jiahaoyou",
+  "riskDescription": "广告:加好友:加好友",
+  "riskDetail": {
+    "matchedLists": [
+      {
+        "name": "社区敏感词名单",
+        "words": [
+          {
+            "word": "qq",
+            "position": [6, 7]
+          }
+        ]
+      }
+    ],
+    "riskSegments": [
+      {
+        "segment": "qq12345",
+        "position": [6, 12],
+        "from": 1001
+      }
+    ],
+    "riskSource": 1001
+  },
+  "auxInfo": {
+    "filteredText": "加个好友吧 **12345",
+    "contactResult": [
+      {
+        "contactString": "qq12345",
+        "contactType": 2
+      }
+    ]
+  },
+  "allLabels": [
+    {
+      "probability": 0.955,
+      "riskLevel": "REJECT",
+      "riskLabel1": "ad",
+      "riskLabel2": "jiahaoyou",
+      "riskLabel3": "jiahaoyou",
+      "riskDescription": "广告:加好友:加好友",
+      "riskDetail": {
+        "matchedLists": [
+          {
+            "name": "社区敏感词名单",
+            "words": [
+              {
+                "word": "qq",
+                "position": [6, 7]
+              }
+            ]
+          }
+        ],
+        "riskSource": 1001
+      }
+    }
+  ],
+  "finalResult": 1,
+  "resultType": 0
+}

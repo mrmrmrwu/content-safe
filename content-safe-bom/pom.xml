@@ -59,6 +59,11 @@
             </dependency>
             <dependency>
                 <groupId>io.github.wrqtec</groupId>
+                <artifactId>content-safe-provider-shumei</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wrqtec</groupId>
                 <artifactId>content-safe-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>

@@ -35,15 +35,15 @@
 | T-014 | provider-tencent | tms/ims operation | P1 | T-013 | BizType/Type/GIF/OCR 映射通过 |
 | T-015 | provider-baidu | text/image operation | P1 | T-013 | access_token 与策略映射通过 ✅ |
 | T-016 | provider-volcengine | veImageX/risk operation ✅（risk-text/risk-image 同步，veImageX 异步待 v1.1） | P2 | T-013 | product split 与回调通过 |
-| T-017 | provider-shumei | text/image operation | P2 | T-013 | tokenId/finalResult/riskSource 映射通过 |
+| T-017 | provider-shumei | text/image operation ✅（供应商 extra 扩展键统一 kebab-case） | P2 | T-013 | tokenId/finalResult/riskSource 映射通过 |
 | T-018 | async task store | 内存实现 + SPI | P1 | T-003 | save/find/markDone/markFailed |
 | T-019 | callback verifier | 阿里云/腾讯/数美/火山实现 | P1 | T-018 | 验签失败死信，重复回调幂等 |
 | T-020 | credentials provider | static/STS/CAM/KMS 抽象 | P0 | T-003 | 密钥不进日志，可替换实现 |
 | T-021 | error catalog + failure analyzer | 错误码与启动诊断 ✅ | P1 | T-013 | 配置错误可读提示 |
 | T-022 | samples | basic/routing-failover/async-callback ✅ | P0 | M2 | README 可复现 |
 | T-023 | 文档 | quick start/config reference/guides/FAQ ✅ | P0 | M4 | 含限制、合规、Feature Matrix |
-| T-024 | 发布流水线 | GPG/SBOM/Central/GitHub Packages | P0 | M4 | artifacts 发布与校验 |
-| T-025 | 兼容与 deprecation policy | 文档 + japicmp/revapi | P1 | M4 | CI 检查 api/spi 破坏变更 |
+| T-024 | 发布流水线 | GPG/SBOM/Central/GitHub Packages ✅（凭据注入需发布时配置，见 docs/release-guide.md） | P0 | M4 | artifacts 发布与校验 |
+| T-025 | 兼容与 deprecation policy | 文档 + japicmp/revapi ✅ | P1 | M4 | CI 检查 api/spi 破坏变更 |
 
 ## 3. 最近两周启动计划
 

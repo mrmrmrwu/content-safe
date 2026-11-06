@@ -1,0 +1,13 @@
+{
+  "code": 1100,
+  "message": "成功",
+  "requestId": "d93c0a8ha11fd02d226fb384968fe04",
+  "riskLevel": "PASS",
+  "riskLabel1": "normal",
+  "riskDetail": {
+    "riskSource": 1002
+  },
+  "finalResult": 1,
+  "resultType": 0,
+  "allLabels": []
+}
