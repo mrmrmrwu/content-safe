@@ -125,7 +125,7 @@ public record AuditRequest(
          * @param options 审核选项
          * @return 本构建器
          */
-        public Builder option(AuditOptions options) {
+        public Builder options(AuditOptions options) {
             this.options = options;
             return this;
         }

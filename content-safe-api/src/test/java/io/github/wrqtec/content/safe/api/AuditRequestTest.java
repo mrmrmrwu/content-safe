@@ -40,7 +40,7 @@ class AuditRequestTest {
                 .content(ContentRef.url("https://example.com/a.jpg"))
                 .dataId("user-1")
                 .context(AuditContext.ofUser("user-1", "device-9"))
-                .option(AuditOptions.enableOcr(true))
+                .options(AuditOptions.enableOcr(true))
                 .passThrough(Map.of("tenant", "t1"))
                 .build();
         assertEquals("user-1", request.dataId());

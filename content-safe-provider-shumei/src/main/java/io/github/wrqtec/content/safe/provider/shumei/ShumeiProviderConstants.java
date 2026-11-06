@@ -46,6 +46,24 @@ public final class ShumeiProviderConstants {
     /** 默认图片检测风险类型：涉政+色情+暴恐违禁+二维码+广告+图片文字违规 */
     public static final String DEFAULT_IMAGE_TYPE = "POLITY_EROTIC_VIOLENT_QRCODE_ADVERT_IMGTEXTRISK";
 
+    /** extra 键：文本检测风险类型覆盖 */
+    public static final String EXTRA_TEXT_TYPE = "text-type";
+
+    /** extra 键：图片检测风险类型覆盖 */
+    public static final String EXTRA_IMAGE_TYPE = "image-type";
+
+    /** extra 键：文本接口地址整体覆盖 */
+    public static final String EXTRA_TEXT_BASE_URL = "text-base-url";
+
+    /** extra 键：图片接口地址整体覆盖 */
+    public static final String EXTRA_IMAGE_BASE_URL = "image-base-url";
+
+    /** extra 键：连接超时（毫秒） */
+    public static final String EXTRA_CONNECT_TIMEOUT_MS = "connect-timeout-ms";
+
+    /** extra 键：读取超时（毫秒） */
+    public static final String EXTRA_READ_TIMEOUT_MS = "read-timeout-ms";
+
     private ShumeiProviderConstants() {
     }
 }

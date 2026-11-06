@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.provider.shumei.ShumeiProviderConstants;
@@ -47,8 +48,8 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
      */
     public HttpShumeiClientInvoker(String accessKey, String appId, ShumeiProviderProperties properties,
                                    int connectTimeoutMs, int readTimeoutMs) {
-        this.accessKey = Asserts.notBlank(accessKey, "accessKey must not be blank");
-        this.appId = Asserts.notBlank(appId, "appId must not be blank");
+        this.accessKey = Asserts.notBlank(accessKey, "accessKey");
+        this.appId = Asserts.notBlank(appId, "appId");
         this.textUri = URI.create(textBaseUrlOf(properties));
         this.imageUri = URI.create(imageBaseUrlOf(properties));
         this.httpClient = HttpClient.newBuilder()
@@ -59,17 +60,17 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
 
     @Override
     public ShumeiSyncResponse textDetect(String eventId, String type, Map<String, Object> data) {
-        Asserts.notBlank(eventId, "eventId must not be blank");
-        Asserts.notBlank(type, "type must not be blank");
-        Asserts.notNull(data, "data must not be null");
+        Asserts.notBlank(eventId, "eventId");
+        Asserts.notBlank(type, "type");
+        Asserts.notNull(data, "data");
         return post(textUri, envelope(eventId, type, data));
     }
 
     @Override
     public ShumeiSyncResponse imageDetect(String eventId, String type, Map<String, Object> data) {
-        Asserts.notBlank(eventId, "eventId must not be blank");
-        Asserts.notBlank(type, "type must not be blank");
-        Asserts.notNull(data, "data must not be null");
+        Asserts.notBlank(eventId, "eventId");
+        Asserts.notBlank(type, "type");
+        Asserts.notNull(data, "data");
         return post(imageUri, envelope(eventId, type, data));
     }
 
@@ -100,6 +101,9 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
             return ShumeiErrorMapper.assertSuccess(parsed);
         } catch (IOException e) {
             throw ShumeiErrorMapper.fromException(e);
+        } catch (JsonSyntaxException e) {
+            // 报文非合法 JSON：归一为调用异常；message 不携带报文原文
+            throw new ProviderCallException("shumei detect returned invalid json body", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ProviderCallException("shumei detect call interrupted", e);
@@ -113,7 +117,7 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     }
 
     private static String textBaseUrlOf(ShumeiProviderProperties properties) {
-        String override = properties.extraValue("text-base-url");
+        String override = properties.extraValue(ShumeiProviderConstants.EXTRA_TEXT_BASE_URL);
         if (override != null) {
             return override;
         }
@@ -122,7 +126,7 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     }
 
     private static String imageBaseUrlOf(ShumeiProviderProperties properties) {
-        String override = properties.extraValue("image-base-url");
+        String override = properties.extraValue(ShumeiProviderConstants.EXTRA_IMAGE_BASE_URL);
         if (override != null) {
             return override;
         }

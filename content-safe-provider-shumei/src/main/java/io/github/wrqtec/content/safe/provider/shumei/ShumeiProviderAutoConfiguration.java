@@ -40,8 +40,8 @@ public class ShumeiProviderAutoConfiguration {
                                                    ObjectProvider<List<CredentialsProvider>> credentialsProviders) {
         properties.validate();
         String accessKey = resolveAccessKey(properties, credentialsProviders);
-        int connectTimeoutMs = timeoutOf(properties, "connect-timeout-ms", DEFAULT_CONNECT_TIMEOUT_MS);
-        int readTimeoutMs = timeoutOf(properties, "read-timeout-ms", DEFAULT_READ_TIMEOUT_MS);
+        int connectTimeoutMs = timeoutOf(properties, ShumeiProviderConstants.EXTRA_CONNECT_TIMEOUT_MS, DEFAULT_CONNECT_TIMEOUT_MS);
+        int readTimeoutMs = timeoutOf(properties, ShumeiProviderConstants.EXTRA_READ_TIMEOUT_MS, DEFAULT_READ_TIMEOUT_MS);
         return new HttpShumeiClientInvoker(accessKey, properties.getAppId(), properties,
                 connectTimeoutMs, readTimeoutMs);
     }

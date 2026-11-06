@@ -27,9 +27,6 @@ import org.springframework.core.io.Resource;
  */
 public class JsonSceneDefinitionProvider implements SceneDefinitionProvider {
 
-    /** 当前支持的 scenes.json schema 版本 */
-    public static final int SUPPORTED_SCHEMA_VERSION = 1;
-
     /** 默认加载的 classpath 场景文件路径 */
     public static final String DEFAULT_SCENES_CLASSPATH = "content-safe/scenes.json";
 
@@ -56,10 +53,10 @@ public class JsonSceneDefinitionProvider implements SceneDefinitionProvider {
         try (InputStream in = resource.getInputStream()) {
             JsonNode root = MAPPER.readTree(in);
             int schemaVersion = root.path("schemaVersion").asInt(-1);
-            if (schemaVersion != SUPPORTED_SCHEMA_VERSION) {
+            if (schemaVersion != ContentSafeConfigValidator.SUPPORTED_SCHEMA_VERSION) {
                 throw new ConfigInvalidException(
                         "unsupported " + SCENES_FILE + " schemaVersion: " + schemaVersion
-                                + " (supported: " + SUPPORTED_SCHEMA_VERSION + ")");
+                                + " (supported: " + ContentSafeConfigValidator.SUPPORTED_SCHEMA_VERSION + ")");
             }
             List<SceneDefinition> out = new ArrayList<>();
             for (JsonNode node : root.path("scenes")) {

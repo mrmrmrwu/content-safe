@@ -32,8 +32,8 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
     private final ShumeiAuditResultNormalizer normalizer;
 
     public ShumeiAuditOperationProvider(ShumeiProviderProperties properties, ShumeiClientInvoker client) {
-        this.properties = Asserts.notNull(properties, "properties must not be null");
-        this.client = Asserts.notNull(client, "client must not be null");
+        this.properties = Asserts.notNull(properties, "properties");
+        this.client = Asserts.notNull(client, "client");
         this.normalizer = new ShumeiAuditResultNormalizer();
     }
 
@@ -49,7 +49,7 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
 
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
-        Asserts.notNull(scene, "scene must not be null");
+        Asserts.notNull(scene, "scene");
         String eventId = properties.getScenes().get(scene.code());
         if (eventId == null) {
             return List.of();
@@ -76,12 +76,12 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
     }
 
     private String textTypeOf() {
-        String type = properties.extraValue("text-type");
+        String type = properties.extraValue(ShumeiProviderConstants.EXTRA_TEXT_TYPE);
         return type == null ? ShumeiProviderConstants.DEFAULT_TEXT_TYPE : type;
     }
 
     private String imageTypeOf() {
-        String type = properties.extraValue("image-type");
+        String type = properties.extraValue(ShumeiProviderConstants.EXTRA_IMAGE_TYPE);
         return type == null ? ShumeiProviderConstants.DEFAULT_IMAGE_TYPE : type;
     }
 }

@@ -32,10 +32,10 @@ public class ShumeiTextDetectOperation implements AuditOperation {
     public ShumeiTextDetectOperation(ProviderPlan plan, ShumeiClientInvoker client,
                                      ShumeiAuditResultNormalizer normalizer, String type,
                                      SceneDefinition scene) {
-        this.plan = Asserts.notNull(plan, "plan must not be null");
-        this.client = Asserts.notNull(client, "client must not be null");
-        this.normalizer = Asserts.notNull(normalizer, "normalizer must not be null");
-        this.type = Asserts.notBlank(type, "type must not be blank");
+        this.plan = Asserts.notNull(plan, "plan");
+        this.client = Asserts.notNull(client, "client");
+        this.normalizer = Asserts.notNull(normalizer, "normalizer");
+        this.type = Asserts.notBlank(type, "type");
         this.scene = scene;
         this.capabilities = AuditCapabilities.builder()
                 .contentTypes(ContentType.TEXT)
@@ -55,7 +55,7 @@ public class ShumeiTextDetectOperation implements AuditOperation {
 
     @Override
     public AuditResult audit(AuditRequest request) {
-        Asserts.notNull(request, "request must not be null");
+        Asserts.notNull(request, "request");
         if (!capabilities.supports(request)) {
             throw new UnsupportedContentException("shumei text detect only supports TEXT content");
         }

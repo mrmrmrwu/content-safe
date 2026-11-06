@@ -106,7 +106,7 @@ AuditResult result = contentSafeTemplate.audit(
         .content(ContentRef.url(avatarUrl))
         .dataId(userId)
         .context(AuditContext.ofUser(userId, deviceId))
-        .option(AuditOptions.enableOcr(true))
+        .options(AuditOptions.enableOcr(true))
         .build()
 );
 ```

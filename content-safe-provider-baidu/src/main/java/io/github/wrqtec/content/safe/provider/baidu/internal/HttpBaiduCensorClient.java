@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.provider.baidu.BaiduProviderConstants;
@@ -44,8 +45,8 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
      */
     public HttpBaiduCensorClient(BaiduAccessTokenManager tokenManager, String baseUrl,
                                  int connectTimeoutMs, int readTimeoutMs) {
-        this.tokenManager = Asserts.notNull(tokenManager, "tokenManager must not be null");
-        Asserts.notBlank(baseUrl, "baseUrl must not be blank");
+        this.tokenManager = Asserts.notNull(tokenManager, "tokenManager");
+        Asserts.notBlank(baseUrl, "baseUrl");
         this.textUri = URI.create(baseUrl + BaiduProviderConstants.TEXT_CENSOR_PATH);
         this.imageUri = URI.create(baseUrl + BaiduProviderConstants.IMAGE_CENSOR_PATH);
         this.httpClient = HttpClient.newBuilder()
@@ -56,19 +57,19 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
 
     @Override
     public BaiduCensorResponse textCensor(String text, String strategyId) {
-        Asserts.notNull(text, "text must not be null");
+        Asserts.notNull(text, "text");
         return callWithTokenRetry(textUri, formOf("text", text, strategyId));
     }
 
     @Override
     public BaiduCensorResponse imageCensorByBase64(String base64, String strategyId) {
-        Asserts.notBlank(base64, "base64 must not be blank");
+        Asserts.notBlank(base64, "base64");
         return callWithTokenRetry(imageUri, formOf("image", base64, strategyId));
     }
 
     @Override
     public BaiduCensorResponse imageCensorByUrl(String imgUrl, String strategyId) {
-        Asserts.notBlank(imgUrl, "imgUrl must not be blank");
+        Asserts.notBlank(imgUrl, "imgUrl");
         return callWithTokenRetry(imageUri, formOf("imgUrl", imgUrl, strategyId));
     }
 
@@ -100,6 +101,9 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
             return parsed;
         } catch (IOException e) {
             throw BaiduErrorMapper.fromException(e);
+        } catch (JsonSyntaxException e) {
+            // 报文非合法 JSON：归一为调用异常；message 不携带报文原文
+            throw new ProviderCallException("baidu censor returned invalid json body", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new ProviderCallException("baidu censor call interrupted", e);
@@ -138,7 +142,7 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
             StringBuilder body = new StringBuilder(128);
             body.append(contentKey).append('=').append(BaiduAccessTokenManager.urlEncode(contentValue));
             if (strategyId != null) {
-                body.append("&strategyId=").append(strategyId);
+                body.append("&strategyId=").append(BaiduAccessTokenManager.urlEncode(strategyId));
             }
             return body.toString();
         }

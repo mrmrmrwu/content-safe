@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -16,6 +17,7 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
+import io.github.wrqtec.content.safe.provider.baidu.BaiduProviderConstants;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -54,11 +56,10 @@ public class BaiduAccessTokenManager {
      */
     public BaiduAccessTokenManager(String apiKey, String secretKey, String baseUrl,
                                    int connectTimeoutMs, int readTimeoutMs) {
-        this.apiKey = Asserts.notBlank(apiKey, "apiKey must not be blank");
-        this.secretKey = Asserts.notBlank(secretKey, "secretKey must not be blank");
-        Asserts.notBlank(baseUrl, "baseUrl must not be blank");
-        this.tokenUri = URI.create(baseUrl + io.github.wrqtec.content.safe.provider.baidu
-                .BaiduProviderConstants.TOKEN_PATH);
+        this.apiKey = Asserts.notBlank(apiKey, "apiKey");
+        this.secretKey = Asserts.notBlank(secretKey, "secretKey");
+        Asserts.notBlank(baseUrl, "baseUrl");
+        this.tokenUri = URI.create(baseUrl + BaiduProviderConstants.TOKEN_PATH);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
                 .build();
@@ -124,7 +125,7 @@ public class BaiduAccessTokenManager {
     }
 
     static String urlEncode(String value) {
-        return java.net.URLEncoder.encode(value, StandardCharsets.UTF_8);
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 
     private static String nullToEmpty(String value) {

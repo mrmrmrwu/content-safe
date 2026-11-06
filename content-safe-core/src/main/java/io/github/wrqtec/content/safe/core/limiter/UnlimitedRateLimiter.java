@@ -9,8 +9,8 @@ final class UnlimitedRateLimiter implements RateLimiter {
 
     static final UnlimitedRateLimiter INSTANCE = new UnlimitedRateLimiter();
 
-    private static final RateLimiter.Permit PERMIT = Permit.acquired(() -> {
-    });
+    /** release 为纯空操作且无内部状态：不走 {@link Permit#acquired(Runnable)}，避免共享 synchronized 实例成为全局锁 */
+    private static final RateLimiter.Permit PERMIT = new NoopPermit();
 
     private UnlimitedRateLimiter() {
     }
@@ -23,5 +23,18 @@ final class UnlimitedRateLimiter implements RateLimiter {
     @Override
     public String name() {
         return "unlimited";
+    }
+
+    private static final class NoopPermit implements RateLimiter.Permit {
+
+        @Override
+        public boolean acquired() {
+            return true;
+        }
+
+        @Override
+        public void release() {
+            // unlimited 许可不持有任何资源
+        }
     }
 }

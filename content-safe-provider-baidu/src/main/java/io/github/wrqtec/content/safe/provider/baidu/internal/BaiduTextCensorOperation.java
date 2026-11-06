@@ -29,9 +29,9 @@ public class BaiduTextCensorOperation implements AuditOperation {
 
     public BaiduTextCensorOperation(ProviderPlan plan, BaiduCensorClient client,
                                     BaiduAuditResultNormalizer normalizer) {
-        this.plan = Asserts.notNull(plan, "plan must not be null");
-        this.client = Asserts.notNull(client, "client must not be null");
-        this.normalizer = Asserts.notNull(normalizer, "normalizer must not be null");
+        this.plan = Asserts.notNull(plan, "plan");
+        this.client = Asserts.notNull(client, "client");
+        this.normalizer = Asserts.notNull(normalizer, "normalizer");
         this.capabilities = AuditCapabilities.builder()
                 .contentTypes(ContentType.TEXT)
                 .sync(true)
@@ -50,7 +50,7 @@ public class BaiduTextCensorOperation implements AuditOperation {
 
     @Override
     public AuditResult audit(AuditRequest request) {
-        Asserts.notNull(request, "request must not be null");
+        Asserts.notNull(request, "request");
         if (!capabilities.supports(request)) {
             throw new UnsupportedContentException("baidu text censor only supports TEXT content");
         }

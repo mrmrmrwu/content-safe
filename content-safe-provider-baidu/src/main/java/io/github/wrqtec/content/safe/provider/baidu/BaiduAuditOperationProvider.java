@@ -32,8 +32,8 @@ public class BaiduAuditOperationProvider implements AuditOperationProvider {
     private final BaiduAuditResultNormalizer normalizer;
 
     public BaiduAuditOperationProvider(BaiduProviderProperties properties, BaiduCensorClient client) {
-        this.properties = Asserts.notNull(properties, "properties must not be null");
-        this.client = Asserts.notNull(client, "client must not be null");
+        this.properties = Asserts.notNull(properties, "properties");
+        this.client = Asserts.notNull(client, "client");
         this.normalizer = new BaiduAuditResultNormalizer();
     }
 
@@ -49,7 +49,7 @@ public class BaiduAuditOperationProvider implements AuditOperationProvider {
 
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
-        Asserts.notNull(scene, "scene must not be null");
+        Asserts.notNull(scene, "scene");
         String strategyId = properties.getScenes().get(scene.code());
         if (strategyId == null) {
             return List.of();
