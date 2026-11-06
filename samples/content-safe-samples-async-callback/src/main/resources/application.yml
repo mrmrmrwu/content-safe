@@ -1,0 +1,4 @@
+content:
+  safe:
+    # 回调验签密钥：FakeCallbackVerifier 校验 header x-callback-token 是否等于该值
+    callback-secret: demo-callback-secret

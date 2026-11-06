@@ -17,5 +17,18 @@
 
     <modules>
         <module>content-safe-samples-basic</module>
+        <module>content-safe-samples-routing-failover</module>
+        <module>content-safe-samples-async-callback</module>
     </modules>
+
+    <build>
+        <plugins>
+            <!-- 使子模块可直接 mvn spring-boot:run 启动演示（不绑定生命周期，不影响 verify） -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring-boot.version}</version>
+            </plugin>
+        </plugins>
+    </build>
 </project>
