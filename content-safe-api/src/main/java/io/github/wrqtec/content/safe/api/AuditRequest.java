@@ -1,0 +1,150 @@
+package io.github.wrqtec.content.safe.api;
+
+import java.util.Map;
+
+import io.github.wrqtec.content.safe.api.enums.ContentType;
+import io.github.wrqtec.content.safe.api.util.Asserts;
+
+/**
+ * 统一审核请求。不可变；业务代码只传业务场景 code（如 {@code nickname}），
+ * 云厂商场景 ID 只允许出现在 yml 配置与 provider 内部。
+ *
+ * @author L.David
+ */
+public record AuditRequest(
+        String scene,
+        ContentType type,
+        ContentRef content,
+        String dataId,
+        AuditContext context,
+        AuditOptions options,
+        Map<String, Object> passThrough) {
+
+    public AuditRequest {
+        Asserts.notBlank(scene, "scene");
+        Asserts.notNull(type, "type");
+        Asserts.notNull(content, "content");
+        options = options == null ? AuditOptions.defaults() : options;
+        passThrough = passThrough == null ? Map.of() : Map.copyOf(passThrough);
+    }
+
+    /**
+     * 文本审核快捷构造。
+     */
+    public static AuditRequest text(String scene, String text) {
+        return builder().scene(scene).type(ContentType.TEXT).content(ContentRef.text(text)).build();
+    }
+
+    /**
+     * 图片审核快捷构造。
+     */
+    public static AuditRequest image(String scene, ContentRef content) {
+        return builder().scene(scene).type(ContentType.IMAGE).content(content).build();
+    }
+
+    /**
+     * 创建构建器。
+     *
+     * @return 新构建器
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * {@link AuditRequest} 构建器。
+     */
+    public static final class Builder {
+
+        private String scene;
+        private ContentType type;
+        private ContentRef content;
+        private String dataId;
+        private AuditContext context;
+        private AuditOptions options;
+        private Map<String, Object> passThrough;
+
+        private Builder() {
+        }
+
+        /**
+         * 业务场景 code（如 {@code nickname}），必填。
+         *
+         * @param scene 业务场景 code
+         * @return 本构建器
+         */
+        public Builder scene(String scene) {
+            this.scene = scene;
+            return this;
+        }
+
+        /**
+         * 内容类型，必填。
+         *
+         * @param type 内容类型
+         * @return 本构建器
+         */
+        public Builder type(ContentType type) {
+            this.type = type;
+            return this;
+        }
+
+        /**
+         * 待审核内容引用，必填。
+         *
+         * @param content 内容引用
+         * @return 本构建器
+         */
+        public Builder content(ContentRef content) {
+            this.content = content;
+            return this;
+        }
+
+        /**
+         * 业务侧数据唯一标识，用于异步任务与回调对账。
+         */
+        public Builder dataId(String dataId) {
+            this.dataId = dataId;
+            return this;
+        }
+
+        /**
+         * 发起方用户/设备上下文。
+         *
+         * @param context 审核上下文
+         * @return 本构建器
+         */
+        public Builder context(AuditContext context) {
+            this.context = context;
+            return this;
+        }
+
+        /**
+         * 单次审核的可选开关。
+         *
+         * @param options 审核选项
+         * @return 本构建器
+         */
+        public Builder option(AuditOptions options) {
+            this.options = options;
+            return this;
+        }
+
+        /**
+         * 透传给 provider 的扩展参数，同时可作为多租户成本标签载体。
+         */
+        public Builder passThrough(Map<String, Object> passThrough) {
+            this.passThrough = passThrough;
+            return this;
+        }
+
+        /**
+         * 构建不可变请求；scene/type/content 缺失时抛出 {@code InvalidRequestException}。
+         *
+         * @return 审核请求
+         */
+        public AuditRequest build() {
+            return new AuditRequest(scene, type, content, dataId, context, options, passThrough);
+        }
+    }
+}
