@@ -16,6 +16,6 @@
     <description>Runnable samples. Not published.</description>
 
     <modules>
-        <module>sample-basic</module>
+        <module>content-safe-samples-basic</module>
     </modules>
 </project>

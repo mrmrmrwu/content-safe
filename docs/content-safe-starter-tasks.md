@@ -9,7 +9,7 @@
 | 里程碑 | 目标 | 退出标准 |
 |---|---|---|
 | M0 设计冻结 | PRD/设计/任务评审通过 | 范围、API、配置 schema、发布仓库确定 |
-| M1 骨架可用 | api/spi/model/core/starter 骨架 | `sample-basic` 能启动并触发 mock provider |
+| M1 骨架可用 | api/spi/model/core/starter 骨架 | `content-safe-samples-basic` 能启动并触发 mock provider |
 | M2 首家 provider | 阿里或腾讯文本+图片同步 | 真实/沙箱接口契约测试通过 |
 | M3 多云与异步 | 第二家 provider、仲裁、图片异步/回调 | 主备切换、重复回调幂等、验签失败死信 |
 | M4 治理完善 | 健康、熔断、凭据链、指标、错误目录 | 故障演练通过，指标接入 Micrometer |
@@ -54,7 +54,7 @@
 | D5-D7 | T-005/T-006/T-010 | 输入治理、路由、配置属性与 fail-fast |
 | D8-D10 | T-011/T-020 | starter 装配、凭据链、ApplicationContextRunner 测试 |
 | D11-D12 | T-009/T-012 | 事件、HealthIndicator、Micrometer binder |
-| D13-D14 | T-022 最小样例 + mock provider | sample-basic 跑通，准备 M2 接首家真实 provider |
+| D13-D14 | T-022 最小样例 + mock provider | content-safe-samples-basic 跑通，准备 M2 接首家真实 provider |
 
 ## 4. Definition of Done
 
@@ -80,4 +80,4 @@
 2. #2 定义 `AuditRequest/AuditResult/ContentRef/SceneDefinition/ProviderPlan`。
 3. #3 定义 spi：`AuditOperationProvider/AuditOperation/AuditRouter/AuditTaskStore/CallbackVerifier`。
 4. #4 starter：`ContentSafeProperties` + `ContentSafeAutoConfiguration` + `ApplicationContextRunner` 测试。
-5. #5 `sample-basic`：用 mock provider 跑通 nickname 文本审核与 avatar 图片审核。
+5. #5 `content-safe-samples-basic`：用 mock provider 跑通 nickname 文本审核与 avatar 图片审核。

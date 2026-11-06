@@ -10,8 +10,8 @@
         <version>0.1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sample-basic</artifactId>
-    <name>sample-basic</name>
+    <artifactId>content-safe-samples-basic</artifactId>
+    <name>content-safe-samples-basic</name>
     <description>Minimal runnable sample: inject ContentSafeTemplate, audit text with a mock provider.</description>
 
     <dependencies>

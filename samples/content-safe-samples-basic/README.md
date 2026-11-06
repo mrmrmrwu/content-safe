@@ -1,4 +1,4 @@
-# sample-basic
+# content-safe-samples-basic
 
 最小可运行样例：引入 `content-safe-spring-boot-starter` + 一个 mock 供应商，演示：
 
@@ -10,7 +10,7 @@
 ## 运行
 
 ```bash
-mvn -pl samples/sample-basic -am spring-boot:run -pl samples/sample-basic
+mvn -pl samples/content-safe-samples-basic -am spring-boot:run -pl samples/content-safe-samples-basic
 ```
 
 或先 `mvn clean verify` 再运行 `SampleBasicApplication` 主类。期望日志：
