@@ -1,0 +1,9 @@
+{
+  "Code": 200,
+  "Message": "OK",
+  "RequestId": "req-text-pass-001",
+  "Data": {
+    "labels": "",
+    "reason": "{\"riskLevel\":\"none\"}"
+  }
+}

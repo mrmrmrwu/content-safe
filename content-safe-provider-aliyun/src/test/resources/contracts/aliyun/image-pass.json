@@ -1,0 +1,14 @@
+{
+  "code": 200,
+  "msg": "OK",
+  "requestId": "req-image-pass-001",
+  "data": {
+    "RiskLevel": "none",
+    "Result": [
+      {
+        "Label": "nonLabel",
+        "Confidence": 99.9
+      }
+    ]
+  }
+}

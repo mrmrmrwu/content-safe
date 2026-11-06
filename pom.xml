@@ -23,6 +23,7 @@
         <module>content-safe-spi</module>
         <module>content-safe-model</module>
         <module>content-safe-core</module>
+        <module>content-safe-provider-aliyun</module>
         <module>content-safe-spring-boot-starter</module>
         <module>content-safe-bom</module>
         <module>samples</module>
@@ -38,6 +39,8 @@
         <junit-jupiter.version>5.10.5</junit-jupiter.version>
         <archunit.version>1.3.0</archunit.version>
         <lombok.version>1.18.36</lombok.version>
+        <aliyun-green.version>3.6.6</aliyun-green.version>
+        <gson.version>2.11.0</gson.version>
 
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.1</maven-surefire-plugin.version>
@@ -69,8 +72,20 @@
             </dependency>
             <dependency>
                 <groupId>io.github.wrqtec</groupId>
+                <artifactId>content-safe-provider-aliyun</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.wrqtec</groupId>
                 <artifactId>content-safe-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+
+            <!-- 阿里云内容安全 2.0 SDK（optional，不进入使用方编译期传递依赖） -->
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>green20220302</artifactId>
+                <version>${aliyun-green.version}</version>
             </dependency>
 
             <dependency>

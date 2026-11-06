@@ -1,0 +1,9 @@
+{
+  "Code": 200,
+  "Message": "OK",
+  "RequestId": "req-text-review-001",
+  "Data": {
+    "labels": "ad_001",
+    "reason": "{\"riskLevel\":\"medium\",\"riskWords\":\"兼职刷单\"}"
+  }
+}

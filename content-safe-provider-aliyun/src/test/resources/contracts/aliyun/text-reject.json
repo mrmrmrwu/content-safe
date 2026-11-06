@@ -1,0 +1,9 @@
+{
+  "Code": 200,
+  "Message": "OK",
+  "RequestId": "req-text-reject-001",
+  "Data": {
+    "labels": "porn_001,contraband_002",
+    "reason": "{\"riskLevel\":\"high\",\"confidence\":98.5,\"riskWords\":\"示例命中词\"}"
+  }
+}

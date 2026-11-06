@@ -111,6 +111,9 @@ public class ContentSafeProperties {
     @Data
     public static class ProviderProperties {
 
+        /** 是否启用该供应商（默认 false，显式开启才装配） */
+        private boolean enabled;
+
         /** 访问密钥 ID（敏感，禁止进入日志与异常消息） */
         private String ak;
 
@@ -122,6 +125,9 @@ public class ContentSafeProperties {
 
         /** 地域 ID */
         private String regionId;
+
+        /** 业务场景 code → 供应商场景/服务标识的映射（如 nickname → nickname_detection） */
+        private Map<String, String> scenes = new LinkedHashMap<>();
 
         /** 供应商级扩展配置，透传给对应 CredentialsProvider / 客户端 */
         private Map<String, String> extra = new LinkedHashMap<>();

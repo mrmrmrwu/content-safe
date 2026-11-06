@@ -1,0 +1,20 @@
+{
+  "code": 200,
+  "msg": "OK",
+  "requestId": "req-image-reject-001",
+  "data": {
+    "RiskLevel": "high",
+    "Result": [
+      {
+        "Label": "porn",
+        "Confidence": 92.5,
+        "Description": "疑似色情内容",
+        "RiskLevel": "high"
+      },
+      {
+        "Label": "nonLabel",
+        "Confidence": 88.0
+      }
+    ]
+  }
+}

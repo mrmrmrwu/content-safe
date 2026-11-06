@@ -202,10 +202,20 @@ content.safe:
   providers:
     aliyun:
       enabled: true
-      type: aliyun
-      region: cn-hangzhou
+      region-id: cn-hangzhou        # endpoint 缺省推导 green-cip.<regionId>.aliyuncs.com
+      ak: xxx                       # 缺省回退环境变量 CONTENT_SAFE_ALIYUN_AK
+      sk: xxx                       # 缺省回退环境变量 CONTENT_SAFE_ALIYUN_SK
+      # security-token: 可选（STS），缺省回退 CONTENT_SAFE_ALIYUN_STSTOKEN
+      scenes:                       # 业务场景 code → 云厂商 serviceCode（只进 provider）
+        nickname: nickname_detection
+        avatar: baselineCheck
+        resume_title: resume_title_detection
+      extra:                        # 可选：HTTP 超时（毫秒）
+        connectTimeoutMs: "3000"
+        readTimeoutMs: "5000"
+      # --- 以下为规划形态，T-013 尚未落地 ---
       credentials:
-        type: static
+        type: static                # 规划：static / sts / ram-role / secret-manager
         access-key-id: xxx
         access-key-secret: xxx
       features:
@@ -218,25 +228,21 @@ content.safe:
         manual-review: false
       plans:
         text-sync:
-          product: content-detection
-          api-version: "1.0"
-          operation: TextScan
+          product: green-cip
+          api-version: "2022-03-02"
+          operation: TextModeration
           mode: SYNC
         image-sync:
-          product: content-detection
-          api-version: "1.0"
-          operation: ImageSyncScan
-          mode: SYNC_BATCH
-        image-async:
-          product: content-detection
-          api-version: "1.0"
+          product: green-cip
+          api-version: "2022-03-02"
+          operation: ImageModeration
+          mode: SYNC
+        image-async:                # 待 T-019
+          product: green-cip
+          api-version: "2022-03-02"
           operation: ImageAsyncScan
           mode: ASYNC_CALLBACK
           enabled: false
-      scenes:
-        nickname: nickname_detection
-        avatar: baselineCheck_face
-        resume_title: resume_title_detection
 
   route:
     default-policy: PRIORITY

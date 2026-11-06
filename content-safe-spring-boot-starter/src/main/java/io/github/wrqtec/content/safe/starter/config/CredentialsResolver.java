@@ -2,7 +2,6 @@ package io.github.wrqtec.content.safe.starter.config;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -10,6 +9,7 @@ import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
+import io.github.wrqtec.content.safe.spi.CredentialsSupport;
 
 /**
  * 凭据解析链：优先委托给注册了对应 {@link CredentialsProvider} 的实现（如 STS/CAM/KMS 扩展），
@@ -22,18 +22,10 @@ import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
  */
 public class CredentialsResolver {
 
-    /** 环境变量前缀，如 CONTENT_SAFE_ALIYUN_AK */
-    private static final String ENV_PREFIX = "CONTENT_SAFE_";
-
     /** 供应商 config 子树与静态配置中的密钥 key */
     private static final String KEY_AK = "ak";
     private static final String KEY_SK = "sk";
     private static final String KEY_SECURITY_TOKEN = "securityToken";
-
-    /** 环境变量后缀 */
-    private static final String ENV_SUFFIX_AK = "AK";
-    private static final String ENV_SUFFIX_SK = "SK";
-    private static final String ENV_SUFFIX_STS_TOKEN = "STSTOKEN";
 
     private final Map<String, CredentialsProvider> providers = new HashMap<>();
     private final ContentSafeProperties properties;
@@ -73,21 +65,11 @@ public class CredentialsResolver {
         String ak = stringConfig(config, KEY_AK);
         String sk = stringConfig(config, KEY_SK);
         String token = stringConfig(config, KEY_SECURITY_TOKEN);
-        if (isBlank(ak)) {
-            ak = envLookup.apply(envKey(provider, ENV_SUFFIX_AK));
-        }
-        if (isBlank(sk)) {
-            sk = envLookup.apply(envKey(provider, ENV_SUFFIX_SK));
-        }
-        if (isBlank(token)) {
-            token = envLookup.apply(envKey(provider, ENV_SUFFIX_STS_TOKEN));
-        }
-        if (isBlank(ak) || isBlank(sk)) {
-            throw new ConfigInvalidException("missing credentials for provider '" + provider
-                    + "': configure " + ContentSafeProperties.PREFIX + ".providers." + provider + ".ak/sk"
-                    + " or env " + envKey(provider, ENV_SUFFIX_AK) + "/" + envKey(provider, ENV_SUFFIX_SK));
-        }
-        return new Credentials(ak, sk, token);
+        return CredentialsSupport.resolveStatic(provider, ak, sk, token, envLookup)
+                .orElseThrow(() -> new ConfigInvalidException("missing credentials for provider '" + provider
+                        + "': configure " + ContentSafeProperties.PREFIX + ".providers." + provider + ".ak/sk"
+                        + " or env " + CredentialsSupport.accessKeyIdEnvKey(provider)
+                        + "/" + CredentialsSupport.accessKeySecretEnvKey(provider)));
     }
 
     /** 将供应商配置展开为 SPI 约定的 config 子树 */
@@ -113,11 +95,6 @@ public class CredentialsResolver {
     private static String stringConfig(Map<String, Object> config, String key) {
         Object value = config.get(key);
         return value instanceof String s ? s : null;
-    }
-
-    private static String envKey(String provider, String suffix) {
-        return ENV_PREFIX + provider.replace('-', '_').toUpperCase(Locale.ROOT)
-                + "_" + suffix;
     }
 
     private static boolean isBlank(String value) {
