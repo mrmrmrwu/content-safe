@@ -42,6 +42,13 @@ import org.springframework.core.io.ClassPathResource;
 @EnableConfigurationProperties(ContentSafeProperties.class)
 public class ContentSafeAutoConfiguration {
 
+    /** 启动期配置契约校验（纯内存检查）：schema-version 等不支持即 fail-fast */
+    @Bean
+    @ConditionalOnMissingBean
+    public ContentSafeConfigValidator contentSafeConfigValidator(ContentSafeProperties properties) {
+        return new ContentSafeConfigValidator(properties);
+    }
+
     /** 自动导入 classpath:content-safe/scenes.json（不存在则忽略） */
     @Bean
     @ConditionalOnMissingBean(JsonSceneDefinitionProvider.class)

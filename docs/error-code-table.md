@@ -20,6 +20,8 @@
 
 ## 使用约定
 
+- **启动诊断**：启动/装配期抛出的 `ContentSafeException` 由 starter 内置 `ContentSafeFailureAnalyzer`
+  （`META-INF/spring.factories` 注册）翻译为 Spring Boot `APPLICATION FAILED TO START` 可读报告（错误码 + 出错 Bean + 原因 + 修复动作），见接入指南 §7。
 - **重试语义**：`retryable` 为是的错误（`PROVIDER_NOT_AVAILABLE` / `PROVIDER_CALL_ERROR` / `ALL_PROVIDER_FAILED`）core 会自动 failover 到下一候选 provider；只有所有候选都失败才抛给调用方，此时可按 `retryable` 决定业务侧重试。
 - **敏感信息**：异常 message 不得包含 accessKey/secret/签名 URL/用户内容原文；provider 侧统一经 `ErrorMapper` 脱敏（长 token 掩码、截断）。
 - **观测**：异常不直接落日志即吞，core 路径会同步发布事件（`ProviderDegradedEvent` / `ProviderThrottledEvent` / `CallbackDeadLetterEvent`），指标见 `ContentSafeMetrics`。

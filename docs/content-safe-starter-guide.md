@@ -192,3 +192,24 @@ content:
 - **自定义 provider**：实现 `AuditOperationProvider`（一 provider 一类，可出多个 `AuditOperation`）+ 提供 `@AutoConfiguration` 与 `META-INF/spring/...AutoConfiguration.imports`，声明能力（`AuditCapabilities`）与限额（`OperationLimits`）。最小演示见 [../samples/content-safe-samples-basic](../samples/content-safe-samples-basic)。
 - **默认 Bean 全部 `@ConditionalOnMissingBean`**：`AuditRouter`、`AuditArbitrationPolicy`、`AuditTaskStore`、`CredentialsProvider`、`ContentRefNormalizer`、`EvidenceRedactor`、`AuditListener`、`RateLimiterRegistry`、`CircuitBreakerRegistry` 均可覆盖。
 - **Java SPI**：`META-INF/services` 注册 `AuditOperationProvider`/`SceneDefinitionProvider`/`AuditResultNormalizer` 等扩展点（见设计文档 §7.1）。
+
+## 7. 启动失败诊断（FailureAnalyzer）
+
+`content.safe.*` 配置非法时，starter 启动即 fail-fast（错误码见 [error-code-table.md](error-code-table.md)），并由内置的
+`ContentSafeFailureAnalyzer` 把异常翻译为 Spring Boot 标准的 `APPLICATION FAILED TO START` 报告，格式为
+"错误码 + 出错 Bean + 原因 + 修复动作"，例如：
+
+```text
+APPLICATION FAILED TO START
+***************************
+Description:
+    content-safe startup failed with code CONFIG_INVALID (while creating bean 'arbitrationPolicyRegistry')
+    unknown arbitration policy: NOPE (available: [FIRST_NON_PASS])
+Action:
+    Set content.safe.defaults.arbitration (or scenes.<code>.defaultArbitration) to a registered policy
+    such as FIRST_NON_PASS, or register an AuditArbitrationPolicy bean whose name() matches the configured value.
+```
+
+覆盖的诊断场景：配置缺失（凭据/仲裁策略/schema 版本）、场景未注册（`SCENE_NOT_CONFIGURED`）、
+特性未实现（`UNSUPPORTED_FEATURE`）、内容形态不支持（`UNSUPPORTED_CONTENT`）、provider 不可用等。
+报告只含错误码与配置键名，绝不输出 accessKey/secret/用户内容原文。

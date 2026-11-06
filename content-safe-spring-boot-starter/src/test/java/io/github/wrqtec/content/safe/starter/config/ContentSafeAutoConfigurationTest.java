@@ -4,6 +4,7 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
+import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.core.SceneRegistry;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
@@ -70,7 +71,21 @@ class ContentSafeAutoConfigurationTest {
     @Test
     void unknownArbitrationPolicyFailsStartup() {
         runner.withPropertyValues("content.safe.defaults.arbitration=NOPE")
-                .run(context -> assertThat(context).hasFailed());
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(ConfigInvalidException.class);
+                });
+    }
+
+    @Test
+    void unsupportedSchemaVersionFailsFast() {
+        runner.withPropertyValues("content.safe.schema-version=99")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure()).hasRootCauseInstanceOf(ConfigInvalidException.class);
+                    assertThat(context.getStartupFailure().getCause())
+                            .hasMessageContaining("content.safe.schema-version");
+                });
     }
 
     @Configuration(proxyBeanMethods = false)
