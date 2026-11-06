@@ -17,7 +17,7 @@ SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6
 | 批量审核 | ❌ | `maxBatchSize=1` |
 | 异步查询 / 回调 | ⏳ | 待 T-019（ImageAsyncScan 系列） |
 | OCR | ⏳ | 2.0 service 能力，未接入 |
-| AIGC 检测 | ⏳ | service `ai_art_detection` 预留 |
+| AIGC 检测 | ✅ | 配置期：场景 service 配为 `aigcDetector`/`aigcDetectorFull` 时操作自动声明 aigcDetect 能力位，请求期开关按能力位门控（来源：help.aliyun.com 文档 2642717，查阅日期 2026-11-06） |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
 | 回调验签（CallbackVerifier） | ⏳ | 待 T-019 |
 | suggestion 映射 | ✅ | riskLevel 三档：none/low→PASS，medium→REVIEW，high→REJECT；缺失时回退标签判空 |
@@ -43,7 +43,7 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 | --- | --- | --- |
 | 文本同步审核（TMS TextModeration） | ✅ | BizType 由 `scenes.<sceneCode>` 映射；Content 自动 Base64(UTF-8) 编码 |
 | 图片同步审核（IMS ImageModeration） | ✅ | URL（FileUrl）/ base64（FileContent）/ bytes（内部编码）三通道 |
-| AIGC 检测 | ✅ | `aigcScenes.<sceneCode>` 独立配置，Type=IMAGE_AIGC，仅 IMAGE 场景生效 |
+| AIGC 检测 | ✅ | 双通道：`aigcScenes.<sceneCode>` 配置期路由（TEXT/IMAGE 均生效，Type=TEXT_AIGC/IMAGE_AIGC）+ 请求期 `AuditOptions.withAigcDetect(true)` 切换 Type（来源：cloud.tencent.com/product/1124 文档 51860，查阅日期 2026-11-06） |
 | 风控字段映射（User/Device） | ✅ | `AuditContext.userId/deviceId/ip` → TMS/IMS User/Device |
 | GIF 截帧 | ✅ | extra 配置 `gifInterval` / `gifMaxFrames` |
 | 批量审核 | ❌ | `maxBatchSize=1` |
@@ -176,3 +176,22 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 ## huawei
 
 ⏳ 未实现（规划见 docs/content-safe-starter-design.md §8）。
+
+## 平台级能力（core/starter，与具体供应商无关）
+
+### AIGC 检测开关（请求期）
+
+- `AuditOptions.withAigcDetect(true)` 声明本次审核需要 AIGC 识别（AI 生成内容检测）。
+- `AuditCapabilities.supports()` 单向门控：开关打开而操作未声明 `aigcDetect` 能力位时直接过滤该操作；
+  开关关闭/缺省不影响任何路由（配置期 AIGC 场景不受开关影响）。
+- 供应商支持面见上表：腾讯（Type 请求期切换）、阿里（service 码配置期路由）已接入；
+  baidu/shumei/volcengine 未声明该能力位（未验证不编造）。
+
+### 人审闭环（REVIEW 终态归一）
+
+- 机审 `REVIEW` 结果发布 `ReviewEvent`（同步/查询路径由 core 模板发布，回调路径由 CallbackDispatcher 发布），
+  业务方经 `AuditListener` 消费后转人审队列。
+- 业务方调用 `ContentSafeTemplate.resolveReview(ReviewResolution)` 落终态：
+  归一为 `AuditResult`（source=`AuditSource.MANUAL`、finalResult=true、suggestion=PASS/REJECT 对应决议）。
+- `taskId` 存在时同步迁移异步任务终态（幂等，已终态抛 InvalidRequestException）；
+  注入 `ReviewResultSink` SPI 时先回写后迁移（回写失败任务保持 PENDING，可整体重试）。

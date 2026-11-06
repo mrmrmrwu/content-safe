@@ -44,6 +44,8 @@
 | T-023 | 文档 | quick start/config reference/guides/FAQ ✅ | P0 | M4 | 含限制、合规、Feature Matrix |
 | T-024 | 发布流水线 | GPG/SBOM/Central/GitHub Packages ✅（凭据注入需发布时配置，见 docs/release-guide.md） | P0 | M4 | artifacts 发布与校验 |
 | T-025 | 兼容与 deprecation policy | 文档 + japicmp/revapi ✅ | P1 | M4 | CI 检查 api/spi 破坏变更 |
+| T-026 | AIGC 检测开关 | AuditOptions 请求期开关 + 能力位单向门控 + 腾讯/阿里接入 ✅ | P1 | T-013/T-014 | 支持面见 Feature Matrix 平台级能力节 |
+| T-027 | 人审闭环 | ReviewEvent 发布 + resolveReview 终态归一 + ReviewResultSink 回写 ✅ | P1 | T-007 | MANUAL 终态、sink 先行、任务幂等迁移 |
 
 ## 3. 最近两周启动计划
 

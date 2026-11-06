@@ -25,6 +25,8 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 - 多云路由：主备切换、成本优先、多结果仲裁（如 `FIRST_NON_PASS`）。
 - 异步任务：图片异步提交/查询/回调，回调验签、幂等、死信处理。
 - 治理内建：健康探测、熔断限流（operation 级）、统一错误码、审计事件、Micrometer 指标。
+- AIGC 识别：请求期开关（`AuditOptions.withAigcDetect`），按能力位单向门控，不支持的供应商快速失败而非静默降级。
+- 人审闭环：机审 REVIEW 经 `ReviewEvent` 出口、`resolveReview` 终态归一（source=MANUAL、finalResult=true）、`ReviewResultSink` 回写，异步任务幂等迁移。
 - 依赖干净：默认零 HTTP/JSON 传递依赖（JDK HttpClient + SPI 可替换），云 SDK 全部 optional。
 - 更多... 见 [设计文档](docs/content-safe-starter-design.md)
 

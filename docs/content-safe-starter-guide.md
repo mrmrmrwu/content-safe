@@ -105,7 +105,7 @@ content:
         region: ap-guangzhou
         scenes:
           comment: your-biztype       # 业务场景 → 腾讯云 BizType（控制台配置）
-        aigc-scenes:                  # 可选：AIGC 识别（Type=IMAGE_AIGC，仅 IMAGE 场景）
+        aigc-scenes:                  # 可选：AIGC 识别独立路由（TEXT/IMAGE 均生效，Type=TEXT_AIGC/IMAGE_AIGC）
           ai-art: your-aigc-biztype
         extra:
           gifInterval: "2"            # 可选：GIF 截帧
@@ -260,3 +260,52 @@ Action:
 覆盖的诊断场景：配置缺失（凭据/仲裁策略/schema 版本）、场景未注册（`SCENE_NOT_CONFIGURED`）、
 特性未实现（`UNSUPPORTED_FEATURE`）、内容形态不支持（`UNSUPPORTED_CONTENT`）、provider 不可用等。
 报告只含错误码与配置键名，绝不输出 accessKey/secret/用户内容原文。
+
+## 8. AIGC 检测与人审闭环
+
+### 8.1 AIGC 检测开关（请求期）
+
+单次审核要求同时识别 AI 生成内容（AIGC 灌水/AI 生成评论等）：
+
+```java
+AuditResult result = contentSafeTemplate.audit(AuditRequest.builder()
+        .scene("comment")
+        .type(ContentType.TEXT)
+        .content(ContentRef.text(text))
+        .options(AuditOptions.defaults().withAigcDetect(true))
+        .build());
+```
+
+语义为**单向门控**（详见 [provider-feature-matrix.md](provider-feature-matrix.md) 平台级能力节）：
+
+- 开关打开而当前供应商操作未声明 `aigcDetect` 能力位时，该操作被路由过滤——不会静默降级为普通审核；
+- 开关关闭/缺省不影响任何路由，配置期 AIGC 独立场景（如腾讯 `aigc-scenes`、阿里 `aigcDetector` service 码）不受开关影响；
+- 腾讯：开关在请求期把 Type 切换为 `TEXT_AIGC`/`IMAGE_AIGC`；阿里：AIGC 是独立 Service 码（`aigcDetector`），走场景配置路由，操作自动声明能力位；
+- baidu/shumei/volcengine 未声明该能力位（未验证不编造），打开开关会直接路由失败。
+
+### 8.2 人审闭环（REVIEW 终态归一）
+
+机审 `REVIEW` 不再是死端，三步走完闭环：
+
+**1）订阅人审事件**：实现 `AuditListener`，消费 `ReviewEvent`（eventType=`REVIEW`），转人审队列。
+同步/查询/回调三条路径都会发布（回调由 `CallbackDispatcher` 在任务终态迁移成功后发布）。
+
+**2）人审完成后回写终态**：
+
+```java
+AuditResult manual = contentSafeTemplate.resolveReview(ReviewResolution.of(
+        "comment",              // scene
+        "dataId-123",           // 机审结果 dataId
+        taskId,                 // 异步任务 ID，同步审核产生的 REVIEW 传 null
+        ReviewDecision.REJECT,  // APPROVE→终态 PASS / REJECT→终态 REJECT
+        "alice",                // 复核人，可空
+        "确认违规"));            // 备注，可空
+```
+
+归一后的终态结果：`source=AuditSource.MANUAL`、`finalResult=true`、suggestion 按决议取
+`PASS`/`REJECT`；`taskId` 存在时同步迁移异步任务终态（幂等，已终态抛 `InvalidRequestException`），
+并发布 `AuditEvent`。
+
+**3）（可选）注入回写出口**：实现 `ReviewResultSink` Bean，starter 按 0..1 装配；
+执行顺序为**先回写后迁移**——sink 失败时任务保持 PENDING，业务可整体重试；
+未注入 sink 时仅做终态归一与事件发布。
