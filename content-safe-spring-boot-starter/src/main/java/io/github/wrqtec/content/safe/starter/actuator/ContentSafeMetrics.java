@@ -8,8 +8,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
- * Micrometer 审计指标：以 AuditListener 形式接入事件流。
- * 注意：tag 只使用低基数字段（scene / suggestion / provider），绝不出现内容与密钥。
+ * Micrometer 审计指标：以 AuditListener 形式接入事件流
+ * 注意：tag 只使用低基数字段（scene / suggestion / provider），绝不出现内容与密钥
  *
  * @author L.David
  */

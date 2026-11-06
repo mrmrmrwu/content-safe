@@ -10,7 +10,7 @@ import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.spi.AuditTaskStore;
 
 /**
- * 默认内存任务存储。生产环境应替换为 DB/Redis 实现（对外 Bean 默认可被覆盖）。
+ * 默认内存任务存储，生产环境应替换为 DB/Redis 实现（对外 Bean 默认可被覆盖）
  *
  * @author L.David
  */

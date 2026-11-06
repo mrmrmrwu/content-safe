@@ -10,9 +10,9 @@ import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 
 /**
- * 仲裁策略注册表：按场景解析生效的仲裁策略。
- * 优先级：scenes.&lt;code&gt;.defaultArbitration &gt; defaults.arbitration。
- * 构造时即校验所有配置的策略名可解析，非法配置启动期抛出 {@link ConfigInvalidException}。
+ * 仲裁策略注册表：按场景解析生效的仲裁策略
+ * 优先级：scenes.&lt;code&gt;.defaultArbitration &gt; defaults.arbitration
+ * 构造时即校验所有配置的策略名可解析，非法配置启动期抛出 {@link ConfigInvalidException}
  *
  * @author L.David
  */

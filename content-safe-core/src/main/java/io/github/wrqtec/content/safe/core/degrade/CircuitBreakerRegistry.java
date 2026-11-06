@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.function.Supplier;
 
 /**
- * 熔断器注册表：按 planKey 懒加载。线程安全。
+ * 熔断器注册表：按 planKey 懒加载，线程安全
  *
  * @author L.David
  */
@@ -17,7 +17,7 @@ public class CircuitBreakerRegistry {
     private final Supplier<CircuitBreaker> factory;
 
     /**
-     * 默认构造：使用 {@link SlidingWindowCircuitBreaker} 默认参数。
+     * 默认构造：使用 {@link SlidingWindowCircuitBreaker} 默认参数
      */
     public CircuitBreakerRegistry() {
         this(SlidingWindowCircuitBreaker::new);
@@ -31,7 +31,7 @@ public class CircuitBreakerRegistry {
     }
 
     /**
-     * 获取（或懒创建）指定 planKey 的熔断器。
+     * 获取（或懒创建）指定 planKey 的熔断器
      *
      * @param planKey 供应商操作键（provider:operation）
      * @return 熔断器，永不为 null
@@ -41,7 +41,7 @@ public class CircuitBreakerRegistry {
     }
 
     /**
-     * 当前所有熔断器状态快照（用于健康检查与监控，不触发任何远程调用）。
+     * 当前所有熔断器状态快照（用于健康检查与监控，不触发任何远程调用）
      *
      * @return planKey → 熔断状态
      */

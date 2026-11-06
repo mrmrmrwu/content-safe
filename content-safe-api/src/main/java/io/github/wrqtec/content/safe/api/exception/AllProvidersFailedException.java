@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 路由链上全部供应商调用失败。
+ * 路由链上全部供应商调用失败
  *
  * @author L.David
  */

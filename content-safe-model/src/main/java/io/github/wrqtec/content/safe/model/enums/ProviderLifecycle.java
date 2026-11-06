@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.model.enums;
 
 /**
- * 供应商/产品生命周期。DEPRECATED 起装配告警，EOL 建议迁移，REMOVED 拒绝装配。
+ * 供应商/产品生命周期。DEPRECATED 起装配告警，EOL 建议迁移，REMOVED 拒绝装配
  *
  * @author L.David
  */

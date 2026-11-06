@@ -5,7 +5,7 @@ import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.enums.ProviderLifecycle;
 
 /**
- * 供应商操作计划：一次可调用的供应商能力单元。不可变。
+ * 供应商操作计划：一次可调用的供应商能力单元。不可变
  *
  * @param provider   供应商 key（yml 配置键，如 {@code aliyun}）
  * @param product    产品线（如阿里 content-detection）
@@ -36,7 +36,7 @@ public record ProviderPlan(
     }
 
     /**
-     * 路由与熔断隔离键：provider + operation。
+     * 路由与熔断隔离键：provider + operation
      */
     public String planKey() {
         return provider + ":" + operation;

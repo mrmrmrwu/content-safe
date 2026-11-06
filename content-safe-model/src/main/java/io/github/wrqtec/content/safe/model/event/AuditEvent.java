@@ -6,7 +6,7 @@ import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 审核完成事件。
+ * 审核完成事件
  *
  * @author L.David
  */

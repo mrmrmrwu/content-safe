@@ -11,8 +11,8 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * content.safe 前缀的配置绑定。密钥（ak/sk/callbackSecret）仅用于装配供应商客户端，
- * 任何情况下不得进入日志或异常消息。
+ * content.safe 前缀的配置属性绑定：密钥（ak/sk/callbackSecret）仅用于装配供应商客户端，
+ * 任何情况下不得进入日志或异常消息
  *
  * @author L.David
  */

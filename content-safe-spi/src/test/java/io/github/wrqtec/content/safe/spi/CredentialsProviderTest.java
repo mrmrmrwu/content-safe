@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link CredentialsProvider} 及其 {@link CredentialsProvider.Credentials} 单元测试。
+ * {@link CredentialsProvider} 及其 {@link CredentialsProvider.Credentials} 单元测试
  *
  * @author L.David
  */

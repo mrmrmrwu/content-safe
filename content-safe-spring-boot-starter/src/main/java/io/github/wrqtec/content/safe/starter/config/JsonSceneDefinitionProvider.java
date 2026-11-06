@@ -18,10 +18,10 @@ import io.github.wrqtec.content.safe.spi.SceneDefinitionProvider;
 import org.springframework.core.io.Resource;
 
 /**
- * 从 classpath:content-safe/scenes.json 加载业务场景定义。
+ * 从 classpath:content-safe/scenes.json 加载业务场景定义
  * 文件不存在视为未配置（返回空列表）；文件存在但非法
  * （JSON 错误、schemaVersion 不支持、type 超出 v1 范围等）在启动期
- * 即抛 {@link ConfigInvalidException}。
+ * 即抛 {@link ConfigInvalidException}
  *
  * @author L.David
  */

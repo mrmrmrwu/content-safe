@@ -7,7 +7,7 @@ import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.enums.HealthStatus;
 
 /**
- * 供应商操作健康快照，由后台 {@code ProviderHealthProbe} 异步刷新。不可变。
+ * 供应商操作健康快照，由后台 {@code ProviderHealthProbe} 异步刷新。不可变
  *
  * @author L.David
  */
@@ -26,7 +26,7 @@ public record ProviderHealth(
     }
 
     /**
-     * 构造"未配置"健康快照。
+     * 构造"未配置"健康快照
      *
      * @param provider  供应商 key
      * @param operation 操作名
@@ -37,7 +37,7 @@ public record ProviderHealth(
     }
 
     /**
-     * 是否可承接流量（UP 或 DEGRADED）。
+     * 是否可承接流量（UP 或 DEGRADED）
      *
      * @return true 表示可用
      */

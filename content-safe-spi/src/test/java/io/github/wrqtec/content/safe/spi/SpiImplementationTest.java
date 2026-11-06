@@ -25,13 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 用一个最小"自定义 provider"验证 SPI 可完整实现（对应 T-003 验收标准）。
+ * 用一个最小"自定义 provider"验证 SPI 可完整实现（对应 T-003 验收标准）
  *
  * @author L.David
  */
 class SpiImplementationTest {
 
-    /** 最小自定义操作实现。 */
+    /** 最小自定义操作实现 */
     static class FakeOperation implements AuditOperation {
 
         private final ProviderPlan plan = new ProviderPlan("fake", "p", "1", "textScan", null, null, null, null);
@@ -59,7 +59,7 @@ class SpiImplementationTest {
         }
     }
 
-    /** 最小自定义 provider 实现。 */
+    /** 最小自定义 provider 实现 */
     static class FakeProvider implements AuditOperationProvider {
 
         @Override
@@ -78,7 +78,7 @@ class SpiImplementationTest {
         }
     }
 
-    /** 最小任务存储实现（内存版雏形，验证 SPI 可实现）。 */
+    /** 最小任务存储实现（内存版雏形，验证 SPI 可实现） */
     static class InMemoryTaskStore implements AuditTaskStore {
 
         private final Map<String, AuditTask> store = new ConcurrentHashMap<>();

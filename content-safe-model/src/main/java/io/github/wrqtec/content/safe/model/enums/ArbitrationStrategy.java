@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.model.enums;
 
 /**
- * 多供应商仲裁策略。
+ * 多供应商仲裁策略
  *
  * @author L.David
  */

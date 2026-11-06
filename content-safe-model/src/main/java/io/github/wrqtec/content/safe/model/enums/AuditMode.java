@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.model.enums;
 
 /**
- * 供应商操作模式。
+ * 供应商操作模式
  *
  * @author L.David
  */

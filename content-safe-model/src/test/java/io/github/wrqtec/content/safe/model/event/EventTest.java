@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * 事件 record（{@link AuditEvent} 等）单元测试。
+ * 事件 record（{@link AuditEvent} 等）单元测试
  *
  * @author L.David
  */

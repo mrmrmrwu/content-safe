@@ -30,8 +30,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 
 /**
- * ContentSafe 自动装配。仅做条件装配与配置绑定，不含任何审核编排逻辑；
- * 所有对外 Bean 均 {@link ConditionalOnMissingBean}，业务方可整体替换。
+ * ContentSafe 自动装配，仅做条件装配与配置绑定，不含任何审核编排逻辑；
+ * 所有对外 Bean 均 {@link ConditionalOnMissingBean}，业务方可整体替换
  *
  * @author L.David
  */
@@ -103,7 +103,7 @@ public class ContentSafeAutoConfiguration {
     }
 
     /**
-     * 组合监听器。懒解析委托列表，避免组合器自身作为 AuditListener Bean 造成的循环依赖。
+     * 组合监听器，懒解析委托列表，避免组合器自身作为 AuditListener Bean 造成的循环依赖
      */
     @Bean
     @ConditionalOnMissingBean

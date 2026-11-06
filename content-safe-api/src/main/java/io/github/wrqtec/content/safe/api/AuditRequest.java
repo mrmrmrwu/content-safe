@@ -6,8 +6,8 @@ import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 统一审核请求。不可变；业务代码只传业务场景 code（如 {@code nickname}），
- * 云厂商场景 ID 只允许出现在 yml 配置与 provider 内部。
+ * 统一审核请求，不可变；业务代码只传业务场景 code（如 {@code nickname}），
+ * 云厂商场景 ID 只允许出现在 yml 配置与供应商内部
  *
  * @author L.David
  */
@@ -29,21 +29,21 @@ public record AuditRequest(
     }
 
     /**
-     * 文本审核快捷构造。
+     * 文本审核快捷构造
      */
     public static AuditRequest text(String scene, String text) {
         return builder().scene(scene).type(ContentType.TEXT).content(ContentRef.text(text)).build();
     }
 
     /**
-     * 图片审核快捷构造。
+     * 图片审核快捷构造
      */
     public static AuditRequest image(String scene, ContentRef content) {
         return builder().scene(scene).type(ContentType.IMAGE).content(content).build();
     }
 
     /**
-     * 创建构建器。
+     * 创建构建器
      *
      * @return 新构建器
      */
@@ -52,7 +52,7 @@ public record AuditRequest(
     }
 
     /**
-     * {@link AuditRequest} 构建器。
+     * {@link AuditRequest} 构建器
      */
     public static final class Builder {
 
@@ -68,7 +68,7 @@ public record AuditRequest(
         }
 
         /**
-         * 业务场景 code（如 {@code nickname}），必填。
+         * 业务场景 code（如 {@code nickname}），必填
          *
          * @param scene 业务场景 code
          * @return 本构建器
@@ -79,7 +79,7 @@ public record AuditRequest(
         }
 
         /**
-         * 内容类型，必填。
+         * 内容类型，必填
          *
          * @param type 内容类型
          * @return 本构建器
@@ -90,7 +90,7 @@ public record AuditRequest(
         }
 
         /**
-         * 待审核内容引用，必填。
+         * 待审核内容引用，必填
          *
          * @param content 内容引用
          * @return 本构建器
@@ -101,7 +101,7 @@ public record AuditRequest(
         }
 
         /**
-         * 业务侧数据唯一标识，用于异步任务与回调对账。
+         * 业务侧数据唯一标识，用于异步任务与回调对账
          */
         public Builder dataId(String dataId) {
             this.dataId = dataId;
@@ -109,7 +109,7 @@ public record AuditRequest(
         }
 
         /**
-         * 发起方用户/设备上下文。
+         * 发起方用户/设备上下文
          *
          * @param context 审核上下文
          * @return 本构建器
@@ -120,7 +120,7 @@ public record AuditRequest(
         }
 
         /**
-         * 单次审核的可选开关。
+         * 单次审核的可选开关
          *
          * @param options 审核选项
          * @return 本构建器
@@ -131,7 +131,7 @@ public record AuditRequest(
         }
 
         /**
-         * 透传给 provider 的扩展参数，同时可作为多租户成本标签载体。
+         * 透传给供应商的扩展参数，同时可作为多租户成本标签载体
          */
         public Builder passThrough(Map<String, Object> passThrough) {
             this.passThrough = passThrough;
@@ -139,7 +139,7 @@ public record AuditRequest(
         }
 
         /**
-         * 构建不可变请求；scene/type/content 缺失时抛出 {@code InvalidRequestException}。
+         * 构建不可变请求；scene/type/content 缺失时抛出 {@code InvalidRequestException}
          *
          * @return 审核请求
          */

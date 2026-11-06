@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 内容类型或引用方式超出供应商能力声明（{@code AuditCapabilities.supports()} 未通过）。
+ * 内容类型或引用方式超出供应商能力声明（{@code AuditCapabilities.supports()} 未通过）
  *
  * @author L.David
  */

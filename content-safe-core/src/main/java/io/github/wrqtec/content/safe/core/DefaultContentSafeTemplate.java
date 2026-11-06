@@ -34,15 +34,15 @@ import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 默认编排实现：场景解析 → 能力过滤 → 路由 → 熔断 → 执行（失败切换）→ 脱敏 → 事件。
- * 不感知任何具体供应商；所有供应商差异收敛在 provider 模块与 SPI 实现内。
+ * 默认编排实现：场景解析 → 能力过滤 → 路由 → 熔断 → 执行（失败转移）→ 脱敏 → 事件
+ * 不感知任何具体供应商；所有供应商差异收敛在 provider 模块与 SPI 实现内
  *
  * @author L.David
  */
 @Slf4j
 public class DefaultContentSafeTemplate implements ContentSafeTemplate {
 
-    /** 脱敏器通配 provider：匹配任意供应商。 */
+    /** 脱敏器通配 provider：匹配任意供应商 */
     private static final String ANY_PROVIDER = "*";
 
     private final SceneRegistry sceneRegistry;

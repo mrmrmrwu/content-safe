@@ -8,7 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 /**
- * 启动即演示：内置场景 + scenes.json 自定义场景各审核一次。
+ * 启动即演示：内置场景 + scenes.json 自定义场景各审核一次
  *
  * @author L.David
  */

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
- * spi 模块架构约束测试（ArchUnit）：禁止依赖 Spring/云厂商 SDK/序列化框架与 core 模块。
+ * spi 模块架构约束测试（ArchUnit）：禁止依赖 Spring/云厂商 SDK/序列化框架与 core 模块
  *
  * @author L.David
  */

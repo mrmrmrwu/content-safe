@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link ProviderPlan} 单元测试。
+ * {@link ProviderPlan} 单元测试
  *
  * @author L.David
  */

@@ -11,8 +11,8 @@ import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditRouter;
 
 /**
- * 默认路由：过滤 ACTIVE 生命周期 + 能力匹配，按 {@link AuditOperation#order()} 升序取首个。
- * 不感知任何具体供应商。
+ * 默认路由：过滤 ACTIVE 生命周期 + 能力匹配，按 {@link AuditOperation#order()} 升序取首个
+ * 不感知任何具体供应商
  *
  * @author L.David
  */

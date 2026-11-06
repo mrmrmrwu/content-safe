@@ -14,9 +14,9 @@ import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
 /**
  * 凭据解析链：优先委托给注册了对应 {@link CredentialsProvider} 的实现（如 STS/CAM/KMS 扩展），
  * 未注册时回退到静态凭据（content.safe.providers.&lt;name&gt;.ak/sk，缺省再查环境变量
- * CONTENT_SAFE_&lt;PROVIDER&gt;_AK / _SK）。
+ * CONTENT_SAFE_&lt;PROVIDER&gt;_AK / _SK）
  *
- * <p>安全约束：任何异常消息与日志只出现供应商名，绝不出现密钥值。
+ * <p>安全约束：任何异常消息与日志只出现供应商名，绝不出现密钥值
  *
  * @author L.David
  */
@@ -58,7 +58,7 @@ public class CredentialsResolver {
     }
 
     /**
-     * 解析指定供应商的访问密钥。
+     * 解析指定供应商的访问密钥
      *
      * @param provider 供应商 key（如 aliyun）
      * @throws ConfigInvalidException 凭据缺失时抛出（消息不含任何密钥值）

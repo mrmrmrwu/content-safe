@@ -6,9 +6,9 @@ import io.github.wrqtec.content.safe.api.enums.ContentRefType;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 待审核内容引用。不可变；{@code bytes} 与 {@code meta} 均做防御性拷贝。
+ * 待审核内容引用，不可变；{@code bytes} 与 {@code meta} 均做防御性拷贝
  *
- * <p>注意：{@code value}/{@code bytes} 属于用户内容原文，禁止进入日志与异常 message。</p>
+ * <p>注意：{@code value}/{@code bytes} 属于用户内容原文，禁止进入日志与异常 message</p>
  *
  * @author L.David
  */
@@ -26,7 +26,7 @@ public record ContentRef(ContentRefType type, String value, byte[] bytes, Map<St
     }
 
     /**
-     * 构造纯文本内容引用。
+     * 构造纯文本内容引用
      *
      * @param text 文本原文，非空白
      * @return 内容引用
@@ -36,7 +36,7 @@ public record ContentRef(ContentRefType type, String value, byte[] bytes, Map<St
     }
 
     /**
-     * 构造公网 URL 内容引用。
+     * 构造公网 URL 内容引用
      *
      * @param url 公网可访问的 URL，非空白
      * @return 内容引用
@@ -46,7 +46,7 @@ public record ContentRef(ContentRefType type, String value, byte[] bytes, Map<St
     }
 
     /**
-     * 构造 Base64 编码内容引用。
+     * 构造 Base64 编码内容引用
      *
      * @param base64 Base64 编码内容，非空白
      * @return 内容引用
@@ -56,7 +56,7 @@ public record ContentRef(ContentRefType type, String value, byte[] bytes, Map<St
     }
 
     /**
-     * 构造原始字节内容引用。
+     * 构造原始字节内容引用
      *
      * @param bytes 原始字节，非 {@code null}
      * @return 内容引用
@@ -66,7 +66,7 @@ public record ContentRef(ContentRefType type, String value, byte[] bytes, Map<St
     }
 
     /**
-     * 构造对象存储 key 内容引用。
+     * 构造对象存储 key 内容引用
      *
      * @param objectKey 对象存储 key，非空白
      * @return 内容引用

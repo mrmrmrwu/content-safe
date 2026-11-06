@@ -7,7 +7,7 @@ import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 命中风险标签事件。
+ * 命中风险标签事件
  *
  * @author L.David
  */

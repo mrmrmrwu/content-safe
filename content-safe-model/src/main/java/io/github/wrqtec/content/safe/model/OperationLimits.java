@@ -3,7 +3,7 @@ package io.github.wrqtec.content.safe.model;
 import java.time.Duration;
 
 /**
- * 供应商操作的限额声明。不可变；各字段为 null/0 表示未声明（不作限制）。
+ * 供应商操作的限额声明。不可变；各字段为 null/0 表示未声明（不作限制）
  *
  * @param maxConcurrency     最大并发
  * @param qps                每秒请求上限
@@ -22,7 +22,7 @@ public record OperationLimits(
         boolean multiSceneBilling) {
 
     /**
-     * 未声明任何限额。
+     * 未声明任何限额
      */
     public static OperationLimits unlimited() {
         return new OperationLimits(null, null, null, 0L, 0L, false);

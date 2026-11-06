@@ -7,10 +7,10 @@ import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 
 /**
- * 单条风险命中详情。不可变。
+ * 单条风险命中详情，不可变
  *
  * <p>{@code evidence} 必须已经过 {@code EvidenceRedactor} 脱敏/截断；
- * {@code raw} 默认不进入日志与审计事件正文。</p>
+ * {@code raw} 默认不进入日志与审计事件正文</p>
  *
  * @param labelPath       归一化标签路径，如 {@code porn/sexual_accusation}
  * @param labels          供应商原始标签链

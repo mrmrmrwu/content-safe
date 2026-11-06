@@ -5,7 +5,7 @@ import java.time.Instant;
 import io.github.wrqtec.content.safe.api.AuditResult;
 
 /**
- * 复审（人工复核）事件。
+ * 人工复核（REVIEW）事件
  *
  * @author L.David
  */

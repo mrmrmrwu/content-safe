@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.model.enums;
 
 /**
- * 异步任务状态机：PENDING 为唯一非终态。
+ * 异步任务状态机：PENDING 为唯一非终态
  *
  * @author L.David
  */
@@ -15,7 +15,7 @@ public enum TaskStatus {
     FAILED;
 
     /**
-     * 是否为终态。终态任务不允许再次迁移。
+     * 是否为终态。终态任务不允许再次迁移
      *
      * @return true 表示终态（SUCCEEDED/FAILED）
      */

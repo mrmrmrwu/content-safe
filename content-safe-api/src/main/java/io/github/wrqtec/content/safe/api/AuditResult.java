@@ -8,10 +8,10 @@ import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 
 /**
- * 统一审核结果。不可变。
+ * 统一审核结果，不可变
  *
  * <p>{@code ok} 仅表示"审核流程成功执行"，业务放行与否看 {@code suggestion}；
- * {@code suggestion == ERROR} 时不得当作 PASS 处理。</p>
+ * {@code suggestion == ERROR} 时不得当作 PASS 处理</p>
  *
  * @param ok          审核流程是否成功执行（与内容是否合规无关）
  * @param suggestion  归一化审核建议
@@ -48,7 +48,7 @@ public record AuditResult(
     }
 
     /**
-     * 是否业务放行：流程成功且建议为 {@link RiskSuggestion#PASS}。
+     * 是否业务放行：流程成功且建议为 {@link RiskSuggestion#PASS}
      *
      * @return 可放行返回 {@code true}
      */
@@ -57,7 +57,7 @@ public record AuditResult(
     }
 
     /**
-     * 创建构建器，默认 ok=true、suggestion=PASS、finalResult=true、source=SYNC。
+     * 创建构建器，默认 ok=true、suggestion=PASS、finalResult=true、source=SYNC
      *
      * @return 新构建器
      */
@@ -66,7 +66,7 @@ public record AuditResult(
     }
 
     /**
-     * {@link AuditResult} 构建器。
+     * {@link AuditResult} 构建器
      */
     public static final class Builder {
 
@@ -87,7 +87,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置审核流程是否成功执行。
+         * 设置审核流程是否成功执行
          *
          * @param ok 流程是否成功
          * @return 本构建器
@@ -98,7 +98,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置归一化审核建议。
+         * 设置归一化审核建议
          *
          * @param suggestion 审核建议
          * @return 本构建器
@@ -109,7 +109,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置是否为终态。
+         * 设置是否为终态
          *
          * @param finalResult 是否终态
          * @return 本构建器
@@ -120,7 +120,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置结果来源。
+         * 设置结果来源
          *
          * @param source 结果来源
          * @return 本构建器
@@ -131,7 +131,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置命中详情列表。
+         * 设置命中详情列表
          *
          * @param hits 命中详情
          * @return 本构建器
@@ -142,7 +142,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置供应商侧请求 ID。
+         * 设置供应商侧请求 ID
          *
          * @param requestId 供应商请求 ID
          * @return 本构建器
@@ -153,7 +153,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置业务侧数据唯一标识。
+         * 设置业务侧数据唯一标识
          *
          * @param dataId 数据标识
          * @return 本构建器
@@ -164,7 +164,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置实际执行审核的供应商。
+         * 设置实际执行审核的供应商
          *
          * @param provider 供应商 key
          * @return 本构建器
@@ -175,7 +175,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置供应商产品线。
+         * 设置供应商产品线
          *
          * @param product 产品线
          * @return 本构建器
@@ -186,7 +186,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置供应商 service/场景 ID。
+         * 设置供应商 service/场景 ID
          *
          * @param service 供应商场景 ID
          * @return 本构建器
@@ -197,7 +197,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置本次调用耗时。
+         * 设置本次调用耗时
          *
          * @param cost 调用耗时
          * @return 本构建器
@@ -208,7 +208,7 @@ public record AuditResult(
         }
 
         /**
-         * 设置供应商原始响应。
+         * 设置供应商原始响应
          *
          * @param raw 原始响应
          * @return 本构建器
@@ -219,7 +219,7 @@ public record AuditResult(
         }
 
         /**
-         * 构建不可变审核结果。
+         * 构建不可变审核结果
          *
          * @return 审核结果
          */

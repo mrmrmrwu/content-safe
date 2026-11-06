@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 请求参数非法。
+ * 请求参数非法
  *
  * @author L.David
  */

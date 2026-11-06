@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.model.enums;
 
 /**
- * 供应商健康状态。
+ * 供应商健康状态
  *
  * @author L.David
  */

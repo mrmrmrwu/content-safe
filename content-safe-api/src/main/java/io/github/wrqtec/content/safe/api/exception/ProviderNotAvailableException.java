@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 无可用供应商：未配置、熔断中或健康状态 DOWN。
+ * 无可用供应商：未配置、熔断中或健康状态 DOWN
  *
  * @author L.David
  */

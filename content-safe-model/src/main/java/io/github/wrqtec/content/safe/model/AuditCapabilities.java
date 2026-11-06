@@ -8,11 +8,11 @@ import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 供应商操作能力声明。任何 provider 调用前必须过 {@link #supports(AuditRequest)}，
- * 不支持就抛 {@code UnsupportedContentException}，禁止"先调了再说"。不可变。
+ * 供应商操作能力声明。任何供应商调用前必须先通过 {@link #supports(AuditRequest)} 校验，
+ * 不支持则抛出 {@code UnsupportedContentException}，禁止未通过能力校验直接调用。不可变
  *
  * <p>设计文档中的 {@code DataSize} 字段在此以 long（字节）表达，
- * 因为 model 模块不允许依赖 Spring。</p>
+ * 因为 model 模块不允许依赖 Spring</p>
  *
  * @author L.David
  */
@@ -41,7 +41,7 @@ public record AuditCapabilities(
     }
 
     /**
-     * 能力校验：内容类型 + 内容引用方式。
+     * 能力校验：内容类型 + 内容引用方式
      *
      * @param request 审核请求，不得为 null
      * @return true 表示该能力组合支持处理此请求
@@ -62,7 +62,7 @@ public record AuditCapabilities(
     }
 
     /**
-     * 创建 {@link AuditCapabilities} 的构建器。
+     * 创建 {@link AuditCapabilities} 的构建器
      *
      * @return 新的构建器实例
      */
@@ -71,7 +71,7 @@ public record AuditCapabilities(
     }
 
     /**
-     * {@link AuditCapabilities} 的构建器。
+     * {@link AuditCapabilities} 的构建器
      *
      * @author L.David
      */
@@ -195,7 +195,7 @@ public record AuditCapabilities(
         }
 
         /**
-         * 构建不可变的 {@link AuditCapabilities}。
+         * 构建不可变的 {@link AuditCapabilities}
          *
          * @return 能力声明实例
          */

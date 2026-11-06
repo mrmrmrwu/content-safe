@@ -13,8 +13,8 @@ import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.spi.SceneDefinitionProvider;
 
 /**
- * 场景注册表：内置场景 + 业务自定义场景（{@link SceneDefinitionProvider}）。
- * 业务 code 与云厂商场景 ID 解耦的唯一入口。线程安全（构造后只读）。
+ * 场景注册表：内置场景 + 业务自定义场景（{@link SceneDefinitionProvider}）
+ * 业务 code 与云厂商场景 ID 解耦的唯一入口，线程安全（构造后只读）
  *
  * @author L.David
  */
@@ -52,7 +52,7 @@ public class SceneRegistry {
     }
 
     /**
-     * 按场景 code 查找。
+     * 按场景 code 查找
      *
      * @param code 业务场景 code
      * @return 场景定义，不存在时为空
@@ -62,7 +62,7 @@ public class SceneRegistry {
     }
 
     /**
-     * 获取场景，不存在抛 {@link SceneNotConfiguredException}。
+     * 获取场景，不存在抛 {@link SceneNotConfiguredException}
      */
     public SceneDefinition require(String code) {
         return find(code).orElseThrow(() ->
@@ -70,7 +70,7 @@ public class SceneRegistry {
     }
 
     /**
-     * 全部场景（只读视图，构造时快照）。
+     * 全部场景（只读视图，构造时快照）
      *
      * @return code → 场景定义
      */

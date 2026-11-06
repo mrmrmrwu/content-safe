@@ -42,7 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DefaultContentSafeTemplateTest {
 
-    /** 可编程的假操作。 */
+    /** 可编程的假操作 */
     static class StubOperation implements AuditOperation {
 
         private final String provider;

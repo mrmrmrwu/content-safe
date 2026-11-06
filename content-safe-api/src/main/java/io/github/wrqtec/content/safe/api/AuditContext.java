@@ -5,7 +5,7 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 审核上下文：发起方用户/设备信息，供供应商风控字段与审计使用。不可变。
+ * 审核上下文：发起方用户/设备信息，供供应商风控字段与审计使用，不可变
  *
  * @author L.David
  */
@@ -16,7 +16,7 @@ public record AuditContext(String userId, String deviceId, String ip, Map<String
     }
 
     /**
-     * 仅带用户 ID 的上下文快捷构造。
+     * 仅带用户 ID 的上下文快捷构造
      *
      * @param userId 发起方用户 ID，非空白
      * @return 审核上下文
@@ -26,7 +26,7 @@ public record AuditContext(String userId, String deviceId, String ip, Map<String
     }
 
     /**
-     * 带用户 ID 与设备 ID 的上下文快捷构造。
+     * 带用户 ID 与设备 ID 的上下文快捷构造
      *
      * @param userId   发起方用户 ID，非空白
      * @param deviceId 发起方设备 ID，可为 {@code null}
@@ -37,7 +37,7 @@ public record AuditContext(String userId, String deviceId, String ip, Map<String
     }
 
     /**
-     * 完整上下文快捷构造。
+     * 完整上下文快捷构造
      *
      * @param userId   发起方用户 ID，非空白
      * @param deviceId 发起方设备 ID，可为 {@code null}

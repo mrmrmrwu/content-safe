@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 配置了当前版本未实现的特性（如 v1 启用 video）。
+ * 配置了当前版本未实现的特性（如 v1 启用 video）
  *
  * @author L.David
  */

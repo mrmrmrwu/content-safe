@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * {@link SceneDefinition} 单元测试。
+ * {@link SceneDefinition} 单元测试
  *
  * @author L.David
  */

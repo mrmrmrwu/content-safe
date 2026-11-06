@@ -8,7 +8,7 @@ import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
  * 业务场景定义。业务 code（如 {@code nickname}）与云厂商场景 ID 解耦，
- * 后者只允许出现在 yml 配置与 provider 内部。不可变。
+ * 后者只允许出现在 yml 配置与 provider 内部。不可变
  *
  * @author L.David
  */
@@ -26,7 +26,7 @@ public record SceneDefinition(
     }
 
     /**
-     * 创建场景定义（无描述、无扩展属性）。
+     * 创建场景定义（无描述、无扩展属性）
      *
      * @param code            业务场景 code
      * @param type            内容类型

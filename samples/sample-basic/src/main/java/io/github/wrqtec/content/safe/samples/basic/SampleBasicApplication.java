@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * 最小样例：引入 content-safe-spring-boot-starter 即可获得可注入的 ContentSafeTemplate。
+ * 最小样例：引入 content-safe-spring-boot-starter 后自动装配 ContentSafeTemplate，可直接注入使用
  *
  * @author L.David
  */

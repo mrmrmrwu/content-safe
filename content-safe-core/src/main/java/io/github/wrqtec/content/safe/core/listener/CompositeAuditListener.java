@@ -8,9 +8,9 @@ import io.github.wrqtec.content.safe.spi.AuditListener;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 组合监听器：逐个派发，单个监听器异常不影响其他监听器，也不影响主流程。
+ * 组合监听器：逐个派发，单个监听器异常不影响其他监听器，也不影响主流程
  * 支持 {@link Supplier} 懒解析委托列表，避免 Spring 容器中"组合器自身也是 AuditListener"
- * 导致的循环依赖。
+ * 导致的循环依赖
  *
  * @author L.David
  */
@@ -29,7 +29,7 @@ public class CompositeAuditListener implements AuditListener {
 
     /**
      * 懒解析构造：首次事件到达时才从 {@code delegatesSupplier} 取列表，
-     * 结果缓存后不再重复解析。
+     * 结果缓存后不再重复解析
      *
      * @param delegatesSupplier 监听器列表提供者
      */

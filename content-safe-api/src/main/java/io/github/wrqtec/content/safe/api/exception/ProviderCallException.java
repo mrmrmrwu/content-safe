@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 供应商调用失败：超时、限流、5xx、鉴权失效等。
+ * 供应商调用失败：超时、限流、5xx、鉴权失效等
  *
  * @author L.David
  */

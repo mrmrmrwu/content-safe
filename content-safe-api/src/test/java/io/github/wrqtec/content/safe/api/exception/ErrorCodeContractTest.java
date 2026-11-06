@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
- * 错误码是对外契约，修改必须走评审——本测试守护错误码字符串不被无意改动。
+ * 错误码是对外契约，修改必须走评审——本测试守护错误码字符串不被无意改动
  *
  * @author L.David
  */

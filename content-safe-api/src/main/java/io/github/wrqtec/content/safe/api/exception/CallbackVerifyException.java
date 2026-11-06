@@ -1,7 +1,7 @@
 package io.github.wrqtec.content.safe.api.exception;
 
 /**
- * 回调验签失败，回调应进入死信处理。
+ * 回调验签失败，回调应进入死信处理
  *
  * @author L.David
  */

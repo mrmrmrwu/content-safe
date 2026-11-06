@@ -21,16 +21,16 @@ import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 回调处理：验签 → 解析 → 任务终态迁移（幂等）→ 发事件。
+ * 回调处理：验签 → 解析 → 任务终态迁移（幂等）→ 发事件
  * 任何失败发布 {@link CallbackDeadLetterEvent} 死信事件并返回 {@code accepted=false}，
- * 禁止静默吞掉。回调原文与密钥不进日志。
+ * 不得静默丢弃；回调原文与密钥不进日志
  *
  * @author L.David
  */
 @Slf4j
 public class CallbackDispatcher {
 
-    /** 回调解析用占位场景名：回调与业务场景无关，仅用于向供应商取操作。 */
+    /** 回调解析用占位场景名：回调与业务场景无关，仅用于向供应商取操作 */
     private static final String CALLBACK_PROBE_SCENE = "_callback";
 
     private final Map<String, CallbackVerifier> verifiers;
@@ -59,7 +59,7 @@ public class CallbackDispatcher {
     }
 
     /**
-     * 处理回调。验签失败抛 {@link CallbackVerifyException}（并起死信）。
+     * 处理回调，验签失败抛 {@link CallbackVerifyException}（并转为死信）
      */
     public CallbackResult dispatch(CallbackRequest request) {
         CallbackVerifier verifier = verifiers.get(request.provider());

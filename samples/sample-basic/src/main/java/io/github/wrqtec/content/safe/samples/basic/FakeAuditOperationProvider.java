@@ -16,9 +16,9 @@ import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * Mock 供应商：演示如何实现 SPI。
- * 真实供应商（阿里云/腾讯等）在 provider-* 模块中以同样方式接入。
- * 规则：文本包含"违禁"判 REJECT，其余 PASS。
+ * Mock 供应商：演示如何实现 SPI
+ * 真实供应商（阿里云/腾讯等）在 provider-* 模块中以同样方式接入
+ * 规则：文本包含"违禁"判 REJECT，其余 PASS
  *
  * @author L.David
  */

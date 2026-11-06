@@ -3,7 +3,7 @@ package io.github.wrqtec.content.safe.api.util;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 
 /**
- * 对外 API 入参校验，校验失败抛出 {@link InvalidRequestException}。
+ * 对外 API 入参校验，校验失败抛出 {@link InvalidRequestException}
  *
  * @author L.David
  */
@@ -13,7 +13,7 @@ public final class Asserts {
     }
 
     /**
-     * 校验参数非空。
+     * 校验参数非空
      *
      * @param value 待校验值
      * @param name  参数名，用于异常信息
@@ -29,7 +29,7 @@ public final class Asserts {
     }
 
     /**
-     * 校验字符串非空白。
+     * 校验字符串非空白
      *
      * @param value 待校验字符串
      * @param name  参数名，用于异常信息

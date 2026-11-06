@@ -11,8 +11,8 @@ import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 
 /**
- * ContentSafe 健康指示器。仅汇总本地状态（场景数、供应商数、熔断器快照），
- * 不发起任何远程探测。
+ * ContentSafe 健康指示，仅汇总本地状态（场景数、供应商数、熔断器快照），
+ * 不发起任何远程探测
  *
  * @author L.David
  */

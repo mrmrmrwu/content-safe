@@ -3,7 +3,7 @@ package io.github.wrqtec.content.safe.model;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
- * 异步任务的供应商侧引用。不可变。
+ * 异步任务的供应商侧引用。不可变
  *
  * @param providerTaskId 供应商侧任务 ID
  * @param dataId         业务侧数据唯一标识

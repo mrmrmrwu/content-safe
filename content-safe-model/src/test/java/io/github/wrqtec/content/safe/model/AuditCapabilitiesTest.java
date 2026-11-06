@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link AuditCapabilities} 单元测试。
+ * {@link AuditCapabilities} 单元测试
  *
  * @author L.David
  */

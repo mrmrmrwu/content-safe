@@ -4,7 +4,7 @@ import java.time.Duration;
 import java.util.Map;
 
 /**
- * 单次审核的可选开关。字段为 {@code null} 表示未指定，由 provider 配置兜底。不可变。
+ * 单次审核的可选开关，字段为 {@code null} 表示未指定，由供应商配置兜底，不可变
  *
  * @author L.David
  */
@@ -15,7 +15,7 @@ public record AuditOptions(Boolean enableOcr, Boolean enableAigcDetect, Duration
     }
 
     /**
-     * 全部选项未指定的默认实例。
+     * 全部选项未指定的默认实例
      *
      * @return 默认审核选项
      */
@@ -24,7 +24,7 @@ public record AuditOptions(Boolean enableOcr, Boolean enableAigcDetect, Duration
     }
 
     /**
-     * 仅设置 OCR 开关的快捷构造。
+     * 仅设置 OCR 开关的快捷构造
      *
      * @param enableOcr 是否启用 OCR
      * @return 审核选项
@@ -34,7 +34,7 @@ public record AuditOptions(Boolean enableOcr, Boolean enableAigcDetect, Duration
     }
 
     /**
-     * 派生一个设置超时的新实例。
+     * 派生一个设置超时的新实例
      *
      * @param timeout 本次调用超时
      * @return 新审核选项
@@ -44,7 +44,7 @@ public record AuditOptions(Boolean enableOcr, Boolean enableAigcDetect, Duration
     }
 
     /**
-     * 派生一个设置 AIGC 检测开关的新实例。
+     * 派生一个设置 AIGC 检测开关的新实例
      *
      * @param enableAigcDetect 是否启用 AIGC 检测
      * @return 新审核选项

@@ -5,22 +5,22 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
- * 滑动窗口熔断器：窗口内失败率达到阈值即 OPEN，冷却期后进入 HALF_OPEN 放行探测流量，
- * 探测成功关闭，失败重新 OPEN。线程安全。
+ * 滑窗熔断器：滑窗内失败率达到阈值即 OPEN，冷却期后进入 HALF_OPEN 放行探测流量，
+ * 探测成功关闭，失败重新 OPEN，线程安全
  *
  * @author L.David
  */
 public class SlidingWindowCircuitBreaker implements CircuitBreaker {
 
-    /** 默认滑动窗口大小（调用次数）。 */
+    /** 默认滑窗大小（调用次数） */
     private static final int DEFAULT_WINDOW_SIZE = 20;
-    /** 默认失败率阈值（窗口内失败占比达到即熔断）。 */
+    /** 默认失败率阈值（滑窗内失败占比达到即熔断） */
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5D;
-    /** 默认最小统计调用数：窗口样本不足时不触发熔断。 */
+    /** 默认最小统计调用数：滑窗样本不足时不触发熔断 */
     private static final int DEFAULT_MIN_CALLS = 10;
-    /** 默认 OPEN 冷却时长，到期后进入 HALF_OPEN。 */
+    /** 默认 OPEN 冷却时长，到期后进入 HALF_OPEN */
     private static final Duration DEFAULT_OPEN_DURATION = Duration.ofSeconds(30);
-    /** 默认 HALF_OPEN 探测流量上限。 */
+    /** 默认 HALF_OPEN 探测流量上限 */
     private static final int DEFAULT_HALF_OPEN_MAX_CALLS = 3;
 
     private final int windowSize;
@@ -35,7 +35,7 @@ public class SlidingWindowCircuitBreaker implements CircuitBreaker {
     private int halfOpenInFlight;
 
     /**
-     * 默认参数构造。
+     * 默认参数构造
      */
     public SlidingWindowCircuitBreaker() {
         this(DEFAULT_WINDOW_SIZE, DEFAULT_FAILURE_RATE_THRESHOLD, DEFAULT_MIN_CALLS,
@@ -43,8 +43,8 @@ public class SlidingWindowCircuitBreaker implements CircuitBreaker {
     }
 
     /**
-     * @param windowSize           滑动窗口大小（调用次数）
-     * @param failureRateThreshold 失败率阈值，窗口内失败占比达到即 OPEN
+     * @param windowSize           滑窗大小（调用次数）
+     * @param failureRateThreshold 失败率阈值，滑窗内失败占比达到即 OPEN
      * @param minCalls             最小统计调用数，样本不足不熔断
      * @param openDuration         OPEN 冷却时长，到期进入 HALF_OPEN
      * @param halfOpenMaxCalls     HALF_OPEN 探测流量上限
@@ -74,7 +74,7 @@ public class SlidingWindowCircuitBreaker implements CircuitBreaker {
                 }
             }
             default -> {
-                // HALF_OPEN 继续向下走
+                // HALF_OPEN 继续向下执行
             }
         }
         // HALF_OPEN：限量放行探测流量

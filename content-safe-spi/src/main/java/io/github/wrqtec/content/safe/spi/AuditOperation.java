@@ -13,28 +13,28 @@ import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 
 /**
- * 供应商能力操作。由 core 路由，provider 实现。SPI 层不做配置解析，只做调用。
+ * 供应商能力操作。由 core 路由，provider 实现。SPI 层不做配置解析，只做调用
  *
  * @author L.David
  */
 public interface AuditOperation {
 
     /**
-     * 操作计划。
+     * 操作计划
      *
      * @return 该操作的计划声明，不为 null
      */
     ProviderPlan plan();
 
     /**
-     * 能力声明。
+     * 能力声明
      *
      * @return 该操作的能力声明，不为 null
      */
     AuditCapabilities capabilities();
 
     /**
-     * 同步审核。
+     * 同步审核
      *
      * @param request 审核请求，不得为 null
      * @return 归一化后的审核结果
@@ -42,7 +42,7 @@ public interface AuditOperation {
     AuditResult audit(AuditRequest request);
 
     /**
-     * 异步提交。默认不支持，抛 {@link UnsupportedFeatureException}。
+     * 异步提交。默认不支持，抛 {@link UnsupportedFeatureException}
      *
      * @param request 审核请求，不得为 null
      * @return 供应商侧任务引用
@@ -53,7 +53,7 @@ public interface AuditOperation {
     }
 
     /**
-     * 异步查询。默认不支持。
+     * 异步查询。默认不支持
      *
      * @param ref 供应商侧任务引用，不得为 null
      * @return 归一化后的审核结果
@@ -64,7 +64,7 @@ public interface AuditOperation {
     }
 
     /**
-     * 回调验签 + 解析。默认不支持。
+     * 回调验签 + 解析。默认不支持
      *
      * @param request 回调请求，不得为 null
      * @return 回调解析结果；默认实现返回拒绝
@@ -75,7 +75,7 @@ public interface AuditOperation {
     }
 
     /**
-     * 供 {@link io.github.wrqtec.content.safe.spi.AuditRouter} 排序/过滤使用。
+     * 供 {@link io.github.wrqtec.content.safe.spi.AuditRouter} 排序/过滤使用
      *
      * @return 排序值，数值越小优先级越高；默认 0
      */
@@ -84,7 +84,7 @@ public interface AuditOperation {
     }
 
     /**
-     * 是否支持当前请求。实现类可先走 {@code capabilities().supports(request)} 再叠加自定义规则。
+     * 是否支持当前请求。实现类可先调用 {@code capabilities().supports(request)} 再叠加自定义规则
      *
      * @param request 审核请求，不得为 null
      * @return true 表示可处理该请求
@@ -94,7 +94,7 @@ public interface AuditOperation {
     }
 
     /**
-     * 供应商侧批量提交，仅当 capabilities().batch() 为 true 时实现。
+     * 供应商侧批量提交，仅当 capabilities().batch() 为 true 时实现
      *
      * @param requests 批量审核请求列表
      * @return 与请求一一对应的审核结果列表

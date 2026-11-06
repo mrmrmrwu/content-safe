@@ -8,7 +8,7 @@ import com.tngtech.archunit.lang.ArchRule;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
- * 模块铁律守护：api 只允许依赖 JDK，不得依赖 Spring、云厂商 SDK、HTTP/JSON 框架。
+ * 模块铁律守护：api 只允许依赖 JDK，不得依赖 Spring、云厂商 SDK、HTTP/JSON 框架
  *
  * @author L.David
  */

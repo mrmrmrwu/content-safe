@@ -14,8 +14,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Actuator/Micrometer 可选装配：仅当对应类与 Bean 存在时生效。
- * 类型级 @ConditionalOnClass 保证缺少 actuator/micrometer 依赖时不加载实现类。
+ * Actuator/Micrometer 可选装配：仅当对应类与 Bean 存在时生效
+ * 类型级 @ConditionalOnClass 保证缺少 actuator/micrometer 依赖时不加载实现类
  *
  * @author L.David
  */
@@ -23,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 public class ContentSafeActuatorAutoConfiguration {
 
     /**
-     * 健康指示器装配，仅当 actuator 健康检查类存在时生效。
+     * 健康指示装配，仅当 actuator 健康检查类存在时生效
      *
      * @author L.David
      */
@@ -41,7 +41,7 @@ public class ContentSafeActuatorAutoConfiguration {
     }
 
     /**
-     * Micrometer 指标装配，仅当 MeterRegistry 可用时生效。
+     * Micrometer 指标装配，仅当 MeterRegistry 可用时生效
      *
      * @author L.David
      */
