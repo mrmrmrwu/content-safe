@@ -7,6 +7,8 @@ import io.github.wrqtec.content.safe.core.arbitration.FirstNonPassArbitrationPol
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.degrade.SlidingWindowCircuitBreaker;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.core.listener.CompositeAuditListener;
 import io.github.wrqtec.content.safe.core.router.PriorityAuditRouter;
 import io.github.wrqtec.content.safe.core.security.DefaultEvidenceRedactor;
@@ -82,6 +84,37 @@ public class ContentSafeAutoConfiguration {
                 cb.getOpenDuration(), cb.getHalfOpenMaxCalls()));
     }
 
+    /**
+     * 限流器注册表：生效额度 = overrides[planKey] > 全局 qps/maxConcurrency > plan 声明；
+     * enabled=false 时全部放行
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public RateLimiterRegistry rateLimiterRegistry(ContentSafeProperties properties) {
+        ContentSafeProperties.RateLimiterProperties rl = properties.getDefaults().getRateLimiter();
+        if (!rl.isEnabled()) {
+            return new RateLimiterRegistry((planKey, limits) -> RateLimiter.unlimited());
+        }
+        return new RateLimiterRegistry((planKey, limits) -> {
+            ContentSafeProperties.Limit override = rl.getOverrides().get(planKey);
+            Double qps = firstNonNull(override == null ? null : override.getQps(), rl.getQps(),
+                    limits == null ? null : limits.qps());
+            Integer maxConcurrency = firstNonNull(override == null ? null : override.getMaxConcurrency(),
+                    rl.getMaxConcurrency(), limits == null ? null : limits.maxConcurrency());
+            return RateLimiterRegistry.limiterOf(qps, maxConcurrency);
+        });
+    }
+
+    @SafeVarargs
+    private static <T> T firstNonNull(T... candidates) {
+        for (T candidate : candidates) {
+            if (candidate != null) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
     @Bean
     @ConditionalOnMissingBean
     public AuditTaskStore auditTaskStore() {
@@ -131,12 +164,13 @@ public class ContentSafeAutoConfiguration {
                                                    ObjectProvider<AuditOperationProvider> providers,
                                                    AuditRouter router,
                                                    CircuitBreakerRegistry breakers,
+                                                   RateLimiterRegistry limiters,
                                                    CompositeAuditListener listener,
                                                    ObjectProvider<EvidenceRedactor> redactors,
                                                    AuditTaskStore taskStore,
                                                    ObjectProvider<CallbackDispatcher> callbackDispatcher) {
         return new DefaultContentSafeTemplate(sceneRegistry, providers.orderedStream().toList(), router,
-                breakers, listener, redactors.orderedStream().toList(), taskStore,
+                breakers, limiters, listener, redactors.orderedStream().toList(), taskStore,
                 callbackDispatcher.getIfAvailable());
     }
 }

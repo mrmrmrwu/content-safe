@@ -3,6 +3,7 @@ package io.github.wrqtec.content.safe.starter.actuator;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderDegradedEvent;
+import io.github.wrqtec.content.safe.model.event.ProviderThrottledEvent;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,6 +20,8 @@ public class ContentSafeMetrics implements AuditListener {
     public static final String METRIC_AUDIT = "content.safe.audit";
     /** 供应商降级计数器名 */
     public static final String METRIC_PROVIDER_DEGRADED = "content.safe.provider.degraded";
+    /** 供应商限流计数器名 */
+    public static final String METRIC_PROVIDER_THROTTLED = "content.safe.provider.throttled";
 
     /** 低基数 tag key（契约：绝不出现内容与密钥） */
     private static final String TAG_SCENE = "scene";
@@ -46,6 +49,12 @@ public class ContentSafeMetrics implements AuditListener {
             Counter.builder(METRIC_PROVIDER_DEGRADED)
                     .tag(TAG_PROVIDER, String.valueOf(degraded.provider()))
                     .tag(TAG_OPERATION, String.valueOf(degraded.operation()))
+                    .register(registry)
+                    .increment();
+        } else if (event instanceof ProviderThrottledEvent throttled) {
+            Counter.builder(METRIC_PROVIDER_THROTTLED)
+                    .tag(TAG_PROVIDER, String.valueOf(throttled.provider()))
+                    .tag(TAG_OPERATION, String.valueOf(throttled.operation()))
                     .register(registry)
                     .increment();
         }

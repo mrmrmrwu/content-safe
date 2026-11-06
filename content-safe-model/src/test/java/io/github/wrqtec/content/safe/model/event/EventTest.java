@@ -27,6 +27,10 @@ class EventTest {
 
         CallbackDeadLetterEvent dead = new CallbackDeadLetterEvent("p", "verify failed", null);
         assertEquals("CALLBACK_DEAD_LETTER", dead.eventType());
+
+        ProviderThrottledEvent throttled = new ProviderThrottledEvent("p", "op", "rate limited", null);
+        assertEquals("PROVIDER_THROTTLED", throttled.eventType());
+        assertNotNull(throttled.occurredAt());
     }
 
     @Test

@@ -14,12 +14,16 @@ public class SlidingWindowCircuitBreaker implements CircuitBreaker {
 
     /** 默认滑窗大小（调用次数） */
     private static final int DEFAULT_WINDOW_SIZE = 20;
+
     /** 默认失败率阈值（滑窗内失败占比达到即熔断） */
     private static final double DEFAULT_FAILURE_RATE_THRESHOLD = 0.5D;
+
     /** 默认最小统计调用数：滑窗样本不足时不触发熔断 */
     private static final int DEFAULT_MIN_CALLS = 10;
+
     /** 默认 OPEN 冷却时长，到期后进入 HALF_OPEN */
     private static final Duration DEFAULT_OPEN_DURATION = Duration.ofSeconds(30);
+
     /** 默认 HALF_OPEN 探测流量上限 */
     private static final int DEFAULT_HALF_OPEN_MAX_CALLS = 3;
 

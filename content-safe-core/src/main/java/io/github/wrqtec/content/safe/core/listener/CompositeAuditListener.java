@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class CompositeAuditListener implements AuditListener {
 
     private final Supplier<List<AuditListener>> delegatesSupplier;
+
     private volatile List<AuditListener> delegates;
 
     /**

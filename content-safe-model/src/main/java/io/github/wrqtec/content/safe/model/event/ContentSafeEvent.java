@@ -9,7 +9,8 @@ import java.time.Instant;
  * @author L.David
  */
 public sealed interface ContentSafeEvent
-        permits AuditEvent, RiskHitEvent, ReviewEvent, ProviderDegradedEvent, CallbackDeadLetterEvent {
+        permits AuditEvent, RiskHitEvent, ReviewEvent, ProviderDegradedEvent, ProviderThrottledEvent,
+        CallbackDeadLetterEvent {
 
     /**
      * 事件类型标识（供序列化/路由）

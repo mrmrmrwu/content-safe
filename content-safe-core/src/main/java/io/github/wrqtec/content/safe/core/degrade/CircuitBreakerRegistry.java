@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 public class CircuitBreakerRegistry {
 
     private final ConcurrentMap<String, CircuitBreaker> breakers = new ConcurrentHashMap<>();
+
     private final Supplier<CircuitBreaker> factory;
 
     /**

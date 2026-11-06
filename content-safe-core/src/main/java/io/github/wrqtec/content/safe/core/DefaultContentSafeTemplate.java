@@ -21,10 +21,13 @@ import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderDegradedEvent;
+import io.github.wrqtec.content.safe.model.event.ProviderThrottledEvent;
 import io.github.wrqtec.content.safe.model.event.RiskHitEvent;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
@@ -49,6 +52,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private final List<AuditOperationProvider> providers;
     private final AuditRouter router;
     private final CircuitBreakerRegistry breakers;
+    private final RateLimiterRegistry limiters;
     private final AuditListener listener;
     private final List<EvidenceRedactor> redactors;
     private final AuditTaskStore taskStore;
@@ -59,6 +63,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      * @param providers          供应商操作提供器列表，可为 null（视为空）
      * @param router             路由器
      * @param breakers           熔断器注册表
+     * @param limiters           限流器注册表
      * @param listener           事件监听器
      * @param redactors          证据脱敏器列表，可为 null（视为空）
      * @param taskStore          异步任务存储
@@ -68,6 +73,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
                                       CircuitBreakerRegistry breakers,
+                                      RateLimiterRegistry limiters,
                                       AuditListener listener,
                                       List<EvidenceRedactor> redactors,
                                       AuditTaskStore taskStore,
@@ -76,6 +82,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         this.providers = providers == null ? List.of() : List.copyOf(providers);
         this.router = Asserts.notNull(router, "router");
         this.breakers = Asserts.notNull(breakers, "breakers");
+        this.limiters = Asserts.notNull(limiters, "limiters");
         this.listener = Asserts.notNull(listener, "listener");
         this.redactors = redactors == null ? List.of() : List.copyOf(redactors);
         this.taskStore = Asserts.notNull(taskStore, "taskStore");
@@ -101,9 +108,20 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             AuditOperation operation = router.route(request, remaining);
             remaining.remove(operation);
 
-            CircuitBreaker breaker = breakers.get(operation.plan().planKey());
+            String planKey = operation.plan().planKey();
+            // 限流先于熔断：避免在半开状态下因本地限流跳过而泄漏探测名额
+            RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
+            if (!permit.acquired()) {
+                failures.add(planKey + ": rate limited");
+                listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
+                        operation.plan().operation(), "rate limited", null));
+                log.debug("provider {} throttled on scene {}, fail over to next", planKey, scene.code());
+                continue;
+            }
+            CircuitBreaker breaker = breakers.get(planKey);
             if (!breaker.tryAcquire()) {
-                failures.add(operation.plan().planKey() + ": circuit open");
+                permit.release();
+                failures.add(planKey + ": circuit open");
                 continue;
             }
             try {
@@ -114,11 +132,13 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 return redacted;
             } catch (RuntimeException e) {
                 breaker.onFailure();
-                failures.add(operation.plan().planKey() + ": " + e.getClass().getSimpleName());
+                failures.add(planKey + ": " + e.getClass().getSimpleName());
                 listener.onEvent(new ProviderDegradedEvent(operation.plan().provider(),
                         operation.plan().operation(), e.getClass().getSimpleName(), null));
                 log.warn("provider {} degraded on scene {}, fail over to next",
                         operation.plan().planKey(), scene.code(), e);
+            } finally {
+                permit.release();
             }
         }
         throw new AllProvidersFailedException(
@@ -135,9 +155,17 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 .toList();
         AuditOperation operation = router.route(request, async);
 
-        CircuitBreaker breaker = breakers.get(operation.plan().planKey());
+        String planKey = operation.plan().planKey();
+        RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
+        if (!permit.acquired()) {
+            listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
+                    operation.plan().operation(), "rate limited", null));
+            throw new ProviderNotAvailableException("rate limited for " + planKey);
+        }
+        CircuitBreaker breaker = breakers.get(planKey);
         if (!breaker.tryAcquire()) {
-            throw new ProviderNotAvailableException("circuit open for " + operation.plan().planKey());
+            permit.release();
+            throw new ProviderNotAvailableException("circuit open for " + planKey);
         }
         try {
             AsyncTaskRef ref = operation.submitAsync(request);
@@ -148,6 +176,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         } catch (RuntimeException e) {
             breaker.onFailure();
             throw e;
+        } finally {
+            permit.release();
         }
     }
 

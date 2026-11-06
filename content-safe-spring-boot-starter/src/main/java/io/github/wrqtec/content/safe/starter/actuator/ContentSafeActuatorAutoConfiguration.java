@@ -2,6 +2,7 @@ package io.github.wrqtec.content.safe.starter.actuator;
 
 import io.github.wrqtec.content.safe.core.SceneRegistry;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
@@ -35,8 +36,10 @@ public class ContentSafeActuatorAutoConfiguration {
         @ConditionalOnMissingBean
         ContentSafeHealthIndicator contentSafeHealthIndicator(SceneRegistry sceneRegistry,
                                                               ObjectProvider<AuditOperationProvider> providers,
-                                                              CircuitBreakerRegistry breakers) {
-            return new ContentSafeHealthIndicator(sceneRegistry, providers.orderedStream().toList(), breakers);
+                                                              CircuitBreakerRegistry breakers,
+                                                              RateLimiterRegistry limiters) {
+            return new ContentSafeHealthIndicator(sceneRegistry, providers.orderedStream().toList(),
+                    breakers, limiters);
         }
     }
 

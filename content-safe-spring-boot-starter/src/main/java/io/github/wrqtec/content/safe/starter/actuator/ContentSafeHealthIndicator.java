@@ -6,6 +6,7 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.core.SceneRegistry;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -27,17 +28,22 @@ public class ContentSafeHealthIndicator implements HealthIndicator {
     private static final String DETAIL_PROVIDERS = "providers";
     /** 健康详情 key：处于 OPEN 状态的熔断器 key 列表 */
     private static final String DETAIL_OPEN_CIRCUIT_BREAKERS = "openCircuitBreakers";
+    /** 健康详情 key：限流器快照（planKey → 限流器名称） */
+    private static final String DETAIL_RATE_LIMITERS = "rateLimiters";
 
     private final SceneRegistry sceneRegistry;
     private final List<AuditOperationProvider> providers;
     private final CircuitBreakerRegistry breakers;
+    private final RateLimiterRegistry limiters;
 
     public ContentSafeHealthIndicator(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
-                                      CircuitBreakerRegistry breakers) {
+                                      CircuitBreakerRegistry breakers,
+                                      RateLimiterRegistry limiters) {
         this.sceneRegistry = sceneRegistry;
         this.providers = providers == null ? List.of() : List.copyOf(providers);
         this.breakers = breakers;
+        this.limiters = limiters;
     }
 
     @Override
@@ -52,6 +58,7 @@ public class ContentSafeHealthIndicator implements HealthIndicator {
                 .withDetail(DETAIL_SCENES, sceneRegistry.all().size())
                 .withDetail(DETAIL_PROVIDERS, providers.size())
                 .withDetail(DETAIL_OPEN_CIRCUIT_BREAKERS, open)
+                .withDetail(DETAIL_RATE_LIMITERS, limiters.snapshot())
                 .build();
     }
 }

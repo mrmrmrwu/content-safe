@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.exception.CallbackVerifyException;
-import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
@@ -34,9 +33,13 @@ public class CallbackDispatcher {
     private static final String CALLBACK_PROBE_SCENE = "_callback";
 
     private final Map<String, CallbackVerifier> verifiers;
+
     private final Map<String, AuditOperationProvider> providers;
+
     private final AuditTaskStore taskStore;
+
     private final AuditListener listener;
+
     private final String callbackSecret;
 
     public CallbackDispatcher(List<CallbackVerifier> verifiers,

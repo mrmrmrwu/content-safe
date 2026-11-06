@@ -46,4 +46,32 @@ class ContentSafePropertiesBindingTest {
         assertThat(bound.getProviders().get("aliyun").isEnabled()).isFalse();
         assertThat(bound.getProviders().get("aliyun").getScenes()).isEmpty();
     }
+
+    @Test
+    void rateLimiterDefaultsEnabledWithEmptyOverrides() {
+        ContentSafeProperties bound = bind(Map.of("content.safe.callback-secret", "s"));
+
+        ContentSafeProperties.RateLimiterProperties rl = bound.getDefaults().getRateLimiter();
+        assertThat(rl.isEnabled()).isTrue();
+        assertThat(rl.getQps()).isNull();
+        assertThat(rl.getMaxConcurrency()).isNull();
+        assertThat(rl.getOverrides()).isEmpty();
+    }
+
+    @Test
+    void rateLimiterBindsGlobalAndOverrides() {
+        ContentSafeProperties bound = bind(Map.of(
+                "content.safe.defaults.rate-limiter.enabled", "true",
+                "content.safe.defaults.rate-limiter.qps", "200",
+                "content.safe.defaults.rate-limiter.max-concurrency", "8",
+                "content.safe.defaults.rate-limiter.overrides.[aliyun:TextModeration].qps", "50",
+                "content.safe.defaults.rate-limiter.overrides.[aliyun:TextModeration].max-concurrency", "2"));
+
+        ContentSafeProperties.RateLimiterProperties rl = bound.getDefaults().getRateLimiter();
+        assertThat(rl.getQps()).isEqualTo(200D);
+        assertThat(rl.getMaxConcurrency()).isEqualTo(8);
+        ContentSafeProperties.Limit override = rl.getOverrides().get("aliyun:TextModeration");
+        assertThat(override.getQps()).isEqualTo(50D);
+        assertThat(override.getMaxConcurrency()).isEqualTo(2);
+    }
 }

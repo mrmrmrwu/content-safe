@@ -75,6 +75,9 @@ public class ContentSafeProperties {
         /** 熔断器默认参数 */
         private CircuitBreakerProperties circuitBreaker = new CircuitBreakerProperties();
 
+        /** 限流器默认参数 */
+        private RateLimiterProperties rateLimiter = new RateLimiterProperties();
+
         /** 异步审核默认参数 */
         private AsyncProperties async = new AsyncProperties();
     }
@@ -96,6 +99,32 @@ public class ContentSafeProperties {
 
         /** 半开状态允许的最大探测请求数，默认 3 */
         private int halfOpenMaxCalls = 3;
+    }
+
+    @Data
+    public static class RateLimiterProperties {
+
+        /** 是否启用本地限流（默认 true；关闭后全部放行） */
+        private boolean enabled = true;
+
+        /** 全局 QPS 覆盖；为空时使用 plan 声明额度 */
+        private Double qps;
+
+        /** 全局并发上限覆盖；为空时使用 plan 声明额度 */
+        private Integer maxConcurrency;
+
+        /** 按 planKey（provider:operation）的额度覆盖，优先级最高 */
+        private Map<String, Limit> overrides = new LinkedHashMap<>();
+    }
+
+    @Data
+    public static class Limit {
+
+        /** QPS 上限；为空表示不限 */
+        private Double qps;
+
+        /** 并发上限；为空表示不限 */
+        private Integer maxConcurrency;
     }
 
     @Data

@@ -19,6 +19,7 @@ import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
 import io.github.wrqtec.content.safe.api.exception.SceneNotConfiguredException;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
+import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
@@ -26,6 +27,8 @@ import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.degrade.SlidingWindowCircuitBreaker;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.core.listener.CompositeAuditListener;
 import io.github.wrqtec.content.safe.core.router.PriorityAuditRouter;
 import io.github.wrqtec.content.safe.core.security.DefaultEvidenceRedactor;
@@ -47,20 +50,31 @@ class DefaultContentSafeTemplateTest {
 
         private final String provider;
         private final int order;
+        private final OperationLimits limits;
         private RuntimeException failure;
+        private int calls;
 
         StubOperation(String provider, int order) {
+            this(provider, order, null);
+        }
+
+        StubOperation(String provider, int order, OperationLimits limits) {
             this.provider = provider;
             this.order = order;
+            this.limits = limits;
         }
 
         void failWith(RuntimeException e) {
             this.failure = e;
         }
 
+        int calls() {
+            return calls;
+        }
+
         @Override
         public ProviderPlan plan() {
-            return new ProviderPlan(provider, "p", "1", "textScan", null, null, null, null);
+            return new ProviderPlan(provider, "p", "1", "textScan", null, null, limits, null);
         }
 
         @Override
@@ -75,6 +89,7 @@ class DefaultContentSafeTemplateTest {
 
         @Override
         public AuditResult audit(AuditRequest request) {
+            calls++;
             if (failure != null) {
                 throw failure;
             }
@@ -118,8 +133,13 @@ class DefaultContentSafeTemplateTest {
     }
 
     private DefaultContentSafeTemplate templateOf(AuditOperationProvider... providers) {
+        return templateOf(new RateLimiterRegistry(), providers);
+    }
+
+    private DefaultContentSafeTemplate templateOf(RateLimiterRegistry limiters,
+                                                  AuditOperationProvider... providers) {
         return new DefaultContentSafeTemplate(scenes, List.of(providers), new PriorityAuditRouter(),
-                new CircuitBreakerRegistry(), new CompositeAuditListener(List.of(recording)),
+                new CircuitBreakerRegistry(), limiters, new CompositeAuditListener(List.of(recording)),
                 List.of(new DefaultEvidenceRedactor()), new InMemoryAuditTaskStore(), null);
     }
 
@@ -209,7 +229,8 @@ class DefaultContentSafeTemplateTest {
         bad.failWith(new ProviderCallException("boom"));
         DefaultContentSafeTemplate template = new DefaultContentSafeTemplate(scenes,
                 List.of(providerOf(bad)), new PriorityAuditRouter(), registry,
-                new CompositeAuditListener(List.of()), List.of(), new InMemoryAuditTaskStore(), null);
+                new RateLimiterRegistry(), new CompositeAuditListener(List.of()), List.of(),
+                new InMemoryAuditTaskStore(), null);
 
         // 连续失败直至熔断
         for (int i = 0; i < 4; i++) {
@@ -218,5 +239,60 @@ class DefaultContentSafeTemplateTest {
         // 熔断后请求直接失败（不再调用 provider）
         assertThrows(AllProvidersFailedException.class, () -> template.text(Scenes.NICKNAME, "t"));
         assertEquals(CircuitBreaker.State.OPEN, registry.get("bad:textScan").state());
+    }
+
+    /** 始终拒绝的限流器（模拟额度耗尽） */
+    private static RateLimiter rejectingLimiter() {
+        return new RateLimiter() {
+            @Override
+            public Permit tryAcquire() {
+                return Permit.rejected();
+            }
+
+            @Override
+            public String name() {
+                return "reject-all";
+            }
+        };
+    }
+
+    @Test
+    void rateLimitedFailsOverToNextProvider() {
+        StubOperation throttled = new StubOperation("bad", 0);
+        StubOperation good = new StubOperation("good", 1);
+        RateLimiterRegistry limiters = new RateLimiterRegistry(
+                (planKey, limits) -> planKey.startsWith("bad") ? rejectingLimiter() : RateLimiter.unlimited());
+        DefaultContentSafeTemplate template = templateOf(limiters, providerOf(throttled), providerOf(good));
+
+        AuditResult result = template.text(Scenes.NICKNAME, "你好");
+        assertEquals("good", result.provider());
+        assertEquals(0, throttled.calls());
+        assertTrue(events.stream().anyMatch(e -> "PROVIDER_THROTTLED".equals(e.eventType())));
+    }
+
+    @Test
+    void allProvidersRateLimitedThrows() {
+        StubOperation a = new StubOperation("a", 0);
+        StubOperation b = new StubOperation("b", 1);
+        RateLimiterRegistry limiters = new RateLimiterRegistry((planKey, limits) -> rejectingLimiter());
+        DefaultContentSafeTemplate template = templateOf(limiters, providerOf(a), providerOf(b));
+
+        AllProvidersFailedException e = assertThrows(AllProvidersFailedException.class,
+                () -> template.text(Scenes.NICKNAME, "t"));
+        assertTrue(e.getMessage().contains("rate limited"));
+        assertEquals(2, events.stream().filter(ev -> "PROVIDER_THROTTLED".equals(ev.eventType())).count());
+    }
+
+    @Test
+    void concurrencyPermitReleasedOnFailure() {
+        // 并发上限 1：若异常路径许可泄漏，第二次调用会被限流而非再次打到 provider
+        OperationLimits limits = new OperationLimits(1, null, null, 0L, 0L, false);
+        StubOperation bad = new StubOperation("bad", 0, limits);
+        bad.failWith(new ProviderCallException("boom"));
+        DefaultContentSafeTemplate template = templateOf(providerOf(bad));
+
+        assertThrows(AllProvidersFailedException.class, () -> template.text(Scenes.NICKNAME, "t"));
+        assertThrows(AllProvidersFailedException.class, () -> template.text(Scenes.NICKNAME, "t"));
+        assertEquals(2, bad.calls());
     }
 }

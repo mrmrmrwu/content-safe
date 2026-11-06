@@ -13,10 +13,13 @@ public class DefaultEvidenceRedactor implements EvidenceRedactor {
 
     /** 通配 provider：匹配任意供应商 */
     private static final String ANY_PROVIDER = "*";
+
     /** 脱敏掩码 */
     private static final String MASK = "***";
+
     /** 证据两端各保留的可见字符数 */
     private static final int VISIBLE_EDGE_CHARS = 2;
+
     /** 证据长度不超过该值时整体打码 */
     private static final int MASK_ONLY_MAX_LENGTH = 2 * VISIBLE_EDGE_CHARS;
 

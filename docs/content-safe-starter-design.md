@@ -165,7 +165,7 @@ public record AuditCapabilities(
 6. 凭据解析：`CredentialsProvider`
 7. provider 调用 + normalizer 归一化
 8. 多结果 `AuditArbitrationPolicy` 聚合（若开启）
-9. 事件：audit/hit/review/degraded
+9. 事件：audit/hit/review/degraded/throttled
 10. metrics + audit log（脱敏）
 
 ### 5.2 图片异步与回调
@@ -180,7 +180,9 @@ public record AuditCapabilities(
 
 - 启动：仅校验配置完整性，不远程同步探测。
 - 运行：后台 `ProviderHealthProbe` 刷新快照。
-- 调用：operation 级 circuit breaker + rate limiter；半开试探恢复。
+- 调用：operation（planKey）级 circuit breaker + rate limiter（T-007 已落地）；半开试探恢复。
+  - 限流器：`RateLimiter`（令牌桶 QPS + 信号量并发，`RateLimiterRegistry` 按 planKey 懒加载）；额度取 `ProviderPlan.limits()`（qps/maxConcurrency）声明，可由 `content.safe.defaults.rate-limiter` 全局与 `overrides.<planKey>` 覆盖；未声明即不限流。
+  - 拒绝语义：本地限流拒绝记失败并 failover 到下一候选 provider（不发 HTTP 429），同时发布 `ProviderThrottledEvent`（指标 `content.safe.provider.throttled`）；全部候选失败抛 `AllProvidersFailedException`。并发许可在调用结束（成功或失败）即归还。
 - EOL：`ProviderLifecycle` 启动 warning/failure analyzer。
 
 ## 6. 配置设计
@@ -290,6 +292,23 @@ content.safe:
     arbitrate:
       enabled: false
       policy: FIRST_NON_PASS
+
+  defaults:
+    arbitration: FIRST_NON_PASS
+    failover: true
+    circuit-breaker:
+      window-size: 20
+      failure-rate-threshold: 0.5
+      min-calls: 10
+      open-duration: 30s
+      half-open-max-calls: 3
+    rate-limiter:                     # T-007 已落地
+      enabled: true                   # false 时全部不限流
+      # qps: 100                      # 全局默认 QPS；不配置时用 plan.limits() 声明值
+      # max-concurrency: 4            # 全局默认并发上限
+      overrides:                      # 按 planKey 覆盖（planKey = provider:operation）
+        "[aliyun:TextModeration]":
+          qps: 50
 ```
 
 配置类：`ContentSafeProperties`，使用 `@Validated` + configuration processor；启动 fail-fast。
@@ -351,7 +370,7 @@ starter 中所有默认 Bean 均 `@ConditionalOnMissingBean`，支持用户覆�
 
 - Health：`ContentSafeHealthIndicator` 聚合 operation 状态，health() 不重远程探测。
 - Metrics：provider/scene/suggestion/hit/latency/fallback/callback/cost estimate。
-- Events：`AuditEvent`、`RiskHitEvent`、`ReviewEvent`、`ProviderDegradedEvent`、`CallbackDeadLetterEvent`。
+- Events：`AuditEvent`、`RiskHitEvent`、`ReviewEvent`、`ProviderDegradedEvent`、`ProviderThrottledEvent`、`CallbackDeadLetterEvent`。
 - 错误码：`SCENE_NOT_CONFIGURED`、`UNSUPPORTED_CONTENT`、`PROVIDER_NOT_AVAILABLE`、`PROVIDER_CALL_ERROR`、`CALLBACK_VERIFY_FAILED`、`ALL_PROVIDER_FAILED`、`UNSUPPORTED_FEATURE`。
 - FailureAnalyzer：配置缺失、EOL provider、feature 未实现、scene 未映射。
 
