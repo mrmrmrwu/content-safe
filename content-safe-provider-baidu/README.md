@@ -32,9 +32,9 @@ content:
           comment: "101"          # 业务场景 code → 策略中心 strategyId（数字）
           avatar: ""              # 空字符串 = 不传 strategyId，走账号默认策略
         extra:
-          connectTimeoutMs: "3000"
-          readTimeoutMs: "10000"
-          # baseUrl: https://aip.baidubce.com   # 可选：覆盖默认 API 地址
+          connect-timeout-ms: "3000"
+          read-timeout-ms: "10000"
+          # base-url: https://aip.baidubce.com   # 可选：覆盖默认 API 地址
 ```
 
 未映射的场景不会注册操作（与其他 provider 一致，由路由跳过）。

@@ -42,8 +42,8 @@ public class BaiduProviderAutoConfiguration {
         properties.validate();
         CredentialsProvider.Credentials credentials = resolveCredentials(properties, credentialsProviders);
         String baseUrl = baseUrlOf(properties);
-        int connectTimeoutMs = timeoutOf(properties, "connectTimeoutMs", DEFAULT_CONNECT_TIMEOUT_MS);
-        int readTimeoutMs = timeoutOf(properties, "readTimeoutMs", DEFAULT_READ_TIMEOUT_MS);
+        int connectTimeoutMs = timeoutOf(properties, "connect-timeout-ms", DEFAULT_CONNECT_TIMEOUT_MS);
+        int readTimeoutMs = timeoutOf(properties, "read-timeout-ms", DEFAULT_READ_TIMEOUT_MS);
         BaiduAccessTokenManager tokenManager = new BaiduAccessTokenManager(
                 credentials.accessKeyId(), credentials.accessKeySecret(),
                 baseUrl, connectTimeoutMs, readTimeoutMs);
@@ -92,7 +92,7 @@ public class BaiduProviderAutoConfiguration {
     }
 
     private static String baseUrlOf(BaiduProviderProperties properties) {
-        String baseUrl = properties.getExtra().get("baseUrl");
+        String baseUrl = properties.getExtra().get("base-url");
         return baseUrl == null || baseUrl.isBlank() ? BaiduProviderConstants.BASE_URL : baseUrl;
     }
 

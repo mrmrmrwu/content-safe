@@ -25,10 +25,10 @@ import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
 public final class TencentSdkClientInvoker implements TencentClientInvoker {
 
     /** extra 配置键：连接超时（毫秒） */
-    public static final String EXTRA_CONNECT_TIMEOUT_MS = "connectTimeoutMs";
+    public static final String EXTRA_CONNECT_TIMEOUT_MS = "connect-timeout-ms";
 
     /** extra 配置键：读取超时（秒，SDK HttpProfile 单位为秒） */
-    public static final String EXTRA_READ_TIMEOUT_SECONDS = "readTimeoutSeconds";
+    public static final String EXTRA_READ_TIMEOUT_SECONDS = "read-timeout-seconds";
 
     /** 默认连接超时（毫秒） */
     private static final int DEFAULT_CONNECT_TIMEOUT_MS = 3000;

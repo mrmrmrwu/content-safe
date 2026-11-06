@@ -22,10 +22,10 @@ import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
 public final class TeaGreenClientInvoker implements GreenClientInvoker {
 
     /** extra 配置键：连接超时（毫秒） */
-    public static final String EXTRA_CONNECT_TIMEOUT_MS = "connectTimeoutMs";
+    public static final String EXTRA_CONNECT_TIMEOUT_MS = "connect-timeout-ms";
 
     /** extra 配置键：读取超时（毫秒） */
-    public static final String EXTRA_READ_TIMEOUT_MS = "readTimeoutMs";
+    public static final String EXTRA_READ_TIMEOUT_MS = "read-timeout-ms";
 
     /** 默认连接超时（毫秒） */
     private static final int DEFAULT_CONNECT_TIMEOUT_MS = 3000;

@@ -33,7 +33,7 @@ public class BaiduProviderProperties {
     /** 业务场景 code → 策略中心 strategyId（空字符串 = 默认策略） */
     private Map<String, String> scenes = new LinkedHashMap<>();
 
-    /** 扩展参数：connectTimeoutMs/readTimeoutMs（毫秒）、baseUrl（覆盖默认 API 地址） */
+    /** 扩展参数：connect-timeout-ms/read-timeout-ms（毫秒）、base-url（覆盖默认 API 地址） */
     private Map<String, String> extra = new LinkedHashMap<>();
 
     /**
