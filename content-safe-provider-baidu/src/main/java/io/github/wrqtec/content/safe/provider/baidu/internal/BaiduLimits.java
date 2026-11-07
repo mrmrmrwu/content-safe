@@ -7,7 +7,11 @@ import io.github.wrqtec.content.safe.model.OperationLimits;
 /**
  * 百度内容审核操作限额（用于本地限流与请求前置校验）
  *
- * <p>TODO: 复核限额与百度最新文档一致（https://cloud.baidu.com/doc/ANTIPORN，2026-11-06 调研）
+ * <p>数值来源（官方文档，查阅日期 2026-11-07）：
+ * 文本长度限 20000 字节、图片 base64 编码后 &lt;4MB（最短边 ≥64px、最长边 &lt;8192px）
+ * （内容审核平台请求说明 https://cloud.baidu.com/doc/ANTIPORN/s/Rk3h6xb3i）。
+ * QPS 官方未公开统一缺省值（免费版 5 QPS，付费后按并发资源包扩展），
+ * 下列 QPS 为本地保护性限流缺省，实际以控制台配额为准
  *
  * @author L.David
  */
@@ -19,10 +23,10 @@ public final class BaiduLimits {
     /** 图片上限：base64 后 4MB */
     public static final long MAX_IMAGE_BYTES = 4L * 1024 * 1024;
 
-    /** 文本限流 QPS（付费后 200） */
+    /** 文本限流 QPS（本地保护性缺省，以控制台配额为准） */
     public static final double TEXT_QPS = 200D;
 
-    /** 图像限流 QPS（付费后 50） */
+    /** 图像限流 QPS（本地保护性缺省，以控制台配额为准） */
     public static final double IMAGE_QPS = 50D;
 
     /** 默认超时（HTTP 同步接口，10s 足够） */
