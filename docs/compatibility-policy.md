@@ -1,7 +1,6 @@
 # 兼容与 Deprecation 政策
 
-对应任务 T-025、设计文档 §11（兼容与版本策略）、CLAUDE.md §5/§9。本文是约定全文；
-CI 手段（japicmp）见文末。
+本文是兼容与 deprecation 约定全文；CI 手段（japicmp）见文末。安全与工程约束见 [CLAUDE.md](../CLAUDE.md)。
 
 ## 1. 版本语义（SemVer）
 

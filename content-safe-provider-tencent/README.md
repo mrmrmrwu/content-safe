@@ -1,6 +1,6 @@
 # content-safe-provider-tencent
 
-腾讯云内容安全适配模块（T-014）：文本 TMS `TextModeration` + 图片 IMS `ImageModeration` 同步审核（API 版本均 2020-12-29）。
+腾讯云内容安全适配模块：文本 TMS `TextModeration` + 图片 IMS `ImageModeration` 同步审核（API 版本均 2020-12-29）。
 
 ## 引入
 

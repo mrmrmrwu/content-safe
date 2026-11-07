@@ -6,7 +6,7 @@
 [![JDK](https://img.shields.io/badge/JDK-17%2B-orange.svg)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)]()
 
-帮助文档：见 `docs/` 目录（设计文档 / 使用指南持续完善中）
+帮助文档：见 `docs/` 目录（接入指南 / 供应商能力矩阵 / 错误码表 / 发布与兼容政策）
 
 ContentSafe，如你所见，它仅仅是一个 **内容安全审核** 的 **工具类库（Spring Boot Starter）**，它可以让我们脱离繁琐的各家云厂商内容安全 SDK 与场景 ID 细节，让文本和图片审核变得 **So easy!**
 
@@ -14,7 +14,7 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 
 ## 有哪些特点？
 
-1. **全**：统一封装多家云供应商的文本/图片内容安全能力，业务方只引依赖、只写配置，仍然还在持续扩展中（[开发计划](docs/content-safe-starter-tasks.md)）！
+1. **全**：统一封装多家云供应商的文本/图片内容安全能力，业务方只引依赖、只写配置，仍然还在持续扩展中！
 2. **简**：API 就是奔着最简单去设计的（见后面 `快速开始`），业务代码只传场景（如 `nickname`、`avatar`），云厂商的场景 ID 交给配置，尽量让您用起来没有障碍感！
 
 ## 有哪些功能？
@@ -28,7 +28,7 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 - AIGC 识别：请求期开关（`AuditOptions.withAigcDetect`），按能力位单向门控，不支持的供应商快速失败而非静默降级。
 - 人审闭环：机审 REVIEW 经 `ReviewEvent` 出口、`resolveReview` 终态归一（source=MANUAL、finalResult=true）、`ReviewResultSink` 回写，异步任务幂等迁移。
 - 依赖干净：默认零 HTTP/JSON 传递依赖（JDK HttpClient + SPI 可替换），云 SDK 全部 optional。
-- 更多... 见 [设计文档](docs/content-safe-starter-design.md)
+- 更多... 见 [供应商能力矩阵](docs/provider-feature-matrix.md)
 
 ## 快速开始
 
@@ -38,7 +38,7 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 <dependencyManagement>
     <dependencies>
         <dependency>
-            <groupId>your.group</groupId>
+            <groupId>io.github.wrqtec</groupId>
             <artifactId>content-safe-bom</artifactId>
             <version>{latest-version}</version>
             <type>pom</type>
@@ -49,17 +49,17 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 
 <dependencies>
     <dependency>
-        <groupId>your.group</groupId>
+        <groupId>io.github.wrqtec</groupId>
         <artifactId>content-safe-spring-boot-starter</artifactId>
     </dependency>
     <dependency>
-        <groupId>your.group</groupId>
+        <groupId>io.github.wrqtec</groupId>
         <artifactId>content-safe-provider-aliyun</artifactId>
     </dependency>
 </dependencies>
 ```
 
-> **latest-version** 以发布页为准；坐标 `your.group` 为占位，正式发布前确定。
+> **latest-version** 以发布页为准。
 >
 > 注意：快照版本是功能的尝鲜，并不保证稳定性，请勿在生产环境中使用。
 
@@ -144,25 +144,26 @@ contentSafeTemplate.audit(AuditRequest.text("resume_title", title));
 
 | 供应商 | 文本审核 | 图片审核 | 异步/回调 | 状态 |
 |---|---|---|---|---|
-| 阿里云内容安全 | ✅ 规划中 | ✅ 规划中 | ✅ 规划中 | M2 |
-| 腾讯云内容安全 TMS/IMS | ✅ 规划中 | ✅ 规划中 | ✅ 规划中 | M3 |
-| 百度智能云内容审核 | ✅ 规划中 | ✅ 规划中 | 部分 | M3 |
-| 火山引擎内容安全 | ✅ 规划中 | ✅ 规划中 | ✅ 规划中 | M3 |
-| 数美科技 | ✅ 规划中 | ✅ 规划中 | ✅ 规划中 | M3 |
+| 阿里云内容安全 | ✅ | ✅ | ⏳ 未实现 | 已支持 |
+| 腾讯云内容安全 TMS/IMS | ✅ | ✅ | ⏳ 未实现 | 已支持 |
+| 百度智能云内容审核 | ✅ | ✅ | ⏳ 未实现 | 已支持 |
+| 火山引擎内容安全 | ✅ | ✅ | ⏳ 未实现 | 已支持 |
+| 数美科技 | ✅ | ✅ | ⏳ 未实现 | 已支持 |
 | 华为云 Moderation | - | - | - | 生命周期风险，暂不默认支持 |
 
-> v1 只承诺 **文本 + 图片** 内容安全；音频、视频、文件、直播等能力预留抽象，见 [需求文档](docs/content-safe-starter-prd.md)。
+> v1 只承诺 **文本 + 图片** 内容安全；音频、视频、文件、直播等能力预留抽象。
 
 ## 扩展
 
-- 自定义供应商：实现 `AuditOperationProvider`（SPI），详见 [设计文档](docs/content-safe-starter-design.md)。
+- 自定义供应商：实现 `AuditOperationProvider`（SPI），详见 [接入指南](docs/content-safe-starter-guide.md)。
 - 自定义路由/仲裁/凭据/任务存储/回调验签：覆盖对应 SPI Bean 即可，所有默认 Bean 均支持 `@ConditionalOnMissingBean` 替换。
 
 ## 其他
 
-- [需求文档](docs/content-safe-starter-prd.md)
-- [设计文档](docs/content-safe-starter-design.md)
-- [任务与计划](docs/content-safe-starter-tasks.md)
+- [接入指南](docs/content-safe-starter-guide.md)
+- [供应商能力矩阵](docs/provider-feature-matrix.md)
+- [错误码表](docs/error-code-table.md)
+- [发布指南](docs/release-guide.md) / [兼容政策](docs/compatibility-policy.md)
 - [编码规范](CLAUDE.md)
 
 ## 贡献

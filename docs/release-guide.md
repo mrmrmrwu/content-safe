@@ -1,8 +1,6 @@
 # 发布指南（Release Guide）
 
-对应任务 T-024（发布流水线）。发布目标与分发渠道见
-[content-safe-starter-design.md](content-safe-starter-design.md) §13：
-正式发布走 Maven Central，CI 预览走 GitHub Packages，国内加速可另配云效/Nexus。
+正式发布走 Maven Central（central-publishing-maven-plugin）；SNAPSHOT 预览走 GitHub Packages（CI 自动部署）；国内加速或私有分发可另配云效/Nexus 个人依赖仓库，见 §5。
 
 ## 1. 前置准备（一次性）
 
@@ -19,7 +17,7 @@
 ## 2. 发布流程
 
 ```bash
-# 1. 兼容检查（T-025）：api/spi 对比基线版本，二进制不兼容即失败
+# 1. 兼容检查：api/spi 对比基线版本，二进制不兼容即失败
 ./mvnw -Pcompat-check -Dcompat.baseline.version=<上一发布版本> verify
 
 # 2. 本地全量验证

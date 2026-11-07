@@ -24,7 +24,7 @@ import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
 /**
  * 数美响应 → 统一 {@link AuditResult}
  *
- * <p>映射规则（T-017 验收）：
+ * <p>映射规则：
  * <ul>
  *   <li>{@code riskLevel}：PASS→PASS、REVIEW→REVIEW、REJECT→REJECT（大小写不敏感，未知/缺失按 REVIEW 兜底）</li>
  *   <li>{@code finalResult}：1→终态、0→非终态（数美人审回传前的机审中间态）</li>

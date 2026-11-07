@@ -35,7 +35,7 @@
         </dependency>
     </dependencies>
 
-    <!-- T-025 兼容检查：发布前 -Pcompat-check 对比基线版本，二进制不兼容即构建失败 -->
+    <!-- 兼容检查：发布前 -Pcompat-check 对比基线版本，二进制不兼容即构建失败 -->
     <profiles>
         <profile>
             <id>compat-check</id>

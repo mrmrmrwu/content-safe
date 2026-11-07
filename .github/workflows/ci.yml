@@ -26,7 +26,7 @@ jobs:
         run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=0.1.0 verify -DskipTests || true
 
   snapshot:
-    # CI 预览分发：SNAPSHOT 发布到 GitHub Packages（设计文档 §13）
+    # CI 预览分发：SNAPSHOT 发布到 GitHub Packages
     if: github.ref == 'refs/heads/master'
     needs: verify
     runs-on: ubuntu-latest

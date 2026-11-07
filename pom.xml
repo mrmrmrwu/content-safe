@@ -68,14 +68,14 @@
         <maven-surefire-plugin.version>3.5.1</maven-surefire-plugin.version>
         <maven-wrapper-plugin.version>3.3.2</maven-wrapper-plugin.version>
 
-        <!-- 发布流水线（T-024）：release profile 使用，见 docs/release-guide.md -->
+        <!-- 发布流水线：release profile 使用，见 docs/release-guide.md -->
         <maven-source-plugin.version>3.3.1</maven-source-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
         <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
         <central-publishing-maven-plugin.version>0.12.0</central-publishing-maven-plugin.version>
 
-        <!-- 兼容检查（T-025）：-Pcompat-check 时 japicmp 对比基线版本，见 docs/compatibility-policy.md -->
+        <!-- 兼容检查：-Pcompat-check 时 japicmp 对比基线版本，见 docs/compatibility-policy.md -->
         <japicmp-maven-plugin.version>0.27.0</japicmp-maven-plugin.version>
         <compat.baseline.version>0.1.0</compat.baseline.version>
 
@@ -260,7 +260,7 @@
         </pluginManagement>
     </build>
 
-    <!-- CI 预览发布仓库：GitHub Packages（设计文档 §13），SNAPSHOT 分发由 CI 注入凭据 -->
+    <!-- CI 预览发布仓库：GitHub Packages，SNAPSHOT 分发由 CI 注入凭据 -->
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -275,7 +275,7 @@
     </distributionManagement>
 
     <profiles>
-        <!-- 发布流水线（T-024）：mvn -Prelease deploy 触发 GPG 签名 + sources/javadoc + SBOM，
+        <!-- 发布流水线：mvn -Prelease deploy 触发 GPG 签名 + sources/javadoc + SBOM，
              经 Maven Central Publisher 上传（凭据见 docs/release-guide.md） -->
         <profile>
             <id>release</id>

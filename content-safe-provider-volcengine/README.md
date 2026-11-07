@@ -1,6 +1,6 @@
 # content-safe-provider-volcengine
 
-火山引擎内容安全（Volcengine Content Security）接入（T-016）：文本风险检测
+火山引擎内容安全（Volcengine Content Security）接入：文本风险检测
 （TextRisk，Version `2022-01-26`）与图片风险检测（ImageContentRiskV2，Version
 `2021-11-29`），走官方 `volcengine-java-sdk-contentsecurity`（optional，隔离在
 `internal` 包，ArchUnit 强制不外泄）。

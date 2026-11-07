@@ -3,7 +3,6 @@
 多供应商内容安全审核 Starter 的使用说明。覆盖：快速开始、场景、供应商接入、治理配置、可观测性。
 
 - 模块总览与架构：见根 [README](../README.md)
-- 完整配置形态与设计约束：[content-safe-starter-design.md](content-safe-starter-design.md)
 - 错误码：[error-code-table.md](error-code-table.md)
 - 供应商能力矩阵：[provider-feature-matrix.md](provider-feature-matrix.md)
 - 可运行样例：[../samples](../samples)
@@ -238,7 +237,7 @@ content:
 
 - **自定义 provider**：实现 `AuditOperationProvider`（一 provider 一类，可出多个 `AuditOperation`）+ 提供 `@AutoConfiguration` 与 `META-INF/spring/...AutoConfiguration.imports`，声明能力（`AuditCapabilities`）与限额（`OperationLimits`）。最小演示见 [../samples/content-safe-samples-basic](../samples/content-safe-samples-basic)。
 - **默认 Bean 全部 `@ConditionalOnMissingBean`**：`AuditRouter`、`AuditArbitrationPolicy`、`AuditTaskStore`、`CredentialsProvider`、`ContentRefNormalizer`、`EvidenceRedactor`、`AuditListener`、`RateLimiterRegistry`、`CircuitBreakerRegistry` 均可覆盖。
-- **Java SPI**：`META-INF/services` 注册 `AuditOperationProvider`/`SceneDefinitionProvider`/`AuditResultNormalizer` 等扩展点（见设计文档 §7.1）。
+- **Java SPI**：`META-INF/services` 注册 `AuditOperationProvider`/`SceneDefinitionProvider`/`AuditResultNormalizer` 等扩展点。
 
 ## 7. 启动失败诊断（FailureAnalyzer）
 

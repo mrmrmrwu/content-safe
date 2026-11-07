@@ -1,6 +1,6 @@
 # content-safe-provider-baidu
 
-百度智能云内容审核接入（T-015）：文本 / 图像同步审核（内容审核平台 v2）。
+百度智能云内容审核接入：文本 / 图像同步审核（内容审核平台 v2）。
 
 **无官方现代 SDK**（`com.baidu.aip:java-sdk` 停留在 4.16.18 / ~2022），本模块内置
 自研 HTTP 客户端（JDK `HttpClient` + Gson，均为 optional 依赖，不进入使用方编译期传递依赖）。

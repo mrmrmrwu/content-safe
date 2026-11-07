@@ -5,7 +5,7 @@
 > 标注口径：✅ 已实现；⏳ 已预留抽象、待后续任务；❌ 供应商不支持。
 > 信息来源：阿里云内容安全 2.0（增强版）官方文档（help.aliyun.com，查阅日期 2026-11-06）。
 
-## aliyun（content-safe-provider-aliyun，T-013）
+## aliyun（content-safe-provider-aliyun）
 
 SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6`（optional 依赖）。
 
@@ -15,11 +15,11 @@ SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6
 | 图片同步审核（ImageModeration） | ✅ | 仅公网 URL（`ContentRefType.URL`） |
 | base64 / bytes 内容 | ❌ | 2.0 同步接口仅 URL；能力校验直接拒绝 |
 | 批量审核 | ❌ | `maxBatchSize=1` |
-| 异步查询 / 回调 | ⏳ | 待 T-019（ImageAsyncScan 系列） |
+| 异步查询 / 回调 | ⏳ | 待实现（ImageAsyncScan 系列） |
 | OCR | ⏳ | 2.0 service 能力，未接入 |
 | AIGC 检测 | ✅ | 配置期：场景 service 配为 `aigcDetector`/`aigcDetectorFull` 时操作自动声明 aigcDetect 能力位，请求期开关按能力位门控（来源：help.aliyun.com 文档 2642717，查阅日期 2026-11-06） |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
-| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 |
+| 回调验签（CallbackVerifier） | ⏳ | 待实现 |
 | suggestion 映射 | ✅ | riskLevel 三档：none/low→PASS，medium→REVIEW，high→REJECT；缺失时回退标签判空 |
 
 ### 限额（`AliyunLimits`，声明值，以官方文档为准）
@@ -35,7 +35,7 @@ SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6
 
 `nickname_detection`、`comment_detection`、`chat_detection`、`pgc_detection`、`ad_compliance_detection`、`ai_art_detection`、图片 `baselineCheck` 等。业务侧只配场景 code → serviceCode 映射，云厂商标识不进 api/core（铁律 §5.3）。
 
-## tencent（content-safe-provider-tencent，T-014）
+## tencent（content-safe-provider-tencent）
 
 SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依赖；文本 TMS + 图片 IMS 均为 API 版本 2020-12-29）。
 
@@ -47,10 +47,10 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 | 风控字段映射（User/Device） | ✅ | `AuditContext.userId/deviceId/ip` → TMS/IMS User/Device |
 | GIF 截帧 | ✅ | extra 配置 `gifInterval` / `gifMaxFrames` |
 | 批量审核 | ❌ | `maxBatchSize=1` |
-| 异步查询 / 回调 | ⏳ | SDK 有 CreateImageModerationAsyncTask，待 T-019 |
+| 异步查询 / 回调 | ⏳ | SDK 有 CreateImageModerationAsyncTask，待实现 |
 | OCR | ✅ | IMS 响应 OcrResults 命中归一为标签；**文本原文（用户内容）按安全约束丢弃，不进 evidence/raw/日志** |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
-| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 |
+| 回调验签（CallbackVerifier） | ⏳ | 待实现 |
 | suggestion 映射 | ✅ | Pass→PASS，Review→REVIEW，Block→REJECT；缺失时回退 Label 判 Normal |
 | 用户内容安全 | ✅ | TMS Keywords（敏感词原文）只进 `hit.raw`（raw 按约定不进日志/审计正文） |
 
@@ -65,7 +65,7 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 
 BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code → BizType 映射，云厂商标识不进 api/core（铁律 §5.3）。信息来源：腾讯云 TMS/IMS 官方文档（cloud.tencent.com，查阅日期 2026-11-06）。
 
-## baidu（content-safe-provider-baidu，T-015）
+## baidu（content-safe-provider-baidu）
 
 无官方现代 SDK（`com.baidu.aip:java-sdk` 停留在 4.16.18 / ~2022），**自研 HTTP 客户端**（JDK HttpClient + Gson，均为 optional 依赖）。接口为内容审核平台 v2（text_censor/img_censor user_defined）。
 
@@ -92,7 +92,7 @@ BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code 
 
 strategyId 为百度内容审核平台"策略中心"创建的策略 ID（数字字符串）。业务侧只配场景 code → strategyId 映射；值为空字符串表示不传 strategyId、走账号默认策略。错误码 18/19 为限流、110/111 为 token 问题。信息来源：百度智能云内容审核官方文档（cloud.baidu.com/doc/ANTIPORN，查阅日期 2026-11-06）。
 
-## volcengine（content-safe-provider-volcengine，T-016）
+## volcengine（content-safe-provider-volcengine）
 
 SDK：`com.volcengine:volc-sdk-java:1.0.290`（总包，optional 依赖）。产品线为内容安全/风控
 （host `riskcontrol.volcengineapi.com`，签名 service `BusinessSecurity`，region `cn-north-1`）。
@@ -113,7 +113,7 @@ Service 的控制台文档定义，不进公共抽象）。
 | veImageX 智能审核（CreateImageContentTask） | ⏳ | 异步任务制产品线，待 v1.1 |
 | 新版文本（TextSliceRisk，2022-11-07） | ⏳ | 官方标注 TextRisk 的替代品，待 v1.1 评估切换 |
 | 批量审核 | ❌ | envelope 单条载荷，`maxBatchSize=1` |
-| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 延伸任务 |
+| 回调验签（CallbackVerifier） | ⏳ | 待实现（延伸任务） |
 | 用户内容安全 | ✅ | matchedWords/ocrText 均不进 evidence/raw 之外的字段与日志 |
 
 ### 限额（`VolcengineLimits`，声明值，以官方文档/控制台为准）
@@ -130,7 +130,7 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 同进程多账号需自行隔离。parameters 内层键名（`parameters-text-key` / `parameters-image-key`）
 由使用方按其 Service 的控制台文档显式配置，缺失即装配期 fail-fast（经 FailureAnalyzer 输出可读报告）。
 
-## shumei（content-safe-provider-shumei，T-017）
+## shumei（content-safe-provider-shumei）
 
 无官方维护的现代 Java SDK，**自研 HTTP 客户端**（JDK HttpClient + Gson，均为 optional
 依赖）。产品线为数美天净风控同步接口：文本 `POST https://api-text-{region}.fengkongcloud.com/text/v4`、
@@ -154,7 +154,7 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 | 动图截帧（interval/maxFrame） | ✅ | 经场景 ext 传入，与保留键撞名装配期 fail-fast |
 | 异步检测 / 流式 | ⏳ | 待 v1.1 |
 | 批量审核 | ❌ | 单条载荷，`maxBatchSize=1` |
-| 回调验签（CallbackVerifier） | ⏳ | 待 T-019 延伸任务 |
+| 回调验签（CallbackVerifier） | ⏳ | 待实现（延伸任务） |
 | 用户内容安全 | ✅ | matchedWords 不进 raw 之外的字段与日志；riskSegments/faces/auxInfo 整体不透传 |
 
 ### 限额（`ShumeiLimits`，声明值，以官方文档为准）
@@ -175,7 +175,7 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 
 ## huawei
 
-⏳ 未实现（规划见 docs/content-safe-starter-design.md §8）。
+⏳ 未实现。
 
 ## 平台级能力（core/starter，与具体供应商无关）
 

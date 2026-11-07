@@ -31,7 +31,7 @@ public final class ErrorCodes {
     /** 路由链上全部供应商失败 */
     public static final String ALL_PROVIDER_FAILED = "ALL_PROVIDER_FAILED";
 
-    /** 启动期配置非法或无效（设计文档 §4.2 错误码表） */
+    /** 启动期配置非法或无效（错误码表见 docs/error-code-table.md） */
     public static final String CONFIG_INVALID = "CONFIG_INVALID";
 
     private ErrorCodes() {

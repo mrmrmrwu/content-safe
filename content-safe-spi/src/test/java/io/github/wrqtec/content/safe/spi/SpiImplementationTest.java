@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 用一个最小"自定义 provider"验证 SPI 可完整实现（对应 T-003 验收标准）
+ * 用一个最小"自定义 provider"验证 SPI 可完整实现
  *
  * @author L.David
  */

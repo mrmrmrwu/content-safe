@@ -1,10 +1,10 @@
 # content-safe-provider-aliyun
 
-阿里云内容安全 2.0（增强版，green-cip）provider 适配模块（T-013）。
+阿里云内容安全 2.0（增强版，green-cip）provider 适配模块。
 
 - SDK：`com.aliyun:green20220302:3.6.6`（`optional`，不进入使用方编译期传递依赖）。
 - 已实现：文本同步审核（TextModeration）、图片同步审核（ImageModeration，仅公网 URL）。
-- 未实现：异步审核/回调（T-019）、OCR/AIGC 等扩展 service（可经 `scenes` 映射直接试用，归一化按通用规则处理）。
+- 未实现：异步审核/回调、OCR/AIGC 等扩展 service（可经 `scenes` 映射直接试用，归一化按通用规则处理）。
 
 ## 使用
 

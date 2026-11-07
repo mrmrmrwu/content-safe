@@ -1,6 +1,6 @@
 # content-safe-provider-shumei
 
-数美天净（Shumei）内容安全接入（T-017）：文本 / 图片同步检测（text/v4、image/v4）。
+数美天净（Shumei）内容安全接入：文本 / 图片同步检测（text/v4、image/v4）。
 
 **无官方现代 Java SDK**，本模块内置自研 HTTP 客户端（JDK `HttpClient` + Gson，均为
 optional 依赖，不进入使用方编译期传递依赖）。

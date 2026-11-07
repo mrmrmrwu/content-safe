@@ -23,5 +23,4 @@
 | `ProviderHealthProbe` | 供应商模块（可选） | 健康探测 |
 | `SceneDefinitionProvider` | 可扩展（starter 提供 JSON 实现） | 场景定义来源 |
 
-供应商接入清单与安全约束见 [CLAUDE.md](../CLAUDE.md)；接口设计见
-[设计文档](../docs/content-safe-starter-design.md)。
+供应商接入清单与安全约束见 [CLAUDE.md](../CLAUDE.md)。

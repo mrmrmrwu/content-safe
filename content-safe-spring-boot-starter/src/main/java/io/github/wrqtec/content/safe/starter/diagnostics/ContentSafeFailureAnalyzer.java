@@ -9,7 +9,7 @@ import org.springframework.boot.diagnostics.FailureAnalysis;
 /**
  * 启动失败诊断：把装配期抛出的 {@link ContentSafeException}（含子类，常被
  * {@link BeanCreationException} 包装）翻译为可读的 FailureAnalysis 报告
- * （设计文档 §10：配置缺失、EOL provider、feature 未实现、scene 未映射）
+ * （覆盖：配置缺失、EOL provider、feature 未实现、scene 未映射）
  *
  * <p>安全约束：只输出错误码、原因与修复动作；message 本身已按约定不含
  * accessKey/secret/签名 URL/用户内容原文，本类只做转述，不新增敏感信息
