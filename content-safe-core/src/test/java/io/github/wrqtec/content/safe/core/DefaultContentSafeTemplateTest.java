@@ -19,6 +19,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
 import io.github.wrqtec.content.safe.api.exception.SceneNotConfiguredException;
+import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.OperationLimits;
@@ -41,6 +42,7 @@ import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
+import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -460,5 +462,51 @@ class DefaultContentSafeTemplateTest {
                 () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"), Duration.ZERO, Duration.ofSeconds(1)));
         assertThrows(InvalidRequestException.class,
                 () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"), Duration.ofSeconds(1), Duration.ofSeconds(-1)));
+    }
+
+    @Test
+    void queryStoresAndReturnsRedactedResult() {
+        EvidenceRedactor mask = new EvidenceRedactor() {
+            @Override
+            public String provider() {
+                return "*";
+            }
+
+            @Override
+            public RiskHit redact(RiskHit hit) {
+                return new RiskHit(hit.labelPath(), hit.labels(), hit.confidence(), hit.confidenceScale(),
+                        hit.source(), "***", hit.coordinates(), hit.raw());
+            }
+        };
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                RiskHit hit = new RiskHit("porn", List.of("porn"), 0.99, null, null,
+                        "secret-evidence", null, Map.of());
+                return AuditResult.builder().ok(true).suggestion(RiskSuggestion.REJECT)
+                        .finalResult(true).hits(List.of(hit)).build();
+            }
+        };
+        DefaultContentSafeTemplate template = new DefaultContentSafeTemplate(scenes,
+                List.of(providerOf(async)), new PriorityAuditRouter(), new CircuitBreakerRegistry(),
+                new RateLimiterRegistry(), new CompositeAuditListener(List.of(recording)),
+                List.of(mask), store, null);
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("task-1", "d1"), "nickname", "fake"));
+
+        AuditResult first = template.query("t1");
+        // 终态迁移后再次读取走缓存
+        AuditResult cached = template.query("t1");
+
+        // 返回值、落库值、事件值统一脱敏，同一 taskId 每次读取形状一致
+        assertEquals("***", first.hits().get(0).evidence());
+        assertEquals("***", cached.hits().get(0).evidence());
+        assertEquals("***", store.find("t1").orElseThrow().result().hits().get(0).evidence());
     }
 }

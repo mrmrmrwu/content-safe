@@ -7,6 +7,7 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
+import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.CallbackVerifyException;
@@ -16,16 +17,20 @@ import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
+import io.github.wrqtec.content.safe.model.event.AuditEvent;
+import io.github.wrqtec.content.safe.model.event.CallbackDeadLetterEvent;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
 import io.github.wrqtec.content.safe.core.task.InMemoryAuditTaskStore;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import io.github.wrqtec.content.safe.spi.CallbackVerifier;
+import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -69,8 +74,12 @@ class CallbackDispatcherTest {
 
             @Override
             public CallbackResult handleCallback(CallbackRequest request) {
+                // 证据携带原文，供脱敏用例校验（默认无脱敏器时落库/事件保留原文）
+                RiskHit hit = new RiskHit("porn", List.of("porn"), 0.99, null, null,
+                        "user-content-original", null, Map.of());
                 return CallbackResult.accepted("provider-task-1",
-                        AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS).dataId("d1").build());
+                        AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS)
+                                .dataId("d1").hits(List.of(hit)).build());
             }
         };
         return new AuditOperationProvider() {
@@ -93,7 +102,12 @@ class CallbackDispatcherTest {
 
     private CallbackDispatcher dispatcher(CallbackVerifier verifier) {
         return new CallbackDispatcher(List.of(verifier), List.of(providerWithCallbackOp()),
-                store, listener, "secret");
+                store, listener, List.of(), "secret");
+    }
+
+    private CallbackDispatcher dispatcher(CallbackVerifier verifier, List<EvidenceRedactor> redactors) {
+        return new CallbackDispatcher(List.of(verifier), List.of(providerWithCallbackOp()),
+                store, listener, redactors, "secret");
     }
 
     @Test
@@ -137,5 +151,49 @@ class CallbackDispatcherTest {
 
         assertFalse(result.accepted());
         assertTrue(events.stream().anyMatch(e -> "CALLBACK_DEAD_LETTER".equals(e.eventType())));
+    }
+
+    @Test
+    void acceptedCallbackStoresAndPublishesRedactedResult() {
+        // EvidenceRedactor 契约：落库与事件必须是脱敏副本
+        EvidenceRedactor maskProvider = new EvidenceRedactor() {
+            @Override
+            public String provider() {
+                return "fake";
+            }
+
+            @Override
+            public RiskHit redact(RiskHit hit) {
+                return new RiskHit(hit.labelPath(), hit.labels(), hit.confidence(), hit.confidenceScale(),
+                        hit.source(), "***", hit.coordinates(), hit.raw());
+            }
+        };
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("provider-task-1", "d1"), "avatar", "fake"));
+        CallbackDispatcher dispatcher = dispatcher(verifierReturning(true), List.of(maskProvider));
+
+        CallbackResult result = dispatcher.dispatch(new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertTrue(result.accepted());
+        // 返回值已脱敏
+        assertEquals("***", result.result().hits().get(0).evidence());
+        // 落库结果已脱敏
+        assertEquals("***", store.find("t1").orElseThrow().result().hits().get(0).evidence());
+        // 事件携带结果已脱敏
+        AuditEvent event = (AuditEvent) events.stream()
+                .filter(e -> e instanceof AuditEvent).findFirst().orElseThrow();
+        assertEquals("***", event.result().hits().get(0).evidence());
+    }
+
+    @Test
+    void missingTaskCallbackDeadLettersButAccepts() {
+        // 任务被逐出/应用重启后回调到达：发死信保可观测，返回受理止住供应商重推
+        CallbackDispatcher dispatcher = dispatcher(verifierReturning(true));
+
+        CallbackResult result = dispatcher.dispatch(new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertTrue(result.accepted());
+        assertEquals("provider-task-1", result.taskId());
+        assertTrue(events.stream().anyMatch(e -> e instanceof CallbackDeadLetterEvent dle
+                && dle.reason().contains("audit task not found")));
     }
 }

@@ -387,8 +387,11 @@ public ResponseEntity<String> onCallback(@PathVariable String provider,
 ```
 
 `handleCallback` 内部完成：验签（`CallbackVerifier`，失败抛 `CallbackVerifyException` 并发布
-`CallbackDeadLetterEvent`）→ 归一 `AuditResult` → 按 providerTaskId（空白时按 dataId 反查）
-迁移任务终态 → 发布 `AuditEvent`（REVIEW 结果同时发布 `ReviewEvent`）。重复回调不产生重复事件（幂等）。
+`CallbackDeadLetterEvent`）→ 归一 `AuditResult`（证据先经 `EvidenceRedactor` 脱敏，落库/事件/返回值均为脱敏副本）→
+按 providerTaskId（空白时按 dataId 反查）迁移任务终态 → 发布 `AuditEvent`（REVIEW 结果同时发布 `ReviewEvent`）。
+重复回调不产生重复事件（幂等）。
+任务引用查不到统一任务（任务被逐出、应用重启或外部直接提交）时：回调仍回 200 受理（供应商重推也无法恢复关联），
+但会发布 `CallbackDeadLetterEvent`（原因 `audit task not found ...`）保证可观测，结果不会无声丢失。
 
 ### 9.3 各供应商回调配置
 

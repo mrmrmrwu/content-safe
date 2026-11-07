@@ -11,7 +11,6 @@ import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
 import io.github.wrqtec.content.safe.api.ReviewResolution;
-import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ReviewDecision;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
@@ -35,6 +34,7 @@ import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
+import io.github.wrqtec.content.safe.core.security.EvidenceRedactors;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
 import io.github.wrqtec.content.safe.spi.AuditListener;
@@ -54,9 +54,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class DefaultContentSafeTemplate implements ContentSafeTemplate {
-
-    /** 脱敏器通配 provider：匹配任意供应商 */
-    private static final String ANY_PROVIDER = "*";
 
     /** 默认异步轮询间隔（接口未显式传入时） */
     private static final Duration DEFAULT_POLL_INTERVAL = Duration.ofSeconds(2);
@@ -248,7 +245,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         try {
             AuditResult result = operation.audit(request);
             breaker.onSuccess();
-            AuditResult redacted = redact(result, operation.plan().provider());
+            AuditResult redacted = EvidenceRedactors.redactResult(redactors, result, operation.plan().provider());
             publishAuditEvents(scene.code(), redacted);
             // 成功路径可观测：只含路由与结论元数据，不含用户内容原文
             log.debug("audit success: scene={}, provider={}, suggestion={}, hits={}, cost={}",
@@ -314,17 +311,19 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         AuditTask task = taskStore.find(taskId)
                 .orElseThrow(() -> new InvalidRequestException("unknown taskId: " + taskId));
         if (task.status().isTerminal()) {
+            // 存储的是脱敏后结果，缓存命中直接返回
             return task.result();
         }
         AuditOperation operation = findAsyncQueryOperation(task);
-        AuditResult result = operation.query(task.ref());
+        // 脱敏先行：落库、事件、返回值统一使用脱敏副本，保证同一 taskId 每次读取形状一致
+        AuditResult result = EvidenceRedactors.redactResult(redactors,
+                operation.query(task.ref()), operation.plan().provider());
         if (result.finalResult()) {
             if (taskStore.markTerminal(taskId, TaskStatus.SUCCEEDED, result)) {
-                AuditResult redacted = redact(result, operation.plan().provider());
-                publishAuditEvents(task.scene(), redacted);
-                return redacted;
+                publishAuditEvents(task.scene(), result);
+                return result;
             }
-            // 并发下已被迁移，返回存储中的终态结果
+            // 并发下已被迁移，返回存储中的终态结果（同样已脱敏）
             return taskStore.find(taskId).map(AuditTask::result).orElse(result);
         }
         return result;
@@ -376,23 +375,6 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private AuditResult withSource(AuditResult result, AuditSource source) {
         return new AuditResult(result.ok(), result.suggestion(), result.finalResult(), source,
                 result.hits(), result.requestId(), result.dataId(), result.provider(), result.product(),
-                result.service(), result.cost(), result.raw());
-    }
-
-    private AuditResult redact(AuditResult result, String provider) {
-        if (result == null || result.hits().isEmpty()) {
-            return result;
-        }
-        EvidenceRedactor redactor = redactors.stream()
-                .filter(r -> r.provider().equals(provider) || ANY_PROVIDER.equals(r.provider()))
-                .findFirst()
-                .orElse(null);
-        if (redactor == null) {
-            return result;
-        }
-        List<RiskHit> redactedHits = result.hits().stream().map(redactor::redact).toList();
-        return new AuditResult(result.ok(), result.suggestion(), result.finalResult(), result.source(),
-                redactedHits, result.requestId(), result.dataId(), result.provider(), result.product(),
                 result.service(), result.cost(), result.raw());
     }
 

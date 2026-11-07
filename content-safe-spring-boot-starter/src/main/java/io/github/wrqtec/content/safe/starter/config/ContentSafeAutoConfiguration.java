@@ -171,9 +171,11 @@ public class ContentSafeAutoConfiguration {
                                                  ObjectProvider<AuditOperationProvider> providers,
                                                  AuditTaskStore taskStore,
                                                  CompositeAuditListener listener,
+                                                 ObjectProvider<EvidenceRedactor> redactors,
                                                  ContentSafeProperties properties) {
         return new CallbackDispatcher(verifiers.orderedStream().toList(),
-                providers.orderedStream().toList(), taskStore, listener, properties.getCallbackSecret());
+                providers.orderedStream().toList(), taskStore, listener,
+                redactors.orderedStream().toList(), properties.getCallbackSecret());
     }
 
     @Bean

@@ -11,9 +11,6 @@ import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
  */
 public class DefaultEvidenceRedactor implements EvidenceRedactor {
 
-    /** 通配 provider：匹配任意供应商 */
-    private static final String ANY_PROVIDER = "*";
-
     /** 脱敏掩码 */
     private static final String MASK = "***";
 
@@ -25,7 +22,7 @@ public class DefaultEvidenceRedactor implements EvidenceRedactor {
 
     @Override
     public String provider() {
-        return ANY_PROVIDER;
+        return EvidenceRedactors.ANY_PROVIDER;
     }
 
     @Override
