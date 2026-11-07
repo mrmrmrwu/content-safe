@@ -18,7 +18,7 @@
         </developer>
     </developers>
 
-    <url>https://gitee.com/mrwu-ruiqi/content-safe</url>
+    <url>https://github.com/mrmrmrwu/content-safe</url>
 
     <licenses>
         <license>
@@ -29,9 +29,9 @@
     </licenses>
 
     <scm>
-        <url>https://gitee.com/mrwu-ruiqi/content-safe</url>
-        <connection>scm:git:https://gitee.com/mrwu-ruiqi/content-safe.git</connection>
-        <developerConnection>scm:git:https://gitee.com/mrwu-ruiqi/content-safe.git</developerConnection>
+        <url>https://github.com/mrmrmrwu/content-safe</url>
+        <connection>scm:git:https://github.com/mrmrmrwu/content-safe.git</connection>
+        <developerConnection>scm:git:https://github.com/mrmrmrwu/content-safe.git</developerConnection>
     </scm>
 
     <modules>
@@ -79,8 +79,8 @@
         <japicmp-maven-plugin.version>0.27.0</japicmp-maven-plugin.version>
         <compat.baseline.version>0.1.0</compat.baseline.version>
 
-        <!-- CI 预览发布仓库（GitHub Packages），镜像仓库组织名按实际调整 -->
-        <github.repository>wrqtec/content-safe</github.repository>
+        <!-- CI 预览发布仓库（GitHub Packages）：https://maven.pkg.github.com/mrmrmrwu/content-safe -->
+        <github.repository>mrmrmrwu/content-safe</github.repository>
     </properties>
 
     <dependencyManagement>

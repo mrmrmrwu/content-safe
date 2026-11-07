@@ -11,8 +11,7 @@
 | GitHub Packages 凭据 | GitHub 账号 + `write:packages` PAT，写入 `<server><id>github</id>`（仅 CI 预览/SNAPSHOT 用） |
 
 > groupId `io.github.wrqtec` 需在 Central Portal 完成命名空间验证；
-> 仓库托管在 Gitee（`gitee.com/mrwu-ruiqi/content-safe`），若以 GitHub 镜像做 CI 预览，
-> 调整父 pom 的 `github.repository` 属性为实际镜像仓。
+> 仓库托管在 GitHub（`github.com/mrmrmrwu/content-safe`，父 pom `github.repository` 已指向该仓库）；Gitee（origin）为同步镜像，GitHub Actions 自动将 SNAPSHOT 发布到 GitHub Packages。
 
 ## 2. 发布流程
 
