@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody;
 import com.aliyun.green20220302.models.ImageModerationResponseBody;
 import com.aliyun.green20220302.models.TextModerationResponseBody;
 import io.github.wrqtec.content.safe.api.AuditResult;
@@ -87,6 +88,9 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         if (rawResponse instanceof ImageModerationResponseBody body) {
             return normalizeImage(body, context);
         }
+        if (rawResponse instanceof DescribeImageModerationResultResponseBody body) {
+            return normalizeImageAsyncResult(body, context);
+        }
         throw new ProviderCallException("unsupported aliyun raw response type: "
                 + (rawResponse == null ? "null" : rawResponse.getClass().getName()));
     }
@@ -144,11 +148,53 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         return builder.suggestion(suggestion).hits(hits).build();
     }
 
+    /**
+     * 图片异步检测结果归一化（DescribeImageModerationResult）。data.result 与同步
+     * ImageModeration 同构（label/confidence/description），复用同一套标签解析；
+     * code=280（检测中）不走本方法，由操作层直接产出中间态结果
+     *
+     * @param body    查询响应体
+     * @param context 归一化上下文（service / dataId / cost）
+     * @return 终态审核结果
+     */
+    AuditResult normalizeImageAsyncResult(DescribeImageModerationResultResponseBody body,
+                                          Map<String, Object> context) {
+        AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
+        DescribeImageModerationResultResponseBody.DescribeImageModerationResultResponseBodyData data = body.getData();
+        if (data == null || data.getResult() == null || data.getResult().isEmpty()) {
+            return builder.suggestion(RiskSuggestion.PASS).build();
+        }
+        List<RiskHit> hits = new ArrayList<>();
+        for (DescribeImageModerationResultResponseBody.DescribeImageModerationResultResponseBodyDataResult item
+                : data.getResult()) {
+            if (item == null || PASS_LABEL.equals(item.getLabel())) {
+                continue;
+            }
+            Map<String, Object> hitRaw = item.getDescription() == null || item.getDescription().isBlank()
+                    ? Map.of() : Map.of("description", item.getDescription());
+            hits.add(new RiskHit(
+                    item.getLabel(),
+                    List.of(item.getLabel()),
+                    item.getConfidence() == null ? null : item.getConfidence().doubleValue(),
+                    ConfidenceScale.PERCENTAGE,
+                    HitSource.MACHINE,
+                    null, null, hitRaw));
+        }
+        RiskSuggestion byRiskLevel = fromRiskLevel(data.getRiskLevel());
+        RiskSuggestion suggestion = byRiskLevel != null ? byRiskLevel
+                : hits.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+        return builder.suggestion(suggestion).hits(hits).build();
+    }
+
     private AuditResult.Builder baseBuilder(Integer code, String requestId, Map<String, Object> context) {
         Map<String, Object> safe = context == null ? Map.of() : context;
         Map<String, Object> raw = new LinkedHashMap<>();
-        raw.put("code", code);
-        raw.put("requestId", requestId);
+        if (code != null) {
+            raw.put("code", code);
+        }
+        if (requestId != null) {
+            raw.put("requestId", requestId);
+        }
         return AuditResult.builder()
                 .ok(true)
                 .finalResult(true)

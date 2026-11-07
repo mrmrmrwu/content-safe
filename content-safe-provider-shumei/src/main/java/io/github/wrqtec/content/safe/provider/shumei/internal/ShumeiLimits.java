@@ -34,6 +34,13 @@ public final class ShumeiLimits {
         return new OperationLimits(null, null, DEFAULT_TIMEOUT, 0L, 0L, false);
     }
 
+    /**
+     * 图片异步提交/查询（官方建议超时 5s；QPS 以与数美合同约定为准）
+     */
+    public static OperationLimits imageAsync() {
+        return new OperationLimits(null, null, DEFAULT_TIMEOUT, 0L, 0L, false);
+    }
+
     public static long maxTextChars() {
         return MAX_TEXT_CHARS;
     }

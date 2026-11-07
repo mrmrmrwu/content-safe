@@ -12,6 +12,7 @@ import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunAuditResultNormalizer;
+import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunLimits;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunTextModerationOperation;
@@ -62,6 +63,10 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
             operations.add(new AliyunImageModerationOperation(
                     syncPlan(AliyunProviderConstants.OPERATION_IMAGE_MODERATION, service, AliyunLimits.imageSync()),
                     invoker, normalizer));
+            operations.add(new AliyunImageAsyncOperation(
+                    asyncPlan(service), invoker, normalizer,
+                    properties.getExtra().get(AliyunProviderConstants.EXTRA_CALLBACK_URL),
+                    properties.getExtra().get(AliyunProviderConstants.EXTRA_CALLBACK_SEED)));
         }
         return List.copyOf(operations);
     }
@@ -75,6 +80,18 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
                 service,
                 AuditMode.SYNC,
                 limits,
+                null);
+    }
+
+    private ProviderPlan asyncPlan(String service) {
+        return new ProviderPlan(
+                AliyunProviderConstants.PROVIDER,
+                AliyunProviderConstants.PRODUCT,
+                AliyunProviderConstants.API_VERSION,
+                AliyunProviderConstants.OPERATION_IMAGE_ASYNC_MODERATION,
+                service,
+                AuditMode.ASYNC_QUERY,
+                AliyunLimits.imageAsync(),
                 null);
     }
 }

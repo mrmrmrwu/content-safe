@@ -1,5 +1,7 @@
 package io.github.wrqtec.content.safe.provider.tencent.internal;
 
+import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskRequest;
+import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskResponse;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationRequest;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationResponse;
 import com.tencentcloudapi.tms.v20201229.models.TextModerationRequest;
@@ -31,4 +33,14 @@ public interface TencentClientInvoker {
      * @throws Exception SDK/网络异常（由 {@link TencentErrorMapper} 统一映射）
      */
     ImageModerationResponse imageModeration(ImageModerationRequest request) throws Exception;
+
+    /**
+     * IMS 图片异步审核任务创建（结果经 CallbackUrl 推送，无主动查询接口）
+     *
+     * @param request SDK 请求
+     * @return SDK 响应
+     * @throws Exception SDK/网络异常（由 {@link TencentErrorMapper} 统一映射）
+     */
+    CreateImageModerationAsyncTaskResponse createImageModerationAsyncTask(
+            CreateImageModerationAsyncTaskRequest request) throws Exception;
 }

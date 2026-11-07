@@ -5,6 +5,7 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.model.OperationLimits;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.enums.ProviderLifecycle;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
@@ -15,6 +16,7 @@ import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentAuditResultNormalizer;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentClientInvoker;
+import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentLimits;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentTextModerationOperation;
@@ -85,8 +87,13 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
                         bizType, TencentLimits.imageSync());
                 Integer gifInterval = parsePositiveInt(properties.getExtra(), "gifInterval");
                 Integer gifMaxFrames = parsePositiveInt(properties.getExtra(), "gifMaxFrames");
-                return List.of(new TencentImageModerationOperation(plan, type, gifInterval, gifMaxFrames,
-                        invoker, normalizer));
+                String callbackUrl = properties.getExtra().get(TencentProviderConstants.EXTRA_CALLBACK_URL);
+                ProviderPlan asyncPlan = asyncPlan(bizType);
+                return List.of(
+                        new TencentImageModerationOperation(plan, type, gifInterval, gifMaxFrames,
+                                invoker, normalizer),
+                        new TencentImageAsyncOperation(asyncPlan, gifInterval, gifMaxFrames, callbackUrl,
+                                invoker, normalizer));
             }
             default -> {
                 log.debug("tencent provider skip scene={} unsupported type={}", scene.code(), scene.type());
@@ -125,5 +132,16 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
                 operation,
                 service,
                 null, limits, ProviderLifecycle.ACTIVE);
+    }
+
+    /** 图片异步任务创建操作计划（仅回调推送，无主动查询） */
+    public static ProviderPlan asyncPlan(String service) {
+        return new ProviderPlan(
+                TencentProviderConstants.PROVIDER,
+                TencentProviderConstants.PRODUCT,
+                TencentProviderConstants.API_VERSION,
+                TencentProviderConstants.OPERATION_IMAGE_ASYNC_CREATE,
+                service,
+                AuditMode.ASYNC_CALLBACK, TencentLimits.imageAsync(), ProviderLifecycle.ACTIVE);
     }
 }

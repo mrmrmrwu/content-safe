@@ -113,6 +113,21 @@ class ShumeiProviderAutoConfigurationTest {
                         .hasSingleBean(AuditOperationProvider.class));
     }
 
+    @Test
+    void callbackVerifierAssembledWhenEnabled() {
+        runner.withPropertyValues(
+                        "content.safe.providers.shumei.enabled=true",
+                        "content.safe.providers.shumei.access-key=ak",
+                        "content.safe.providers.shumei.app-id=default",
+                        "content.safe.providers.shumei.scenes.comment=text")
+                .run(context -> assertThat(context)
+                        .hasNotFailed()
+                        .hasSingleBean(io.github.wrqtec.content.safe.spi.CallbackVerifier.class)
+                        .getBean(io.github.wrqtec.content.safe.spi.CallbackVerifier.class)
+                        .extracting(io.github.wrqtec.content.safe.spi.CallbackVerifier::provider)
+                        .isEqualTo("shumei"));
+    }
+
     /**
      * 用户自定义客户端覆盖默认装配
      */
@@ -128,6 +143,18 @@ class ShumeiProviderAutoConfigurationTest {
             @Override
             public ShumeiSyncResponse imageDetect(String eventId, String type, java.util.Map<String, Object> data) {
                 return new ShumeiSyncResponse();
+            }
+
+            @Override
+            public ShumeiSyncResponse imageAsyncSubmit(String eventId, String type,
+                                                       java.util.Map<String, Object> data) {
+                return new ShumeiSyncResponse();
+            }
+
+            @Override
+            public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiAsyncQueryResponse imageAsyncQuery(
+                    java.util.List<String> requestIds) {
+                return new io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiAsyncQueryResponse();
             }
         };
 

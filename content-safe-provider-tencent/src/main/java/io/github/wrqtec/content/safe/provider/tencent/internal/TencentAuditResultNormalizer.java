@@ -78,10 +78,22 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
             return normalizeText(response, context);
         }
         if (rawResponse instanceof ImageModerationResponse response) {
-            return normalizeImage(response, context);
+            return normalizeImage(response, AuditSource.SYNC, context);
         }
         throw new ProviderCallException("unsupported tencent raw response type: "
                 + (rawResponse == null ? "null" : rawResponse.getClass().getName()));
+    }
+
+    /**
+     * 异步回调报文归一化：回调体与同步 ImageModeration 输出同构
+     * （官方无独立回调格式），仅 AuditSource 标记为 ASYNC_CALLBACK
+     *
+     * @param response 回调报文反序列化结果
+     * @param context  归一化上下文
+     * @return 审核结果
+     */
+    public AuditResult normalizeImageCallback(ImageModerationResponse response, Map<String, Object> context) {
+        return normalizeImage(response, AuditSource.ASYNC_CALLBACK, context);
     }
 
     private AuditResult normalizeText(TextModerationResponse response, Map<String, Object> context) {
@@ -121,8 +133,10 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
         return builder.build();
     }
 
-    private AuditResult normalizeImage(ImageModerationResponse response, Map<String, Object> context) {
-        AuditResult.Builder builder = baseBuilder(response.getRequestId(), response.getBizType(), context);
+    private AuditResult normalizeImage(ImageModerationResponse response, AuditSource source,
+                                       Map<String, Object> context) {
+        AuditResult.Builder builder = baseBuilder(response.getRequestId(), response.getBizType(), context)
+                .source(source);
         RiskSuggestion suggestion = fromSuggestion(response.getSuggestion());
         if (suggestion == null) {
             suggestion = PASS_LABEL.equals(response.getLabel()) ? RiskSuggestion.PASS : RiskSuggestion.REJECT;

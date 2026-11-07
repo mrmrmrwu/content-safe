@@ -60,6 +60,7 @@ class TencentProviderAutoConfigurationTest {
                 .run(context -> {
                     assertThat(context).hasSingleBean(TencentAuditOperationProvider.class);
                     assertThat(context).hasSingleBean(TencentClientInvoker.class);
+                    assertThat(context).hasSingleBean(io.github.wrqtec.content.safe.spi.CallbackVerifier.class);
                     TencentAuditOperationProvider provider =
                             context.getBean(TencentAuditOperationProvider.class);
                     assertThat(provider.provider()).isEqualTo("tencent");

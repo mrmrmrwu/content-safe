@@ -15,11 +15,12 @@ SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6
 | 图片同步审核（ImageModeration） | ✅ | 仅公网 URL（`ContentRefType.URL`） |
 | base64 / bytes 内容 | ❌ | 2.0 同步接口仅 URL；能力校验直接拒绝 |
 | 批量审核 | ❌ | `maxBatchSize=1` |
-| 异步查询 / 回调 | ⏳ | 待实现（ImageAsyncScan 系列） |
+| 异步查询（轮询） | ✅ | `ImageAsyncModeration` 提交 + `DescribeImageModerationResult` 按 reqId 轮询（AuditMode.ASYNC_QUERY）；仅 `ContentRefType.URL`（异步接口仅支持 imageUrl/OSS）；响应 code=280 为检测中间态；结果保留 3 天（来源：help.aliyun.com 文档 2638108，查阅日期 2026-11-07） |
+| 异步回调 | ✅ | 提交参数携带 `callback`/`seed`（extra `callback-url` / `callback-seed` 配置）；回调表单 Checksum=SHA256(主账号UID+seed+Content)；数据以回调到达为准时无需轮询 |
 | OCR | ⏳ | 2.0 service 能力，未接入 |
 | AIGC 检测 | ✅ | 配置期：场景 service 配为 `aigcDetector`/`aigcDetectorFull` 时操作自动声明 aigcDetect 能力位，请求期开关按能力位门控（来源：help.aliyun.com 文档 2642717，查阅日期 2026-11-06） |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
-| 回调验签（CallbackVerifier） | ⏳ | 待实现 |
+| 回调验签（CallbackVerifier） | ✅ | `AliyunCallbackVerifier`：SHA256(uid+seed+Content) 恒时比较；uid 经 extra `callback-uid` 配置（须主账号 UID），seed 缺省回退全局 `content.safe.callback-secret`；仅支持 SHA256（不做 SM3） |
 | suggestion 映射 | ✅ | riskLevel 三档：none/low→PASS，medium→REVIEW，high→REJECT；缺失时回退标签判空 |
 
 ### 限额（`AliyunLimits`，声明值，以官方文档为准）
@@ -47,10 +48,10 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 | 风控字段映射（User/Device） | ✅ | `AuditContext.userId/deviceId/ip` → TMS/IMS User/Device |
 | GIF 截帧 | ✅ | extra 配置 `gifInterval` / `gifMaxFrames` |
 | 批量审核 | ❌ | `maxBatchSize=1` |
-| 异步查询 / 回调 | ⏳ | SDK 有 CreateImageModerationAsyncTask，待实现 |
+| 异步任务（仅回调推送） | ✅ | IMS `CreateImageModerationAsyncTask`（AuditMode.ASYNC_CALLBACK）；官方无独立任务 ID/查询接口，关联键为业务侧 `dataId`（必填）；回调地址经 extra `callback-url` 配置（CallbackUrl 必填）；限频 20QPS（来源：cloud.tencent.com 文档 1125/87021，查阅日期 2026-11-07） |
 | OCR | ✅ | IMS 响应 OcrResults 命中归一为标签；**文本原文（用户内容）按安全约束丢弃，不进 evidence/raw/日志** |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
-| 回调验签（CallbackVerifier） | ⏳ | 待实现 |
+| 回调验签（CallbackVerifier） | ✅ | `TencentCallbackVerifier`：官方回调**无签名机制**，仅做结构校验（ImageModeration 同构 JSON 可解析即通过）；防伪须依赖回调接收侧 IP 白名单等业务手段 |
 | suggestion 映射 | ✅ | Pass→PASS，Review→REVIEW，Block→REJECT；缺失时回退 Label 判 Normal |
 | 用户内容安全 | ✅ | TMS Keywords（敏感词原文）只进 `hit.raw`（raw 按约定不进日志/审计正文） |
 
@@ -109,11 +110,11 @@ Service 的控制台文档定义，不进公共抽象）。
 | decision 映射 | ✅ | pass→PASS、suspect→REVIEW、reject→REJECT（大小写不敏感）；缺失/未知值保守回退 REVIEW；完整枚举以官方文档为准 |
 | 文本命中词 | ✅ | contexts.matchedWords（用户内容片段）只进 `hit.raw`，不进 evidence/labels |
 | OCR 文本 / 帧签名 URL | ✅ 安全处理 | `data.ocrText` 与 `frames[].url` 为用户内容/签名 URL，一律丢弃不透传 |
-| 异步检测（AsyncImageRisk + GetImageResult） | ⏳ | SDK 有建模，待 v1.1 |
+| 异步检测 | ❌ | BusinessSecurity TextRisk / ImageContentRiskV2 均为同步接口；SDK 中的异步建模对应视频等其它产品线，不在本 provider 范围（查阅日期 2026-11-07） |
 | veImageX 智能审核（CreateImageContentTask） | ⏳ | 异步任务制产品线，待 v1.1 |
 | 新版文本（TextSliceRisk，2022-11-07） | ⏳ | 官方标注 TextRisk 的替代品，待 v1.1 评估切换 |
 | 批量审核 | ❌ | envelope 单条载荷，`maxBatchSize=1` |
-| 回调验签（CallbackVerifier） | ⏳ | 待实现（延伸任务） |
+| 回调验签（CallbackVerifier） | ❌ | 无异步/回调接口即无验签需求 |
 | 用户内容安全 | ✅ | matchedWords/ocrText 均不进 evidence/raw 之外的字段与日志 |
 
 ### 限额（`VolcengineLimits`，声明值，以官方文档/控制台为准）
@@ -152,9 +153,10 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 | 打码文本 / 联系方式 / 人脸 | ✅ 安全处理 | auxInfo.filteredText、contactResult、faces 人名等用户内容一律丢弃不透传 |
 | tokenId | ✅ | 解析链 context.userId → dataId → 随机 UUID（官方建议无 uid 时用唯一数据标识） |
 | 动图截帧（interval/maxFrame） | ✅ | 经场景 ext 传入，与保留键撞名装配期 fail-fast |
-| 异步检测 / 流式 | ⏳ | 待 v1.1 |
+| 图片异步检测（轮询 + 回调） | ✅ | 提交 `POST /v4/saas/async/img`（请求同同步 image/v4，≤30MB）→ requestId 为任务引用；查询 `POST /v4/image/query` 按 requestId 轮询（AuditMode.ASYNC_QUERY）；回调报文与同步响应同构，回调地址在数美控制台配置（不经过本库） |
+| 异步文本 / 流式 | ❌ | 数美文本域仅同步接口；流式属其它产品线 |
 | 批量审核 | ❌ | 单条载荷，`maxBatchSize=1` |
-| 回调验签（CallbackVerifier） | ⏳ | 待实现（延伸任务） |
+| 回调验签（CallbackVerifier） | ✅ | `ShumeiCallbackVerifier`：官方回调**无签名机制**（HTTP 200 确认，否则按 [1,2,3,4,5,6,7,8] 秒重试 8 次），仅做结构校验；防伪须依赖接收侧 IP 白名单等业务手段 |
 | 用户内容安全 | ✅ | matchedWords 不进 raw 之外的字段与日志；riskSegments/faces/auxInfo 整体不透传 |
 
 ### 限额（`ShumeiLimits`，声明值，以官方文档为准）
@@ -178,6 +180,20 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 ⏳ 未实现。
 
 ## 平台级能力（core/starter，与具体供应商无关）
+
+### 异步审核与回调
+
+- 路由模型：操作的 `ProviderPlan.mode` 声明 `AuditMode.ASYNC_QUERY`（可轮询）/`ASYNC_CALLBACK`（仅回调推送）；
+  同步 `audit()` 路由自动排除异步操作（互不干扰、不会误触发熔断）。
+- 提交与查询：`template.submitAsync(request)` → 内部 taskId（任务入 `AuditTaskStore`，PENDING）；
+  `template.query(taskId)` 轮询终态——中间态返回 `finalResult=false` 的结果、任务保持 PENDING，终态迁移 SUCCEEDED 并发布事件。
+- 回调：HTTP 回调打向业务侧地址，业务侧转交 `template.handleCallback(provider, headers, rawBody)`；
+  core 按 provider 索引 `CallbackVerifier` 验签，失败抛 `CallbackVerifyException` 并发死信事件；
+  通过后归一 `AuditResult` 并按 ref（providerTaskId，空白时按 dataId 反查）迁移任务终态。
+- 供应商支持面：阿里图片（轮询+回调，SHA256 验签）、腾讯图片（仅回调推送，结构校验）、
+  数美图片（轮询+回调，结构校验）；百度/火山文本与图片域无异步接口，腾讯/数美/阿里文本均仅同步。
+
+### AIGC 检测开关（请求期）
 
 ### AIGC 检测开关（请求期）
 

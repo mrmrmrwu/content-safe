@@ -32,6 +32,17 @@ class ShumeiAuditOperationProviderTest {
         public ShumeiSyncResponse imageDetect(String eventId, String type, Map<String, Object> data) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public ShumeiSyncResponse imageAsyncSubmit(String eventId, String type, Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiAsyncQueryResponse imageAsyncQuery(
+                java.util.List<String> requestIds) {
+            throw new UnsupportedOperationException();
+        }
     };
 
     @Test
@@ -59,16 +70,24 @@ class ShumeiAuditOperationProviderTest {
     }
 
     @Test
-    void mappedImageSceneReturnsImageOperationWithEventId() {
+    void mappedImageSceneReturnsSyncAndAsyncOperations() {
         ShumeiAuditOperationProvider provider = new ShumeiAuditOperationProvider(
                 properties(Map.of("avatar", "image")), NOOP_CLIENT);
 
         assertThat(provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.LOW)))
-                .hasSize(1)
-                .first()
-                .satisfies(operation -> {
-                    assertThat(operation.plan().operation()).isEqualTo("ImageDetect");
-                    assertThat(operation.plan().service()).isEqualTo("image");
+                .hasSize(2)
+                .satisfies(operations -> {
+                    assertThat(operations.get(0).plan().operation()).isEqualTo("ImageDetect");
+                    assertThat(operations.get(0).plan().service()).isEqualTo("image");
+                    assertThat(operations.get(0).plan().mode())
+                            .isEqualTo(io.github.wrqtec.content.safe.model.enums.AuditMode.SYNC);
+                    assertThat(operations.get(1)).isInstanceOf(
+                            io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiImageAsyncOperation.class);
+                    assertThat(operations.get(1).plan().operation()).isEqualTo("ImageAsyncSubmit");
+                    assertThat(operations.get(1).plan().mode())
+                            .isEqualTo(io.github.wrqtec.content.safe.model.enums.AuditMode.ASYNC_QUERY);
+                    assertThat(operations.get(1).capabilities().asyncQuery()).isTrue();
+                    assertThat(operations.get(1).capabilities().asyncCallback()).isTrue();
                 });
     }
 
@@ -118,6 +137,17 @@ class ShumeiAuditOperationProviderTest {
         assertThat(plan.apiVersion()).isEqualTo("v4");
         assertThat(plan.operation()).isEqualTo("TextDetect");
         assertThat(plan.service()).isEqualTo("text");
+        assertThat(plan.lifecycle()).isEqualTo(ProviderLifecycle.ACTIVE);
+    }
+
+    @Test
+    void asyncPlanCarriesAsyncDefaults() {
+        io.github.wrqtec.content.safe.model.ProviderPlan plan =
+                ShumeiAuditOperationProvider.asyncPlan("image");
+
+        assertThat(plan.operation()).isEqualTo("ImageAsyncSubmit");
+        assertThat(plan.service()).isEqualTo("image");
+        assertThat(plan.mode()).isEqualTo(io.github.wrqtec.content.safe.model.enums.AuditMode.ASYNC_QUERY);
         assertThat(plan.lifecycle()).isEqualTo(ProviderLifecycle.ACTIVE);
     }
 

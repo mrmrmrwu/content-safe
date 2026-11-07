@@ -308,3 +308,56 @@ AuditResult manual = contentSafeTemplate.resolveReview(ReviewResolution.of(
 **3）（可选）注入回写出口**：实现 `ReviewResultSink` Bean，starter 按 0..1 装配；
 执行顺序为**先回写后迁移**——sink 失败时任务保持 PENDING，业务可整体重试；
 未注入 sink 时仅做终态归一与事件发布。
+
+## 9. 异步审核与回调
+
+供应商对异步的支持面与验签方式不同（详见 [provider-feature-matrix.md](provider-feature-matrix.md)），
+本节给出统一用法；能力由 `AuditCapabilities` 声明，不支持异步的操作路由直接失败，不静默降级。
+
+### 9.1 提交与轮询（阿里 / 数美图片）
+
+```java
+// 提交：返回内部 taskId，任务进入 AuditTaskStore（PENDING）
+String taskId = contentSafeTemplate.submitAsync(
+        AuditRequest.builder()
+                .scene("avatar")
+                .type(ContentType.IMAGE)
+                .content(ContentRef.url(imageUrl))
+                .dataId("img-1001")        // 业务侧数据标识，回调/查询关联键
+                .build());
+
+// 轮询：中间态返回 finalResult=false 的结果且任务保持 PENDING；终态自动迁移 SUCCEEDED 并发布事件
+AuditResult result = contentSafeTemplate.query(taskId);
+```
+
+约束：阿里异步仅支持 URL 内容（异步接口不支持 base64）；数美异步提交单图 ≤30MB；
+阿里结果保留 3 天（官方建议 30 秒轮询间隔）。
+
+### 9.2 回调接入（三家通用）
+
+供应商把审核结果推到业务侧 HTTP 地址，业务侧转发给模板即可：
+
+```java
+@PostMapping("/content-safe/callback/{provider}")
+public ResponseEntity<String> onCallback(@PathVariable String provider,
+                                         @RequestHeader Map<String, String> headers,
+                                         @RequestBody String rawBody) {
+    contentSafeTemplate.handleCallback(new CallbackRequest(provider, headers, rawBody));
+    return ResponseEntity.ok("ok");   // 返回 200 即确认；非 200 供应商会按策略重试
+}
+```
+
+`handleCallback` 内部完成：验签（`CallbackVerifier`，失败抛 `CallbackVerifyException` 并发布
+`CallbackDeadLetterEvent`）→ 归一 `AuditResult` → 按 providerTaskId（空白时按 dataId 反查）
+迁移任务终态 → 发布 `AuditEvent`（REVIEW 结果同时发布 `ReviewEvent`）。重复回调不产生重复事件（幂等）。
+
+### 9.3 各供应商回调配置
+
+| 供应商 | 异步模式 | 配置 | 验签 |
+|---|---|---|---|
+| 阿里云 | 轮询 + 回调 | `content.safe.providers.aliyun.extra.callback-url` / `callback-seed` / `callback-uid`（uid 须主账号 UID） | SHA256(uid+seed+Content)，恒时比较 |
+| 腾讯云 | 仅回调推送（无查询接口） | `content.safe.providers.tencent.extra.callback-url`；`dataId` 必填（回调关联键） | 官方无签名，仅结构校验 |
+| 数美 | 轮询 + 回调 | 回调地址在数美控制台配置（不经过本库） | 官方无签名，仅结构校验 |
+
+> 安全提示：腾讯/数美回调官方均无签名机制，防伪须依赖回调接收侧的 IP 白名单等业务手段；
+> 回调 URL 为公网地址，请勿在回包中回显任何内容原文。

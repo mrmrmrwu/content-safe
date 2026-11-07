@@ -24,6 +24,7 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 - **Governance built in**: health probing, circuit breaking & rate limiting (operation-level), unified error codes, audit events, Micrometer metrics.
 - **AIGC detection**: request-time switch (`AuditOptions.withAigcDetect`) gated by declared capabilities.
 - **Manual-review loop**: machine `REVIEW` results flow out via `ReviewEvent`, get finalized through `resolveReview` (source=MANUAL, finalResult=true), and are written back through `ReviewResultSink`.
+- **Async & callbacks**: image async submit/query/callback (Aliyun/Tencent/Shumei) with signature verification, idempotency and dead-letter handling.
 - **Clean dependencies**: zero transitive HTTP/JSON dependencies by default (JDK HttpClient + SPI replaceable); all cloud SDKs are optional.
 
 ## Quick Start
@@ -158,11 +159,11 @@ AuditResult result = contentSafeTemplate.query(taskId);
 
 | Provider | Text | Image | Async/Callback | Status |
 |---|---|---|---|---|
-| Alibaba Cloud Content Moderation | ✅ | ✅ | ⏳ not yet | supported |
-| Tencent Cloud TMS/IMS | ✅ | ✅ | ⏳ not yet | supported |
-| Baidu Cloud Content Censorship | ✅ | ✅ | ⏳ not yet | supported |
-| Volcengine Content Security | ✅ | ✅ | ⏳ not yet | supported |
-| Shumei Technology | ✅ | ✅ | ⏳ not yet | supported |
+| Alibaba Cloud Content Moderation | ✅ | ✅ | ✅ image polling + callback (SHA-256 signature) | supported |
+| Tencent Cloud TMS/IMS | ✅ | ✅ | ✅ image callback push (structural validation) | supported |
+| Baidu Cloud Content Censorship | ✅ | ✅ | ❌ no async API upstream | supported |
+| Volcengine Content Security | ✅ | ✅ | ❌ no async API upstream | supported |
+| Shumei Technology | ✅ | ✅ | ✅ image polling + callback (structural validation) | supported |
 | Huawei Cloud Moderation | - | - | - | at lifecycle risk, not enabled by default |
 
 > v1 covers **text + image** moderation; abstractions for audio, video, file and live-streaming are reserved.

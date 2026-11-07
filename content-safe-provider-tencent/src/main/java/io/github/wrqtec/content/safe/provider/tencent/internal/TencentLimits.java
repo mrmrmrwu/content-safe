@@ -28,6 +28,9 @@ public final class TencentLimits {
     /** 图片默认 QPS */
     private static final double IMAGE_QPS = 100.0;
 
+    /** 图片异步任务创建默认 QPS（官方限频 20，查阅 2026-11-07） */
+    private static final double IMAGE_ASYNC_QPS = 20.0;
+
     /** 默认超时 */
     private static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
 
@@ -47,6 +50,14 @@ public final class TencentLimits {
      */
     public static OperationLimits imageSync() {
         return new OperationLimits(null, IMAGE_QPS, DEFAULT_TIMEOUT,
+                MAX_BASE64_BYTES, 0, false);
+    }
+
+    /**
+     * 图片异步任务创建限额（结果推送无主动查询流量）
+     */
+    public static OperationLimits imageAsync() {
+        return new OperationLimits(null, IMAGE_ASYNC_QPS, DEFAULT_TIMEOUT,
                 MAX_BASE64_BYTES, 0, false);
     }
 

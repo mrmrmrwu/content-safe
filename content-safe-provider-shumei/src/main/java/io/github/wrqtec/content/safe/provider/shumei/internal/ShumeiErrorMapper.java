@@ -24,6 +24,9 @@ public final class ShumeiErrorMapper {
     /** message 截断长度 */
     private static final int MAX_MESSAGE_LENGTH = 120;
 
+    /** 同步检测操作标签（错误消息用） */
+    private static final String OP_DETECT = "detect";
+
     private ShumeiErrorMapper() {
     }
 
@@ -34,11 +37,34 @@ public final class ShumeiErrorMapper {
      * @return 原响应（链式调用）
      */
     public static ShumeiSyncResponse assertSuccess(ShumeiSyncResponse response) {
+        return assertSuccess(response, OP_DETECT);
+    }
+
+    /**
+     * 业务响应断言（带操作标签）：返回码非 1100 → 抛 {@link ProviderCallException}
+     *
+     * @param response 已解析响应
+     * @param op 操作标签（如 detect / async submit）
+     * @return 原响应（链式调用）
+     */
+    public static ShumeiSyncResponse assertSuccess(ShumeiSyncResponse response, String op) {
         if (response.isSuccess()) {
             return response;
         }
         throw new ProviderCallException(
-                "shumei detect rejected: code=" + response.getCode()
+                "shumei " + op + " rejected: code=" + response.getCode()
+                        + " message=" + sanitize(response.getMessage()));
+    }
+
+    /**
+     * 异步查询响应断言：返回码非 1100 → 抛 {@link ProviderCallException}
+     */
+    public static ShumeiAsyncQueryResponse assertSuccess(ShumeiAsyncQueryResponse response, String op) {
+        if (response.isSuccess()) {
+            return response;
+        }
+        throw new ProviderCallException(
+                "shumei " + op + " rejected: code=" + response.getCode()
                         + " message=" + sanitize(response.getMessage()));
     }
 
@@ -46,8 +72,15 @@ public final class ShumeiErrorMapper {
      * 底层异常 → {@link ProviderCallException}（脱敏）
      */
     public static ProviderCallException fromException(Exception e) {
+        return fromException(e, OP_DETECT);
+    }
+
+    /**
+     * 底层异常 → {@link ProviderCallException}（带操作标签，脱敏）
+     */
+    public static ProviderCallException fromException(Exception e, String op) {
         return new ProviderCallException(
-                "shumei detect call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()), e);
+                "shumei " + op + " call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()), e);
     }
 
     /**

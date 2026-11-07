@@ -5,7 +5,9 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
+import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunTextModerationOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.GreenClientInvoker;
@@ -43,14 +45,18 @@ class AliyunAuditOperationProviderTest {
     }
 
     @Test
-    void imageSceneYieldsImageModerationOperation() {
+    void imageSceneYieldsSyncAndAsyncOperations() {
         AliyunAuditOperationProvider provider = new AliyunAuditOperationProvider(invoker,
                 properties(Map.of("avatar", "baselineCheck")));
         var operations = provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, null));
-        assertThat(operations).hasSize(1);
-        AuditOperation operation = operations.get(0);
-        assertThat(operation).isInstanceOf(AliyunImageModerationOperation.class);
-        assertThat(operation.plan().operation()).isEqualTo(AliyunProviderConstants.OPERATION_IMAGE_MODERATION);
+        assertThat(operations).hasSize(2);
+        AuditOperation sync = operations.get(0);
+        assertThat(sync).isInstanceOf(AliyunImageModerationOperation.class);
+        assertThat(sync.plan().operation()).isEqualTo(AliyunProviderConstants.OPERATION_IMAGE_MODERATION);
+        AuditOperation async = operations.get(1);
+        assertThat(async).isInstanceOf(AliyunImageAsyncOperation.class);
+        assertThat(async.plan().operation()).isEqualTo(AliyunProviderConstants.OPERATION_IMAGE_ASYNC_MODERATION);
+        assertThat(async.plan().mode()).isEqualTo(AuditMode.ASYNC_QUERY);
     }
 
     @Test

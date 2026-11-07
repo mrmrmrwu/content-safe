@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.provider.shumei.internal;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -29,4 +30,22 @@ public interface ShumeiClientInvoker {
      * @param data data 对象内容（img/tokenId/dataId/ip 等，由调用方装配）
      */
     ShumeiSyncResponse imageDetect(String eventId, String type, Map<String, Object> data);
+
+    /**
+     * 图片异步检测提交（/v4/saas/async/img，请求体与同步 image/v4 同构）
+     *
+     * @param eventId 与数美约定的事件标识
+     * @param type 风险类型
+     * @param data data 对象内容（img/tokenId/dataId/ip 等，由调用方装配）
+     * @return 响应 {@code requestId} 即任务引用
+     */
+    ShumeiSyncResponse imageAsyncSubmit(String eventId, String type, Map<String, Object> data);
+
+    /**
+     * 图片异步结果主动查询（/v4/image/query，按 requestIds 查询）
+     *
+     * @param requestIds 异步提交返回的任务引用列表
+     * @return 响应 contents 与同步 image/v4 响应同构（按传入顺序对应）
+     */
+    ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds);
 }

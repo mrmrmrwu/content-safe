@@ -25,6 +25,10 @@ final class ShumeiProviderPlanFixture {
                 new OperationLimits(null, null, ShumeiLimits.DEFAULT_TIMEOUT, 0L, 0L, false));
     }
 
+    static ProviderPlan imageAsyncPlan(String eventId) {
+        return ShumeiAuditOperationProvider.asyncPlan(eventId);
+    }
+
     static AuditMode syncMode() {
         return AuditMode.SYNC;
     }

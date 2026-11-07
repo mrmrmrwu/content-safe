@@ -38,4 +38,23 @@ class InMemoryAuditTaskStoreTest {
     void markTerminalOnMissingTaskReturnsFalse() {
         assertFalse(store.markTerminal("nope", TaskStatus.SUCCEEDED, null));
     }
+
+    @Test
+    void findByRefFallsBackToDataIdWhenTaskIdBlank() {
+        // 部分供应商回调不回显任务 ID（如腾讯图片异步），需按 dataId 反查
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+
+        assertTrue(store.findByRef(null, "d1").isPresent());
+        assertTrue(store.findByRef("  ", "d1").isPresent());
+        assertTrue(store.findByRef(null, "other").isEmpty());
+        assertEquals("t1", store.findByRef(null, "d1").orElseThrow().taskId());
+    }
+
+    @Test
+    void findByRefWithBothBlankReturnsEmpty() {
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+
+        assertTrue(store.findByRef(null, null).isEmpty());
+        assertTrue(store.findByRef("", " ").isEmpty());
+    }
 }

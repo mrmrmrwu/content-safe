@@ -6,8 +6,10 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
+import io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiCallbackVerifier;
 import io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiClientInvoker;
 import io.github.wrqtec.content.safe.provider.shumei.internal.HttpShumeiClientInvoker;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.CredentialsSupport;
 import org.springframework.beans.factory.ObjectProvider;
@@ -51,6 +53,12 @@ public class ShumeiProviderAutoConfiguration {
     public ShumeiAuditOperationProvider shumeiAuditOperationProvider(
             ShumeiProviderProperties properties, ShumeiClientInvoker client) {
         return new ShumeiAuditOperationProvider(properties, client);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CallbackVerifier shumeiCallbackVerifier() {
+        return new ShumeiCallbackVerifier();
     }
 
     /**

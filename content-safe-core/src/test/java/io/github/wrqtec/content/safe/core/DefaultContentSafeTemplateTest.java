@@ -22,6 +22,7 @@ import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
@@ -170,6 +171,29 @@ class DefaultContentSafeTemplateTest {
     void noProviderConfiguredThrowsNotAvailable() {
         DefaultContentSafeTemplate template = templateOf();
         assertThrows(ProviderNotAvailableException.class, () -> template.text(Scenes.NICKNAME, "t"));
+    }
+
+    @Test
+    void asyncOperationsExcludedFromSyncRouting() {
+        StubOperation sync = new StubOperation("sync-p", 0);
+        StubOperation async = new StubOperation("async-p", 1) {
+            @Override
+            public ProviderPlan plan() {
+                return new ProviderPlan("async-p", "p", "1", "imageAsync", null,
+                        AuditMode.ASYNC_QUERY, null, null);
+            }
+
+            @Override
+            public AuditResult audit(AuditRequest request) {
+                throw new IllegalStateException("async op must not be routed by audit()");
+            }
+        };
+        DefaultContentSafeTemplate template = templateOf(providerOf(sync, async));
+
+        AuditResult result = template.text(Scenes.NICKNAME, "你好");
+        assertEquals("sync-p", result.provider());
+        assertEquals(1, sync.calls());
+        assertEquals(0, async.calls());
     }
 
     @Test

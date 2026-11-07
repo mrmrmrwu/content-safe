@@ -11,10 +11,12 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.provider.shumei.ShumeiProviderConstants;
@@ -32,10 +34,17 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
 
     private static final Gson GSON = new Gson();
 
+    /** 错误消息操作标签 */
+    private static final String OP_DETECT = "detect";
+    private static final String OP_ASYNC_SUBMIT = "async submit";
+    private static final String OP_ASYNC_QUERY = "async query";
+
     private final String accessKey;
     private final String appId;
     private final URI textUri;
     private final URI imageUri;
+    private final URI imageAsyncUri;
+    private final URI imageQueryUri;
     private final HttpClient httpClient;
     private final Duration requestTimeout;
 
@@ -51,7 +60,10 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         this.accessKey = Asserts.notBlank(accessKey, "accessKey");
         this.appId = Asserts.notBlank(appId, "appId");
         this.textUri = URI.create(textBaseUrlOf(properties));
-        this.imageUri = URI.create(imageBaseUrlOf(properties));
+        String imageAuthority = imageAuthorityOf(properties);
+        this.imageUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_PATH);
+        this.imageAsyncUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_ASYNC_PATH);
+        this.imageQueryUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_QUERY_PATH);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
                 .build();
@@ -63,7 +75,9 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         Asserts.notBlank(eventId, "eventId");
         Asserts.notBlank(type, "type");
         Asserts.notNull(data, "data");
-        return post(textUri, envelope(eventId, type, data));
+        ShumeiSyncResponse parsed = post(textUri, envelope(eventId, type, data),
+                ShumeiSyncResponse.class, OP_DETECT);
+        return ShumeiErrorMapper.assertSuccess(parsed, OP_DETECT);
     }
 
     @Override
@@ -71,7 +85,34 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         Asserts.notBlank(eventId, "eventId");
         Asserts.notBlank(type, "type");
         Asserts.notNull(data, "data");
-        return post(imageUri, envelope(eventId, type, data));
+        ShumeiSyncResponse parsed = post(imageUri, envelope(eventId, type, data),
+                ShumeiSyncResponse.class, OP_DETECT);
+        return ShumeiErrorMapper.assertSuccess(parsed, OP_DETECT);
+    }
+
+    @Override
+    public ShumeiSyncResponse imageAsyncSubmit(String eventId, String type, Map<String, Object> data) {
+        Asserts.notBlank(eventId, "eventId");
+        Asserts.notBlank(type, "type");
+        Asserts.notNull(data, "data");
+        // 异步提交请求体与同步 image/v4 同构，响应回显请求并携带任务引用 requestId
+        ShumeiSyncResponse parsed = post(imageAsyncUri, envelope(eventId, type, data),
+                ShumeiSyncResponse.class, OP_ASYNC_SUBMIT);
+        return ShumeiErrorMapper.assertSuccess(parsed, OP_ASYNC_SUBMIT);
+    }
+
+    @Override
+    public ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds) {
+        Asserts.notNull(requestIds, "requestIds");
+        if (requestIds.isEmpty()) {
+            throw new InvalidRequestException("requestIds must not be empty");
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("accessKey", accessKey);
+        body.put("requestIds", requestIds);
+        ShumeiAsyncQueryResponse parsed = post(imageQueryUri, body,
+                ShumeiAsyncQueryResponse.class, OP_ASYNC_QUERY);
+        return ShumeiErrorMapper.assertSuccess(parsed, OP_ASYNC_QUERY);
     }
 
     private Map<String, Object> envelope(String eventId, String type, Map<String, Object> data) {
@@ -84,7 +125,7 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         return envelope;
     }
 
-    private ShumeiSyncResponse post(URI uri, Map<String, Object> envelope) {
+    private <T> T post(URI uri, Map<String, Object> envelope, Class<T> responseType, String op) {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(requestTimeout)
                 .header("Content-Type", "application/json")
@@ -93,26 +134,26 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         try {
             HttpResponse<InputStream> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            ShumeiSyncResponse parsed = parse(response.body());
+            T parsed = parse(response.body(), responseType);
             if (parsed == null) {
                 throw new ProviderCallException(
-                        "shumei detect returned empty body, httpStatus=" + response.statusCode());
+                        "shumei " + op + " returned empty body, httpStatus=" + response.statusCode());
             }
-            return ShumeiErrorMapper.assertSuccess(parsed);
+            return parsed;
         } catch (IOException e) {
-            throw ShumeiErrorMapper.fromException(e);
+            throw ShumeiErrorMapper.fromException(e, op);
         } catch (JsonSyntaxException e) {
             // 报文非合法 JSON：归一为调用异常；message 不携带报文原文
-            throw new ProviderCallException("shumei detect returned invalid json body", e);
+            throw new ProviderCallException("shumei " + op + " returned invalid json body", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new ProviderCallException("shumei detect call interrupted", e);
+            throw new ProviderCallException("shumei " + op + " call interrupted", e);
         }
     }
 
-    private static ShumeiSyncResponse parse(InputStream body) throws IOException {
+    private static <T> T parse(InputStream body, Class<T> responseType) throws IOException {
         try (Reader reader = new InputStreamReader(body, StandardCharsets.UTF_8)) {
-            return GSON.fromJson(reader, ShumeiSyncResponse.class);
+            return GSON.fromJson(reader, responseType);
         }
     }
 
@@ -125,12 +166,17 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
                 + ShumeiProviderConstants.HOST_SUFFIX + ShumeiProviderConstants.TEXT_PATH;
     }
 
-    private static String imageBaseUrlOf(ShumeiProviderProperties properties) {
+    /**
+     * 图片域主机（含 scheme）：异步提交/查询与同步共用 api-img-{region} 集群；
+     * image-base-url 整体覆盖时取其 scheme+authority 再拼异步路径
+     */
+    private static String imageAuthorityOf(ShumeiProviderProperties properties) {
         String override = properties.extraValue(ShumeiProviderConstants.EXTRA_IMAGE_BASE_URL);
         if (override != null) {
-            return override;
+            URI uri = URI.create(override);
+            return uri.getScheme() + "://" + uri.getRawAuthority();
         }
         return "https://" + ShumeiProviderConstants.IMAGE_HOST_PREFIX + properties.getRegion()
-                + ShumeiProviderConstants.HOST_SUFFIX + ShumeiProviderConstants.IMAGE_PATH;
+                + ShumeiProviderConstants.HOST_SUFFIX;
     }
 }

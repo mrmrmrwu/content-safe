@@ -3,6 +3,10 @@ package io.github.wrqtec.content.safe.provider.aliyun.internal;
 import java.util.Map;
 
 import com.aliyun.green20220302.Client;
+import com.aliyun.green20220302.models.DescribeImageModerationResultRequest;
+import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody;
+import com.aliyun.green20220302.models.ImageAsyncModerationRequest;
+import com.aliyun.green20220302.models.ImageAsyncModerationResponseBody;
 import com.aliyun.green20220302.models.ImageModerationRequest;
 import com.aliyun.green20220302.models.ImageModerationResponseBody;
 import com.aliyun.green20220302.models.TextModerationRequest;
@@ -89,5 +93,21 @@ public final class TeaGreenClientInvoker implements GreenClientInvoker {
                 .setService(service)
                 .setServiceParameters(JsonParams.toJson(serviceParameters));
         return client.imageModerationWithOptions(request, runtimeOptions).getBody();
+    }
+
+    @Override
+    public ImageAsyncModerationResponseBody imageAsyncModeration(String service, Map<String, String> serviceParameters)
+            throws Exception {
+        ImageAsyncModerationRequest request = new ImageAsyncModerationRequest()
+                .setService(service)
+                .setServiceParameters(JsonParams.toJson(serviceParameters));
+        return client.imageAsyncModerationWithOptions(request, runtimeOptions).getBody();
+    }
+
+    @Override
+    public DescribeImageModerationResultResponseBody describeImageModerationResult(String reqId) throws Exception {
+        DescribeImageModerationResultRequest request = new DescribeImageModerationResultRequest()
+                .setReqId(reqId);
+        return client.describeImageModerationResultWithOptions(request, runtimeOptions).getBody();
     }
 }

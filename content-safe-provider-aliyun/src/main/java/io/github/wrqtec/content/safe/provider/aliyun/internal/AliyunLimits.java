@@ -28,6 +28,9 @@ public final class AliyunLimits {
     /** 图片同步检测默认 QPS。TODO 发布前复核（账户配额相关，约 50） */
     private static final double IMAGE_QPS = 50D;
 
+    /** 图片异步提交默认 QPS（官方文档：本接口单用户 QPS 默认 100，查阅 2026-11-07） */
+    private static final double IMAGE_ASYNC_QPS = 100D;
+
     private AliyunLimits() {
     }
 
@@ -47,5 +50,14 @@ public final class AliyunLimits {
      */
     public static OperationLimits imageSync() {
         return new OperationLimits(null, IMAGE_QPS, null, IMAGE_MAX_CONTENT_BYTES, IMAGE_MAX_PIXELS, false);
+    }
+
+    /**
+     * 图片异步提交限额（轮询 DescribeImageModerationResult 不计费不设限）
+     *
+     * @return 限额声明
+     */
+    public static OperationLimits imageAsync() {
+        return new OperationLimits(null, IMAGE_ASYNC_QPS, null, IMAGE_MAX_CONTENT_BYTES, 0L, false);
     }
 }

@@ -172,5 +172,15 @@ class ShumeiImageDetectOperationTest {
             }
             return GSON.fromJson(responseJson, ShumeiSyncResponse.class);
         }
+
+        @Override
+        public ShumeiSyncResponse imageAsyncSubmit(String eventId, String type, Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

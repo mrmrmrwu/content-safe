@@ -28,6 +28,12 @@ public final class TencentProviderConstants {
     /** IMS 审核类型：AIGC 内容识别 */
     public static final String IMAGE_TYPE_AIGC = "IMAGE_AIGC";
 
+    /** 图片异步审核任务创建操作（IMS，结果经回调推送） */
+    public static final String OPERATION_IMAGE_ASYNC_CREATE = "CreateImageModerationAsyncTask";
+
+    /** extra 配置键：异步任务回调地址（官方 CallbackUrl，必填） */
+    public static final String EXTRA_CALLBACK_URL = "callback-url";
+
     /** TMS 审核类型：AIGC 生成内容识别（Type=TEXT_AIGC，与内容检测同一接口） */
     public static final String TEXT_TYPE_AIGC = "TEXT_AIGC";
 

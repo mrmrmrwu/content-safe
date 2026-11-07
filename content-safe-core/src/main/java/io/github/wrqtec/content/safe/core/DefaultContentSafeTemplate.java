@@ -21,6 +21,7 @@ import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderDegradedEvent;
@@ -125,6 +126,10 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         }
 
         List<AuditOperation> remaining = new ArrayList<>(candidates(scene));
+        // 异步操作不参与同步路由：audit() 在异步操作上始终抛 UnsupportedFeatureException，
+        // 若混入候选会被熔断器记为失败导致误熔断
+        remaining.removeIf(op -> op.plan().mode() == AuditMode.ASYNC_QUERY
+                || op.plan().mode() == AuditMode.ASYNC_CALLBACK);
         if (remaining.isEmpty()) {
             throw new ProviderNotAvailableException("no provider configured for scene: " + scene.code());
         }

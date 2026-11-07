@@ -22,6 +22,21 @@ public final class AliyunProviderConstants {
     /** 图片同步检测操作名 */
     public static final String OPERATION_IMAGE_MODERATION = "ImageModeration";
 
+    /** 图片异步检测提交操作名（来源：help.aliyun.com/doc-detail/2638108，查阅 2026-11-07） */
+    public static final String OPERATION_IMAGE_ASYNC_MODERATION = "ImageAsyncModeration";
+
+    /** 图片异步检测结果查询操作名（按 reqId 轮询，结果保留 3 天） */
+    public static final String OPERATION_IMAGE_ASYNC_QUERY = "DescribeImageModerationResult";
+
+    /** extra 配置键：异步检测回调地址（配置后提交任务携带 callback，启用回调推送） */
+    public static final String EXTRA_CALLBACK_URL = "callback-url";
+
+    /** extra 配置键：回调验签种子（提交时传给阿里云 seed，回调验签 checksum 使用同一值） */
+    public static final String EXTRA_CALLBACK_SEED = "callback-seed";
+
+    /** extra 配置键：阿里云主账号 UID（回调 checksum 参与 SHA256 计算，非 RAM 用户 UID） */
+    public static final String EXTRA_CALLBACK_UID = "callback-uid";
+
     /** AIGC 检测 service 码（来源：help.aliyun.com/doc-detail/2642717，查阅 2026-11-06） */
     public static final String SERVICE_AIGC_DETECTOR = "aigcDetector";
 

@@ -2,6 +2,8 @@ package io.github.wrqtec.content.safe.provider.aliyun.internal;
 
 import java.util.Map;
 
+import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody;
+import com.aliyun.green20220302.models.ImageAsyncModerationResponseBody;
 import com.aliyun.green20220302.models.ImageModerationResponseBody;
 import com.aliyun.green20220302.models.TextModerationResponseBody;
 
@@ -34,4 +36,24 @@ public interface GreenClientInvoker {
      */
     ImageModerationResponseBody imageModeration(String service, Map<String, String> serviceParameters)
             throws Exception;
+
+    /**
+     * 图片异步检测提交（ImageAsyncModeration）
+     *
+     * @param service           阿里云 serviceCode
+     * @param serviceParameters 业务参数（imageUrl / dataId / callback / seed 等），值不得为 null
+     * @return SDK 响应体（data.reqId 为任务引用）
+     * @throws Exception 网络/限流/鉴权等调用异常原样上抛，由调用方统一映射
+     */
+    ImageAsyncModerationResponseBody imageAsyncModeration(String service, Map<String, String> serviceParameters)
+            throws Exception;
+
+    /**
+     * 图片异步检测结果查询（DescribeImageModerationResult，按 reqId 轮询，结果保留 3 天）
+     *
+     * @param reqId 提交时返回的请求 ID
+     * @return SDK 响应体（code=280 表示任务检测中）
+     * @throws Exception 网络/限流/鉴权等调用异常原样上抛，由调用方统一映射
+     */
+    DescribeImageModerationResultResponseBody describeImageModerationResult(String reqId) throws Exception;
 }

@@ -37,12 +37,17 @@ content:
         extra:
           gifInterval: 2                       # GIF 截帧间隔（可选）
           gifMaxFrames: 5                      # GIF 最大截帧数（可选）
-          readTimeoutSeconds: 10               # SDK 读超时（秒，可选）
+          read-timeout-seconds: 10             # SDK 读超时（秒，可选）
+          # callback-url: https://biz.example.com/callback/tencent   # 图片异步回调地址（可选，配置后注册图片异步操作）
 ```
 
 - 默认不装配：`enabled=true` 且 SDK 在类路径上才生效；缺凭证启动即失败（fail-fast）。
 - 未映射的场景返回空操作列表，由路由跳过（不产生调用）。
 - 凭证解析链：自定义 `CredentialsProvider`（provider()=="tencent"）→ 配置 ak/sk → 环境变量回退。
+- **图片异步**（`CreateImageModerationAsyncTask`，仅回调推送，官方无查询接口）：
+  配置 `extra.callback-url` 后自动注册异步操作；提交时请求**必须携带业务侧 `dataId`**
+  （回调报文无任务 ID，按 dataId 关联任务）；官方回调**无签名机制**，
+  `TencentCallbackVerifier` 仅做结构校验，防伪须依赖回调接收侧 IP 白名单等业务手段；限频 20QPS。
 
 ## 能力声明
 

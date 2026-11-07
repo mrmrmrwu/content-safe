@@ -29,9 +29,10 @@ public interface AuditTaskStore {
     Optional<AuditTask> find(String taskId);
 
     /**
-     * 按供应商侧引用查询（回调反查）
+     * 按供应商侧引用查询（回调反查）。providerTaskId 空白时退化为按 dataId 反查
+     * （部分供应商回调不回显任务 ID，如腾讯图片异步）；两者均空白时返回 empty
      *
-     * @param providerTaskId 供应商侧任务 ID
+     * @param providerTaskId 供应商侧任务 ID，可为 null（表示按 dataId 反查）
      * @param dataId         业务侧数据唯一标识，可为 null（表示不约束）
      * @return 命中的任务；不存在时返回 {@link Optional#empty()}
      */

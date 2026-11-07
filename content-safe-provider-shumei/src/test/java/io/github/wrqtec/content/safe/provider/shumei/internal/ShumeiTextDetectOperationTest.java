@@ -183,6 +183,16 @@ class ShumeiTextDetectOperationTest {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public ShumeiSyncResponse imageAsyncSubmit(String eventId, String type, Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds) {
+            throw new UnsupportedOperationException();
+        }
+
         private ShumeiSyncResponse doRespond() {
             if (failure != null) {
                 throw failure;

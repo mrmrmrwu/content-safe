@@ -22,11 +22,23 @@ public final class ShumeiProviderConstants {
     /** 图片同步检测操作名 */
     public static final String OPERATION_IMAGE_DETECT = "ImageDetect";
 
+    /** 图片异步检测操作名（提交接口） */
+    public static final String OPERATION_IMAGE_ASYNC_SUBMIT = "ImageAsyncSubmit";
+
+    /** 图片异步结果查询操作名 */
+    public static final String OPERATION_IMAGE_ASYNC_QUERY = "ImageAsyncQuery";
+
     /** 文本检测路径 */
     public static final String TEXT_PATH = "/text/v4";
 
     /** 图片检测路径 */
     public static final String IMAGE_PATH = "/image/v4";
+
+    /** 图片异步提交路径（与同步共用 api-img-{region} 集群） */
+    public static final String IMAGE_ASYNC_PATH = "/v4/saas/async/img";
+
+    /** 图片异步主动查询路径 */
+    public static final String IMAGE_QUERY_PATH = "/v4/image/query";
 
     /** 文本集群 host 前缀，完整地址形如 api-text-{region}.fengkongcloud.com */
     public static final String TEXT_HOST_PREFIX = "api-text-";

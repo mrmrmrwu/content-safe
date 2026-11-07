@@ -6,9 +6,11 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.Severity;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentAuditResultNormalizer;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentClientInvoker;
+import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentTextModerationOperation;
 import org.junit.jupiter.api.Test;
@@ -53,12 +55,17 @@ class TencentAuditOperationProviderTest {
     }
 
     @Test
-    void mappedImageSceneBuildsImageOperation() {
+    void mappedImageSceneBuildsSyncAndAsyncOperations() {
         properties.getScenes().put("avatar", "biz-avatar");
         List<AuditOperation> operations =
                 provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
-        assertThat(operations).hasSize(1);
+        assertThat(operations).hasSize(2);
         assertThat(operations.get(0)).isInstanceOf(TencentImageModerationOperation.class);
+        assertThat(operations.get(0).plan().mode()).isEqualTo(AuditMode.SYNC);
+        assertThat(operations.get(1)).isInstanceOf(TencentImageAsyncOperation.class);
+        assertThat(operations.get(1).plan().operation()).isEqualTo("CreateImageModerationAsyncTask");
+        assertThat(operations.get(1).plan().mode()).isEqualTo(AuditMode.ASYNC_CALLBACK);
+        assertThat(operations.get(1).plan().service()).isEqualTo("biz-avatar");
     }
 
     @Test
@@ -66,7 +73,7 @@ class TencentAuditOperationProviderTest {
         properties.getAigcScenes().put("ai-art", "biz-aigc");
         List<AuditOperation> imageOps =
                 provider.operations(SceneDefinition.of("ai-art", ContentType.IMAGE, Severity.MEDIUM));
-        assertThat(imageOps).hasSize(1);
+        assertThat(imageOps).hasSize(2);
         assertThat(imageOps.get(0)).isInstanceOf(TencentImageModerationOperation.class);
         assertThat(imageOps.get(0).capabilities().aigcDetect()).isTrue();
 
@@ -90,6 +97,21 @@ class TencentAuditOperationProviderTest {
                 "badInt", "abc"));
         List<AuditOperation> operations =
                 provider.operations(SceneDefinition.of("gif", ContentType.IMAGE, Severity.LOW));
-        assertThat(operations).hasSize(1);
+        assertThat(operations).hasSize(2);
+    }
+
+    @Test
+    void imageAsyncOperationRegistersCallbackVerifierCapability() {
+        properties.getScenes().put("avatar", "biz-avatar");
+        properties.getExtra().put("callback-url", "https://example.com/callback");
+        List<AuditOperation> operations =
+                provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
+        AuditOperation asyncOp = operations.get(1);
+        assertThat(asyncOp.capabilities().asyncCallback()).isTrue();
+
+        properties.getExtra().remove("callback-url");
+        List<AuditOperation> withoutCallback =
+                provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
+        assertThat(withoutCallback.get(1).capabilities().asyncCallback()).isFalse();
     }
 }

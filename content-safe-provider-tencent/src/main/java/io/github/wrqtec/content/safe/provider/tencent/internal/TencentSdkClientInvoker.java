@@ -6,6 +6,8 @@ import com.tencentcloudapi.common.Credential;
 import com.tencentcloudapi.common.profile.ClientProfile;
 import com.tencentcloudapi.common.profile.HttpProfile;
 import com.tencentcloudapi.ims.v20201229.ImsClient;
+import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskRequest;
+import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskResponse;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationRequest;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationResponse;
 import com.tencentcloudapi.tms.v20201229.TmsClient;
@@ -91,5 +93,11 @@ public final class TencentSdkClientInvoker implements TencentClientInvoker {
     @Override
     public ImageModerationResponse imageModeration(ImageModerationRequest request) throws Exception {
         return imsClient.ImageModeration(request);
+    }
+
+    @Override
+    public CreateImageModerationAsyncTaskResponse createImageModerationAsyncTask(
+            CreateImageModerationAsyncTaskRequest request) throws Exception {
+        return imsClient.CreateImageModerationAsyncTask(request);
     }
 }

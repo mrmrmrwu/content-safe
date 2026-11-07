@@ -5,9 +5,11 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
 import io.github.wrqtec.content.safe.spi.CredentialsSupport;
+import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunCallbackVerifier;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.GreenClientInvoker;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.TeaGreenClientInvoker;
 import org.springframework.beans.factory.ObjectProvider;
@@ -51,6 +53,12 @@ public class AliyunProviderAutoConfiguration {
             GreenClientInvoker aliyunGreenClientInvoker,
             AliyunProviderProperties properties) {
         return new AliyunAuditOperationProvider(aliyunGreenClientInvoker, properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public CallbackVerifier aliyunCallbackVerifier(AliyunProviderProperties properties) {
+        return new AliyunCallbackVerifier(properties);
     }
 
     /**

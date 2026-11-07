@@ -1,6 +1,7 @@
 package io.github.wrqtec.content.safe.provider.aliyun;
 
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.GreenClientInvoker;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -72,6 +73,7 @@ class AliyunProviderAutoConfigurationTest {
                     assertThat(context).hasSingleBean(GreenClientInvoker.class);
                     assertThat(context).hasSingleBean(AuditOperationProvider.class);
                     assertThat(context.getBean(AuditOperationProvider.class).provider()).isEqualTo("aliyun");
+                    assertThat(context).hasSingleBean(CallbackVerifier.class);
                 });
     }
 

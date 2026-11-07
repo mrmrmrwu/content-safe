@@ -14,7 +14,8 @@ optional 依赖，不进入使用方编译期传递依赖）。
 | 事件（eventId） | ✅ `scenes` 映射，与数美控制台事件约定一致 |
 | region | ✅ 默认 `sh`；文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp；extra 可整体覆盖地址 |
 | 动图截帧（interval/maxFrame） | ✅ 经场景 ext 传入（maxFrame 官方上限 20） |
-| 批量 / 异步 / 回调 | ❌ v4 同步模型（异步接口待 v1.1） |
+| 图片异步（轮询 + 回调） | ✅ 提交 `/v4/saas/async/img`（≤30MB），查询 `/v4/image/query` 按 requestId 轮询；回调地址在数美控制台配置（不经过本库） |
+| 批量 / 异步文本 | ❌ 数美文本域仅同步接口 |
 
 suggestion 归一：`riskLevel` PASS/REVIEW/REJECT（大小写不敏感）；
 缺失/未知值保守回退 REVIEW。`finalResult`（1=最终）进 `AuditResult.finalResult`，
@@ -57,6 +58,14 @@ content:
 - `AuditResult.raw` 只放 `{code, finalResult, resultType}`；命中 raw 只放
   `{riskLevel, riskSource, matchedWords}`；
 - 日志与异常消息不含 accessKey 与请求原文（长 token 一律掩码，message 截断 120 字符）。
+
+## 异步与回调
+
+- **轮询**：`template.submitAsync(request)` 提交（返回内部 taskId），`template.query(taskId)` 按
+  requestId 轮询，`contents` 未就绪时返回 `finalResult=false` 的中间态；
+- **回调**：报文与同步 image/v4 响应同构，回调地址在数美控制台配置；官方**无签名机制**
+  （HTTP 200 确认，否则按 [1,2,3,4,5,6,7,8] 秒重试 8 次），本模块 `ShumeiCallbackVerifier`
+  仅做结构校验，防伪须依赖接收侧 IP 白名单等业务手段。
 
 ## 测试
 

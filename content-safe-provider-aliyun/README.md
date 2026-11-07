@@ -3,8 +3,12 @@
 阿里云内容安全 2.0（增强版，green-cip）provider 适配模块。
 
 - SDK：`com.aliyun:green20220302:3.6.6`（`optional`，不进入使用方编译期传递依赖）。
-- 已实现：文本同步审核（TextModeration）、图片同步审核（ImageModeration，仅公网 URL）。
-- 未实现：异步审核/回调、OCR/AIGC 等扩展 service（可经 `scenes` 映射直接试用，归一化按通用规则处理）。
+- 已实现：文本同步审核（TextModeration）、图片同步审核（ImageModeration，仅公网 URL）、
+  图片异步审核（ImageAsyncModeration 提交 + DescribeImageModerationResult 轮询，仅 URL，
+  响应 code=280 为检测中间态）与回调验签（`AliyunCallbackVerifier`，SHA256(uid+seed+Content) 恒时比较）。
+- 异步回调配置：`extra.callback-url` / `callback-seed` / `callback-uid`（uid 须主账号 UID，
+  未配置时验签失败；seed 缺省回退全局 `content.safe.callback-secret`）。
+- 未实现：OCR 等扩展 service（可经 `scenes` 映射直接试用，归一化按通用规则处理）。
 
 ## 使用
 
@@ -33,9 +37,12 @@ content:
         scenes:                   # 业务场景 code → 阿里云 serviceCode（仅此模块可见）
           comment: comment_detection
           avatar: baselineCheck
-        extra:                    # 可选：HTTP 超时（毫秒）
-          connectTimeoutMs: "3000"
-          readTimeoutMs: "5000"
+        extra:                    # 可选：HTTP 超时（毫秒）与异步回调
+          connect-timeout-ms: "3000"
+          read-timeout-ms: "5000"
+          # callback-url: https://biz.example.com/callback/aliyun   # 图片异步回调地址（可选）
+          # callback-seed: your-seed          # 回调验签 seed（缺省回退 content.safe.callback-secret）
+          # callback-uid: your-main-uid       # 主账号 UID（必配，否则回调验签失败）
 ```
 
 未映射的场景不会装配该供应商的 operation，由路由自动跳过（数据驱动，铁律 §9.2）。

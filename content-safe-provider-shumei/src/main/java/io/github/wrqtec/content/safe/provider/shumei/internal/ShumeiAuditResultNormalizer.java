@@ -86,6 +86,24 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
 
     @Override
     public AuditResult normalize(Object rawResponse, Map<String, Object> context) {
+        return build(rawResponse, AuditSource.SYNC, context);
+    }
+
+    /**
+     * 异步主动查询结果归一（/v4/image/query contents 单项，与同步响应同构）
+     */
+    public AuditResult normalizeQuery(Object rawResponse, Map<String, Object> context) {
+        return build(rawResponse, AuditSource.ASYNC_QUERY, context);
+    }
+
+    /**
+     * 异步回调报文归一（与同步响应同构）
+     */
+    public AuditResult normalizeCallback(Object rawResponse, Map<String, Object> context) {
+        return build(rawResponse, AuditSource.ASYNC_CALLBACK, context);
+    }
+
+    private AuditResult build(Object rawResponse, AuditSource source, Map<String, Object> context) {
         if (!(rawResponse instanceof ShumeiSyncResponse response)) {
             throw new ProviderCallException("shumei normalizer received unexpected raw type: "
                     + (rawResponse == null ? "null" : rawResponse.getClass().getName()));
@@ -94,7 +112,7 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
                 .ok(true)
                 .suggestion(suggestionOf(response.getRiskLevel()))
                 .finalResult(finalResultOf(response.getFinalResult()))
-                .source(AuditSource.SYNC)
+                .source(source)
                 .provider(provider())
                 .product(ShumeiProviderConstants.PRODUCT)
                 .service((String) context.get(CONTEXT_EVENT_ID))

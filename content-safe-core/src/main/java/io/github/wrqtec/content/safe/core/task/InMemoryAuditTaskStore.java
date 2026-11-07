@@ -30,9 +30,15 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
 
     @Override
     public Optional<AuditTask> findByRef(String providerTaskId, String dataId) {
+        boolean byRef = providerTaskId != null && !providerTaskId.isBlank();
+        boolean byDataId = dataId != null && !dataId.isBlank();
+        if (!byRef && !byDataId) {
+            // 双空反查无意义，避免随机命中任意任务
+            return Optional.empty();
+        }
         return store.values().stream()
-                .filter(t -> t.ref().providerTaskId().equals(providerTaskId))
-                .filter(t -> dataId == null || dataId.equals(t.ref().dataId()))
+                .filter(t -> !byRef || t.ref().providerTaskId().equals(providerTaskId))
+                .filter(t -> !byDataId || dataId.equals(t.ref().dataId()))
                 .findFirst();
     }
 

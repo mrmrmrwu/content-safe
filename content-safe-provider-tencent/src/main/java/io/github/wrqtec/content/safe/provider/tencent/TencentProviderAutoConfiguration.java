@@ -6,6 +6,7 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.CredentialsSupport;
 import org.springframework.beans.factory.ObjectProvider;
@@ -16,6 +17,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentAuditResultNormalizer;
+import io.github.wrqtec.content.safe.provider.tencent.internal.TencentCallbackVerifier;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentClientInvoker;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentSdkClientInvoker;
 
@@ -45,6 +47,16 @@ public class TencentProviderAutoConfiguration {
     public TencentAuditOperationProvider tencentAuditOperationProvider(
             TencentProviderProperties properties, TencentClientInvoker invoker) {
         return new TencentAuditOperationProvider(properties, invoker, new TencentAuditResultNormalizer());
+    }
+
+    /**
+     * 腾讯回调验签器：官方无签名机制，仅结构校验
+     * （防伪依赖回调地址侧 IP 白名单等业务手段）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CallbackVerifier tencentCallbackVerifier() {
+        return new TencentCallbackVerifier();
     }
 
     private CredentialsProvider.Credentials resolveCredentials(
