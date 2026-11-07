@@ -34,3 +34,6 @@ jobs:
 
       - name: Deploy to GitHub Packages
         run: ./mvnw -B -ntp -s "$GITHUB_WORKSPACE/settings.xml" deploy -DskipTests
+        # setup-java 生成的 settings.xml 以 ${env.GITHUB_TOKEN} 引用凭据，缺 env 时为空串导致 401
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
