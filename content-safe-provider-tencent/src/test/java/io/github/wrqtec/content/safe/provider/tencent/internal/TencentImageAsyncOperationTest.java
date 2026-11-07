@@ -79,8 +79,12 @@ class TencentImageAsyncOperationTest {
 
     @Test
     void missingDataIdRejected() {
-        assertThatThrownBy(() -> operation.submitAsync(AuditRequest.image("ugc-image",
-                ContentRef.url("https://example.com/a.jpg"))))
+        // 工厂已自动生成 dataId，这里显式传空白验证纵深防御
+        assertThatThrownBy(() -> operation.submitAsync(AuditRequest.builder()
+                .scene("ugc-image").type(ContentType.IMAGE)
+                .content(ContentRef.url("https://example.com/a.jpg"))
+                .dataId(" ")
+                .build()))
                 .isInstanceOf(InvalidRequestException.class)
                 .hasMessageContaining("dataId");
     }

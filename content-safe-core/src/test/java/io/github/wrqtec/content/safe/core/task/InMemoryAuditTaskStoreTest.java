@@ -7,8 +7,11 @@ import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InMemoryAuditTaskStoreTest {
@@ -56,5 +59,36 @@ class InMemoryAuditTaskStoreTest {
 
         assertTrue(store.findByRef(null, null).isEmpty());
         assertTrue(store.findByRef("", " ").isEmpty());
+    }
+
+    @Test
+    void boundedStoreEvictsOldestWhenCapacityReached() {
+        InMemoryAuditTaskStore bounded = new InMemoryAuditTaskStore(2, Duration.ofHours(1));
+        bounded.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+        bounded.save(AuditTask.pending("t2", new AsyncTaskRef("p2", "d2"), "scene", "provider"));
+
+        // 超出容量时逐出最早写入的任务，容量保持有界
+        bounded.save(AuditTask.pending("t3", new AsyncTaskRef("p3", "d3"), "scene", "provider"));
+
+        assertTrue(bounded.find("t1").isEmpty());
+        assertTrue(bounded.find("t2").isPresent());
+        assertTrue(bounded.find("t3").isPresent());
+    }
+
+    @Test
+    void boundedStoreEvictsExpiredTasks() throws InterruptedException {
+        InMemoryAuditTaskStore bounded = new InMemoryAuditTaskStore(10, Duration.ofMillis(50));
+        bounded.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+
+        Thread.sleep(80);
+
+        assertTrue(bounded.find("t1").isEmpty());
+    }
+
+    @Test
+    void invalidConstructorArgumentsRejected() {
+        assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(0, Duration.ofHours(1)));
+        assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, Duration.ZERO));
+        assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, null));
     }
 }

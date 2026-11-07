@@ -1,31 +1,83 @@
 package io.github.wrqtec.content.safe.core.task;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Iterator;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 
 import io.github.wrqtec.content.safe.api.AuditResult;
+import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.spi.AuditTaskStore;
+import lombok.extern.slf4j.Slf4j;
 
 /**
- * 默认内存任务存储，生产环境应替换为 DB/Redis 实现（对外 Bean 默认可被覆盖）
+ * 默认内存任务存储，生产环境应替换为 DB/Redis 实现（对外 Bean 默认可被覆盖）。
+ * 有界：容量超限时按插入顺序驱逐最旧任务；TTL 惰性过期（读取/迁移时淘汰），
+ * 防止回调丢失的 PENDING 任务无限累积占满内存
  *
  * @author L.David
  */
+@Slf4j
 public class InMemoryAuditTaskStore implements AuditTaskStore {
+
+    /** 默认容量上限 */
+    public static final int DEFAULT_MAX_SIZE = 10_000;
+
+    /** 默认过期时长 */
+    public static final Duration DEFAULT_EXPIRE_AFTER = Duration.ofHours(1);
 
     private final ConcurrentMap<String, AuditTask> store = new ConcurrentHashMap<>();
 
+    /** 插入顺序索引，用于容量超限时驱逐最旧任务 */
+    private final ConcurrentLinkedDeque<String> insertionOrder = new ConcurrentLinkedDeque<>();
+
+    private final int maxSize;
+
+    private final Duration expireAfter;
+
+    public InMemoryAuditTaskStore() {
+        this(DEFAULT_MAX_SIZE, DEFAULT_EXPIRE_AFTER);
+    }
+
+    /**
+     * @param maxSize     容量上限，必须为正数
+     * @param expireAfter 任务过期时长（自创建起），必须为正数
+     */
+    public InMemoryAuditTaskStore(int maxSize, Duration expireAfter) {
+        if (maxSize <= 0) {
+            throw new IllegalArgumentException("maxSize must be positive: " + maxSize);
+        }
+        if (expireAfter == null || expireAfter.isNegative() || expireAfter.isZero()) {
+            throw new IllegalArgumentException("expireAfter must be positive: " + expireAfter);
+        }
+        this.maxSize = maxSize;
+        this.expireAfter = expireAfter;
+    }
+
     @Override
     public void save(AuditTask task) {
-        store.put(task.taskId(), task);
+        if (store.size() >= maxSize) {
+            // 容量吃紧才做全量过期清理，常规路径 O(1)
+            evictExpired();
+            while (store.size() >= maxSize) {
+                if (!evictOldest()) {
+                    break;
+                }
+            }
+        }
+        if (store.put(task.taskId(), task) == null) {
+            insertionOrder.addLast(task.taskId());
+        }
     }
 
     @Override
     public Optional<AuditTask> find(String taskId) {
-        return Optional.ofNullable(store.get(taskId));
+        return Optional.ofNullable(live(taskId));
     }
 
     @Override
@@ -37,6 +89,7 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
             return Optional.empty();
         }
         return store.values().stream()
+                .filter(this::notExpired)
                 .filter(t -> !byRef || t.ref().providerTaskId().equals(providerTaskId))
                 .filter(t -> !byDataId || dataId.equals(t.ref().dataId()))
                 .findFirst();
@@ -45,7 +98,7 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
     @Override
     public boolean markTerminal(String taskId, TaskStatus status, AuditResult result) {
         while (true) {
-            AuditTask current = store.get(taskId);
+            AuditTask current = live(taskId);
             if (current == null) {
                 return false;
             }
@@ -63,5 +116,51 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
     @Override
     public void delete(String taskId) {
         store.remove(taskId);
+    }
+
+    /** 读取仍存活（存在且未过期）的任务；过期任务顺带淘汰 */
+    private AuditTask live(String taskId) {
+        AuditTask task = store.get(taskId);
+        if (task == null) {
+            return null;
+        }
+        return notExpired(task) ? task : null;
+    }
+
+    /** 过期判断 + 惰性淘汰；已过期返回 false 并移除 */
+    private boolean notExpired(AuditTask task) {
+        if (task.createdAt().plus(expireAfter).isAfter(Instant.now())) {
+            return true;
+        }
+        if (store.remove(task.taskId(), task)) {
+            log.debug("audit task expired: taskId={}, createdAt={}", task.taskId(), task.createdAt());
+        }
+        return false;
+    }
+
+    /** 淘汰全部过期任务，释放容量 */
+    private void evictExpired() {
+        Instant now = Instant.now();
+        store.values().removeIf(task -> {
+            boolean expired = task.createdAt().plus(expireAfter).isBefore(now);
+            if (expired) {
+                log.debug("audit task expired: taskId={}, createdAt={}", task.taskId(), task.createdAt());
+            }
+            return expired;
+        });
+    }
+
+    /** 按插入顺序驱逐最旧任务；队列耗尽（并发竞态）返回 false */
+    private boolean evictOldest() {
+        Iterator<String> iterator = insertionOrder.iterator();
+        while (iterator.hasNext()) {
+            String oldest = iterator.next();
+            if (store.remove(oldest) != null) {
+                iterator.remove();
+                return true;
+            }
+            iterator.remove();
+        }
+        return false;
     }
 }

@@ -47,7 +47,11 @@ class AliyunImageAsyncOperationTest {
     }
 
     private AuditRequest request() {
-        return AuditRequest.image("avatar", ContentRef.url(IMAGE_URL));
+        return AuditRequest.builder()
+                .scene("avatar").type(ContentType.IMAGE)
+                .content(ContentRef.url(IMAGE_URL))
+                .dataId("data-req")
+                .build();
     }
 
     @Test
@@ -85,7 +89,8 @@ class AliyunImageAsyncOperationTest {
 
         assertThat(ref.providerTaskId()).isEqualTo("req-1");
         assertThat(ref.dataId()).isEqualTo("data-1");
-        verify(invoker).imageAsyncModeration("baselineCheck", Map.of("imageUrl", IMAGE_URL));
+        verify(invoker).imageAsyncModeration("baselineCheck",
+                Map.of("imageUrl", IMAGE_URL, "dataId", "data-req"));
     }
 
     @Test
@@ -102,6 +107,7 @@ class AliyunImageAsyncOperationTest {
 
         verify(invoker).imageAsyncModeration("baselineCheck", Map.of(
                 "imageUrl", IMAGE_URL,
+                "dataId", "data-req",
                 "callback", "https://biz.example/callback",
                 "seed", "seed-1"));
     }

@@ -1,6 +1,12 @@
 package io.github.wrqtec.content.safe.api;
 
+import java.time.Duration;
+import java.time.Instant;
+
+import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
+import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.Asserts;
 
 /**
  * 内容安全统一门面，业务方注入后直接使用：
@@ -32,6 +38,62 @@ public interface ContentSafeTemplate {
      * @return 本库统一任务 ID
      */
     String submitAsync(AuditRequest request);
+
+    /**
+     * 提交异步任务并阻塞轮询至终态，轮询间隔与超时取实现配置（starter 接线
+     * {@code content.safe.defaults.async.*}）。仅对支持查询的异步任务有意义；
+     * 仅回调推送的供应商（如腾讯图片异步）会在首次查询时抛出
+     * {@link io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException}，
+     * 此类任务请以回调为准。超时抛 {@link ProviderCallException}，任务仍在，
+     * 可后续继续 {@link #query(String)}
+     *
+     * @param request 统一审核请求
+     * @return 终态审核结果
+     */
+    default AuditResult submitAndWait(AuditRequest request) {
+        throw new UnsupportedFeatureException("submitAndWait is not supported by this template");
+    }
+
+    /**
+     * 提交异步任务并阻塞轮询至终态的通用实现：submitAsync → 按 pollInterval 周期 query，
+     * 直到 finalResult=true 或超时
+     *
+     * @param request      统一审核请求
+     * @param pollInterval 轮询间隔，非正数视为非法
+     * @param timeout      总等待超时，非正数视为非法
+     * @return 终态审核结果
+     * @throws ProviderCallException 等待超时或线程中断；任务仍在，可后续 query
+     */
+    default AuditResult submitAndWait(AuditRequest request, Duration pollInterval, Duration timeout) {
+        Asserts.notNull(request, "request");
+        Asserts.notNull(pollInterval, "pollInterval");
+        Asserts.notNull(timeout, "timeout");
+        if (pollInterval.isNegative() || pollInterval.isZero()) {
+            throw new InvalidRequestException("pollInterval must be positive: " + pollInterval);
+        }
+        if (timeout.isNegative() || timeout.isZero()) {
+            throw new InvalidRequestException("timeout must be positive: " + timeout);
+        }
+        String taskId = submitAsync(request);
+        Instant deadline = Instant.now().plus(timeout);
+        while (true) {
+            AuditResult result = query(taskId);
+            if (result.finalResult()) {
+                return result;
+            }
+            long remainingMillis = deadline.toEpochMilli() - System.currentTimeMillis();
+            if (remainingMillis <= 0) {
+                throw new ProviderCallException(
+                        "submitAndWait timed out after " + timeout + " for taskId: " + taskId);
+            }
+            try {
+                Thread.sleep(Math.min(pollInterval.toMillis(), remainingMillis));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new ProviderCallException("submitAndWait interrupted for taskId: " + taskId, e);
+            }
+        }
+    }
 
     /**
      * 查询异步任务结果；优先读任务存储，必要时回源供应商

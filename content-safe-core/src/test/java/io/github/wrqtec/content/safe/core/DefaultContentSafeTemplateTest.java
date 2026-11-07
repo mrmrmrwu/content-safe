@@ -11,6 +11,7 @@ import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.constant.Scenes;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.AllProvidersFailedException;
@@ -18,12 +19,14 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
 import io.github.wrqtec.content.safe.api.exception.SceneNotConfiguredException;
+import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
 import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
+import io.github.wrqtec.content.safe.core.arbitration.FirstNonPassArbitrationPolicy;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
@@ -34,6 +37,7 @@ import io.github.wrqtec.content.safe.core.listener.CompositeAuditListener;
 import io.github.wrqtec.content.safe.core.router.PriorityAuditRouter;
 import io.github.wrqtec.content.safe.core.security.DefaultEvidenceRedactor;
 import io.github.wrqtec.content.safe.core.task.InMemoryAuditTaskStore;
+import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
@@ -142,6 +146,15 @@ class DefaultContentSafeTemplateTest {
         return new DefaultContentSafeTemplate(scenes, List.of(providers), new PriorityAuditRouter(),
                 new CircuitBreakerRegistry(), limiters, new CompositeAuditListener(List.of(recording)),
                 List.of(new DefaultEvidenceRedactor()), new InMemoryAuditTaskStore(), null);
+    }
+
+    private DefaultContentSafeTemplate templateOf(AuditArbitrationSelector selector,
+                                                  AuditOperationProvider... providers) {
+        return new DefaultContentSafeTemplate(scenes, List.of(providers), new PriorityAuditRouter(),
+                new CircuitBreakerRegistry(), new RateLimiterRegistry(),
+                new CompositeAuditListener(List.of(recording)),
+                List.of(new DefaultEvidenceRedactor()), new InMemoryAuditTaskStore(), null,
+                null, selector, null, null);
     }
 
     @Test
@@ -318,5 +331,134 @@ class DefaultContentSafeTemplateTest {
         assertThrows(AllProvidersFailedException.class, () -> template.text(Scenes.NICKNAME, "t"));
         assertThrows(AllProvidersFailedException.class, () -> template.text(Scenes.NICKNAME, "t"));
         assertEquals(2, bad.calls());
+    }
+
+    @Test
+    void arbitrationFansOutAllProvidersAndMergesResults() {
+        StubOperation pass = new StubOperation("pass-p", 0);
+        int[] rejectCalls = {0};
+        StubOperation reject = new StubOperation("reject-p", 1) {
+            @Override
+            public AuditResult audit(AuditRequest request) {
+                rejectCalls[0]++;
+                return AuditResult.builder()
+                        .ok(true)
+                        .suggestion(RiskSuggestion.REJECT)
+                        .provider("reject-p")
+                        .build();
+            }
+        };
+        DefaultContentSafeTemplate template = templateOf(scene -> new FirstNonPassArbitrationPolicy(),
+                providerOf(pass), providerOf(reject));
+
+        AuditResult result = template.text(Scenes.NICKNAME, "t");
+
+        // 主备 failover 会首个成功即返回，仲裁模式必须全量采集
+        assertEquals(1, pass.calls());
+        assertEquals(1, rejectCalls[0]);
+        assertEquals(RiskSuggestion.REJECT, result.suggestion());
+        assertEquals(AuditSource.ARBITRATION, result.source());
+        assertEquals("reject-p", result.provider());
+    }
+
+    @Test
+    void arbitrationFailureOfOneProviderStillReturnsResult() {
+        StubOperation bad = new StubOperation("bad-p", 0);
+        bad.failWith(new ProviderCallException("boom"));
+        StubOperation good = new StubOperation("good-p", 1);
+        DefaultContentSafeTemplate template = templateOf(scene -> new FirstNonPassArbitrationPolicy(),
+                providerOf(bad), providerOf(good));
+
+        AuditResult result = template.text(Scenes.NICKNAME, "t");
+
+        assertEquals(RiskSuggestion.PASS, result.suggestion());
+        assertEquals("good-p", result.provider());
+        assertTrue(events.stream().anyMatch(e -> "AUDIT".equals(e.eventType())));
+    }
+
+    @Test
+    void nullArbitrationSelectorKeepsFailoverSemantics() {
+        StubOperation pass = new StubOperation("pass-p", 0);
+        StubOperation never = new StubOperation("never-p", 1);
+        DefaultContentSafeTemplate template = templateOf((AuditArbitrationSelector) null,
+                providerOf(pass), providerOf(never));
+
+        template.text(Scenes.NICKNAME, "t");
+
+        // selector 为 null 回退主备 failover：首个成功后不再调用后续供应商
+        assertEquals(1, pass.calls());
+        assertEquals(0, never.calls());
+    }
+
+    @Test
+    void submitAndWaitPollsUntilFinalResult() {
+        StubOperation async = new StubOperation("fake", 0) {
+            private int queries;
+
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("task-1", "d1");
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                queries++;
+                if (queries < 2) {
+                    return AuditResult.builder().ok(true).finalResult(false).build();
+                }
+                return AuditResult.builder().ok(true).suggestion(RiskSuggestion.REJECT).build();
+            }
+        };
+        DefaultContentSafeTemplate template = templateOf(providerOf(async));
+
+        AuditResult result = template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"),
+                Duration.ofMillis(10), Duration.ofSeconds(5));
+
+        assertEquals(RiskSuggestion.REJECT, result.suggestion());
+        assertTrue(result.finalResult());
+    }
+
+    @Test
+    void submitAndWaitTimesOutWhenTaskNeverFinishes() {
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("task-1", "d1");
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                return AuditResult.builder().ok(true).finalResult(false).build();
+            }
+        };
+        DefaultContentSafeTemplate template = templateOf(providerOf(async));
+
+        ProviderCallException e = assertThrows(ProviderCallException.class,
+                () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"),
+                        Duration.ofMillis(10), Duration.ofMillis(60)));
+        assertTrue(e.getMessage().contains("timed out"));
+    }
+
+    @Test
+    void submitAndWaitRejectsInvalidArguments() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
+
+        assertThrows(InvalidRequestException.class, () -> template.submitAndWait(null));
+        assertThrows(InvalidRequestException.class,
+                () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"), Duration.ZERO, Duration.ofSeconds(1)));
+        assertThrows(InvalidRequestException.class,
+                () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"), Duration.ofSeconds(1), Duration.ofSeconds(-1)));
     }
 }

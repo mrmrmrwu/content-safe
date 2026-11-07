@@ -7,6 +7,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -30,6 +31,18 @@ class AuditRequestTest {
     void imageShortcutBuildsImageRequest() {
         AuditRequest request = AuditRequest.image("avatar", ContentRef.url("https://example.com/a.jpg"));
         assertEquals(ContentType.IMAGE, request.type());
+    }
+
+    @Test
+    void shortcutsGenerateDataIdForReconciliation() {
+        // 人审闭环与异步关联依赖 dataId，工厂默认自动生成；对账场景用 builder 显式传
+        AuditRequest text = AuditRequest.text("nickname", "张三");
+        AuditRequest image = AuditRequest.image("avatar", ContentRef.url("https://example.com/a.jpg"));
+
+        assertNotNull(text.dataId());
+        assertFalse(text.dataId().contains("-"));
+        assertEquals(32, text.dataId().length());
+        assertNotNull(image.dataId());
     }
 
     @Test

@@ -67,12 +67,16 @@ class AliyunImageModerationOperationTest {
                         .setRiskLevel("none"));
         when(invoker.imageModeration(eq("baselineCheck"), anyMap())).thenReturn(body);
 
-        AuditRequest request = AuditRequest.image("avatar", ContentRef.url(IMAGE_URL));
+        AuditRequest request = AuditRequest.builder()
+                .scene("avatar").type(ContentType.IMAGE)
+                .content(ContentRef.url(IMAGE_URL))
+                .dataId("data-x")
+                .build();
         AuditResult result = operation.audit(request);
 
         assertThat(result.suggestion()).isEqualTo(RiskSuggestion.PASS);
         assertThat(result.requestId()).isEqualTo("r-img-1");
-        verify(invoker).imageModeration("baselineCheck", Map.of("imageUrl", IMAGE_URL));
+        verify(invoker).imageModeration("baselineCheck", Map.of("imageUrl", IMAGE_URL, "dataId", "data-x"));
     }
 
     @Test

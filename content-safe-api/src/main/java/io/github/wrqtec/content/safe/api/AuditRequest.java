@@ -1,6 +1,7 @@
 package io.github.wrqtec.content.safe.api;
 
 import java.util.Map;
+import java.util.UUID;
 
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.util.Asserts;
@@ -29,17 +30,26 @@ public record AuditRequest(
     }
 
     /**
-     * 文本审核快捷构造
+     * 文本审核快捷构造。dataId 自动生成（UUID，用于异步任务与回调对账、人审闭环回链）；
+     * 需要以业务 ID 对账时用 {@link #builder()} 显式传入
      */
     public static AuditRequest text(String scene, String text) {
-        return builder().scene(scene).type(ContentType.TEXT).content(ContentRef.text(text)).build();
+        return builder().scene(scene).type(ContentType.TEXT)
+                .content(ContentRef.text(text)).dataId(newDataId()).build();
     }
 
     /**
-     * 图片审核快捷构造
+     * 图片审核快捷构造。dataId 自动生成（UUID，用于异步任务与回调对账、人审闭环回链）；
+     * 需要以业务 ID 对账时用 {@link #builder()} 显式传入
      */
     public static AuditRequest image(String scene, ContentRef content) {
-        return builder().scene(scene).type(ContentType.IMAGE).content(content).build();
+        return builder().scene(scene).type(ContentType.IMAGE)
+                .content(content).dataId(newDataId()).build();
+    }
+
+    /** 生成请求级 dataId（32 位无杠 UUID，满足各供应商 dataId 长度约束） */
+    private static String newDataId() {
+        return UUID.randomUUID().toString().replace("-", "");
     }
 
     /**
