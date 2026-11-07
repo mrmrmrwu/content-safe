@@ -3,6 +3,7 @@
 **Content moderation, so easy.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/mrmrmrwu/content-safe/actions/workflows/ci.yml/badge.svg)](https://github.com/mrmrmrwu/content-safe/actions/workflows/ci.yml)
 [![JDK](https://img.shields.io/badge/JDK-17%2B-orange.svg)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)]()
 
@@ -31,6 +32,12 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 - 更多... 见 [供应商能力矩阵](docs/provider-feature-matrix.md)
 
 ## 快速开始
+
+### 环境要求
+
+- JDK 17+（本项目基于 JDK 17 语法与 API 构建，低版本无法编译运行）
+- Spring Boot 3.3.x（starter 按 Boot 3 自动装配规范构建，不兼容 Boot 2.x）
+- 可选：Servlet Web 环境（仅启用内置回调接收端点 `content.safe.callback.expose=true` 时需要）
 
 ### 引入依赖
 
@@ -214,7 +221,7 @@ contentSafeTemplate.audit(AuditRequest.text("resume_title", title));
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request。提交前请阅读 [编码规范](CLAUDE.md)，并确保 `./mvnw clean verify` 通过。
+欢迎提交 Issue 和 Pull Request。提交前请阅读 [贡献指南](CONTRIBUTING.md)，并确保 `./mvnw clean verify` 通过。安全漏洞请勿公开 Issue，参见 [安全策略](SECURITY.md)。
 
 ## 鸣谢
 

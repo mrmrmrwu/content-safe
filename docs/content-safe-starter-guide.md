@@ -9,6 +9,8 @@
 
 ## 1. 快速开始
 
+环境要求：JDK 17+、Spring Boot 3.3.x（starter 按 Boot 3 自动装配规范构建，不兼容 Boot 2.x）。
+
 依赖（版本由 `content-safe-bom` 统一管理）：
 
 ```xml
@@ -211,10 +213,25 @@ content:
 ```
 
 - **路由**：`PriorityAuditRouter` 按 `order()`（数值小优先）选主，主失败自动 failover 下一候选。
+- **仲裁**：`content.safe.defaults.arbitration` 选多供应商结果仲裁策略，默认 `OFF`（主备 failover，成本最优）；
+  配置为 `FIRST_NON_PASS` 或自定义 `AuditArbitrationPolicy` Bean 名称后，同步审核改为全量候选并行采集 +
+  仲裁合并（成本 = 每个候选各调用一次），结果 `source=ARBITRATION`。场景可用
+  `content.safe.scenes.<code>.default-arbitration` 单独覆盖，配 `OFF`/`NONE` 表示该场景不仲裁。
 - **熔断**：失败率超阈值 OPEN → 冷却 → 半开探测；触发发布 `ProviderDegradedEvent`。
 - **限流**：本地令牌桶（QPS）+ 信号量（并发），拒绝即 failover 并发布 `ProviderThrottledEvent`——不静默降级。
 - **异步/回调**：`submitAsync`/`query`/`handleCallback`；回调验签 + 幂等（重复回调不产生重复事件），验签失败进死信（`CallbackDeadLetterEvent`）。装配 `CallbackVerifier` Bean 即开启回调分发器。端到端演示见 [../samples/content-safe-samples-async-callback](../samples/content-safe-samples-async-callback)。
 - **异步任务存储**：默认 `InMemoryAuditTaskStore`（容量/过期可配），生产环境建议自行实现 `AuditTaskStore`（Redis/DB）并声明为 Bean。
+
+```yaml
+content:
+  safe:
+    defaults:
+      async:
+        poll-interval: 2s     # submitAndWait() 默认轮询间隔
+        poll-timeout: 5m      # submitAndWait() 默认等待超时
+        max-tasks: 10000      # 仅默认 InMemoryAuditTaskStore 生效：容量上限
+        expire-after: 1h      # 任务过期时间（超限逐出最旧，读取时惰性过期）
+```
 
 ## 5. 可观测性
 
@@ -229,7 +246,7 @@ content:
 | `content.safe.provider.throttled` | provider, operation | 本地限流拒绝 |
 | `content.safe.callback.deadletter` | provider | 回调死信 |
 
-**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）；`health()` 不做远程探测。
+**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）、场景到供应商映射表（`sceneMappings` detail，排查"场景无供应商映射"首查此处）；`health()` 不做远程探测。
 
 **事件**：实现 `AuditListener` Bean 即可订阅全部事件（`AuditEvent`、`RiskHitEvent`、`ReviewEvent`、`ProviderDegradedEvent`、`ProviderThrottledEvent`、`CallbackDeadLetterEvent`），订阅异常不影响主流程。多个 listener 聚合派发，Spring 容器中的 Bean 会被自动收集。
 
@@ -328,14 +345,36 @@ String taskId = contentSafeTemplate.submitAsync(
 
 // 轮询：中间态返回 finalResult=false 的结果且任务保持 PENDING；终态自动迁移 SUCCEEDED 并发布事件
 AuditResult result = contentSafeTemplate.query(taskId);
+
+// 或一步到位：submitAndWait 按配置的 poll-interval/poll-timeout 自动轮询（超时抛 ProviderCallException，任务仍在可继续 query）
+AuditResult waited = contentSafeTemplate.submitAndWait(
+        AuditRequest.builder()
+                .scene("avatar")
+                .type(ContentType.IMAGE)
+                .content(ContentRef.url(imageUrl))
+                .build());
 ```
 
 约束：阿里异步仅支持 URL 内容（异步接口不支持 base64）；数美异步提交单图 ≤30MB；
 阿里结果保留 3 天（官方建议 30 秒轮询间隔）。
+`AuditRequest.text()/image()` 工厂默认自动生成 32 位 `dataId`（对账场景请用 builder 显式传入）。
 
 ### 9.2 回调接入（三家通用）
 
-供应商把审核结果推到业务侧 HTTP 地址，业务侧转发给模板即可：
+**方式一：内置端点（推荐）**。引入 Servlet Web 环境后开启即可，无需自写 Controller：
+
+```yaml
+content:
+  safe:
+    callback:
+      expose: true                # 默认 false
+      path: /content-safe/callback
+```
+
+开启后 starter 提供 `POST {path}/{provider}` 端点：验签失败回 401、拒绝受理回 400、成功回 200 `ok`。
+返回非 200 时供应商会按各自策略重试（阿里重推 / 腾讯不明确 / 数美 1~8 秒递增重试 8 次）。
+
+**方式二：自写 Controller**（非 Servlet Web 环境、或需自定义路径/鉴权时）：
 
 ```java
 @PostMapping("/content-safe/callback/{provider}")
@@ -361,3 +400,38 @@ public ResponseEntity<String> onCallback(@PathVariable String provider,
 
 > 安全提示：腾讯/数美回调官方均无签名机制，防伪须依赖回调接收侧的 IP 白名单等业务手段；
 > 回调 URL 为公网地址，请勿在回包中回显任何内容原文。
+
+## 10. 业务侧异常处理
+
+对外只抛 `ContentSafeException` 子类，每个异常携带稳定 `code`（完整总表见
+[错误码表](error-code-table.md)）。业务侧按 code 分流，不要按异常类型逐一 catch：
+
+```java
+try {
+    AuditResult result = contentSafeTemplate.text(Scenes.COMMENT, userText);
+    if (!result.pass()) {
+        // 建议：不中断主业务，按 suggestion（PASS/REVIEW/REJECT）落库或拦截
+    }
+} catch (ContentSafeException e) {
+    switch (e.getCode()) {
+        case ErrorCodes.UNSUPPORTED_CONTENT ->
+                // 内容形态供应商不支持（如 base64 传给仅支持 URL 的供应商），属请求侧问题，不要重试
+                log.warn("unsupported content: {}", e.getMessage());
+        case ErrorCodes.PROVIDER_CALL_ERROR, ErrorCodes.ALL_PROVIDER_FAILED ->
+                // 供应商侧瞬时失败（retryable=true），可按业务策略重试或降级放行
+                log.error("provider unavailable: {}", e.getMessage());
+        case ErrorCodes.INVALID_REQUEST ->
+                log.warn("bad request: {}", e.getMessage());
+        default -> log.error("audit failed, code={}: {}", e.getCode(), e.getMessage());
+    }
+}
+```
+
+要点：
+
+- 主备 failover 已在框架内完成：只有所有候选供应商都失败才抛 `ALL_PROVIDER_FAILED`，
+  此时重试大概率仍失败，建议降级放行 + 记录，而非同步重试。
+- 请求侧错误（`INVALID_REQUEST` / `UNSUPPORTED_CONTENT` / `SCENE_NOT_CONFIGURED`）
+  `retryable=false`，重试无意义，应修调用方代码。
+- 异常消息已脱敏（不含密钥/签名 URL/内容原文），可直接落日志。
+- 启动期配置错误（`CONFIG_INVALID`）由 FailureAnalyzer 翻译为可读报告（见 §7），无需业务处理。

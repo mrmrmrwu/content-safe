@@ -3,6 +3,7 @@
 **Content moderation, so easy.**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![CI](https://github.com/mrmrmrwu/content-safe/actions/workflows/ci.yml/badge.svg)](https://github.com/mrmrmrwu/content-safe/actions/workflows/ci.yml)
 [![JDK](https://img.shields.io/badge/JDK-17%2B-orange.svg)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)]()
 
@@ -28,6 +29,12 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 - **Clean dependencies**: zero transitive HTTP/JSON dependencies by default (JDK HttpClient + SPI replaceable); all cloud SDKs are optional.
 
 ## Quick Start
+
+### Requirements
+
+- JDK 17+ (the project is built on JDK 17 syntax and APIs; older JDKs cannot compile it)
+- Spring Boot 3.3.x (the starter follows the Boot 3 auto-configuration spec; Boot 2.x is not supported)
+- Optional: a Servlet web environment, only when enabling the built-in callback endpoint (`content.safe.callback.expose=true`)
 
 ### Add dependencies
 
@@ -182,7 +189,7 @@ AuditResult result = contentSafeTemplate.query(taskId);
 
 ## Contributing
 
-Issues and pull requests are welcome. Please run `./mvnw clean verify` before submitting.
+Issues and pull requests are welcome. See the [contributing guide](CONTRIBUTING.md) (Chinese) and run `./mvnw clean verify` before submitting. Please do not report security vulnerabilities via public issues — see [SECURITY.md](SECURITY.md).
 
 ## Acknowledgements
 
