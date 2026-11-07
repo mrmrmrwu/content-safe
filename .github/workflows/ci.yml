@@ -23,7 +23,7 @@ jobs:
 
       # 发布前的兼容检查（基线缺失即跳过）：api/spi 二进制契约守护
       - name: Compatibility check
-        run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=0.1.0 verify -DskipTests || true
+        run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=1.0.0 verify -DskipTests || true
 
   snapshot:
     # CI 预览分发：SNAPSHOT 发布到 GitHub Packages

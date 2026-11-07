@@ -7,10 +7,14 @@
     <parent>
         <groupId>io.github.wrqtec</groupId>
         <artifactId>content-safe-parent</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <version>1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>content-safe-samples</artifactId>
+    <!-- 样例工程仅本地演示，不发布到 Maven 仓库 -->
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
     <name>content-safe-samples</name>
     <packaging>pom</packaging>
     <description>Runnable samples. Not published.</description>
