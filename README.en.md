@@ -57,6 +57,52 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 
 > `{latest-version}`: see the [releases page](https://github.com/mrmrmrwu/content-safe/releases). SNAPSHOT builds are published to GitHub Packages for preview only — do not use them in production.
 
+#### Pulling from GitHub Packages (SNAPSHOT / preview)
+
+Versions are currently hosted on GitHub Packages. Note a GitHub quirk: **even for a public repository, Maven requires a token with the `read:packages` scope to resolve packages**.
+
+1. Declare the repository in your `pom.xml`:
+
+```xml
+<repositories>
+    <repository>
+        <id>github</id>
+        <url>https://maven.pkg.github.com/mrmrmrwu/content-safe</url>
+    </repository>
+</repositories>
+```
+
+2. Configure credentials in `~/.m2/settings.xml` (create the PAT under GitHub → Settings → Developer settings → Personal access tokens, with `read:packages` checked):
+
+```xml
+<settings>
+    <servers>
+        <server>
+            <id>github</id>
+            <username>your-github-username</username>
+            <password>your-read-packages-pat</password>
+        </server>
+    </servers>
+</settings>
+```
+
+Gradle (Kotlin DSL) equivalent:
+
+```kotlin
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/mrmrmrwu/content-safe")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+    mavenCentral()
+}
+```
+
+> Once releases are published to Maven Central, this configuration can be dropped and dependencies resolved from Central directly.
+
 ### Configure
 
 ```yaml

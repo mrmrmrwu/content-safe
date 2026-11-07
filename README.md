@@ -59,9 +59,55 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 </dependencies>
 ```
 
-> **latest-version** 以发布页为准。
+> **latest-version** 以[发布页](https://github.com/mrmrmrwu/content-safe/releases)为准。
 >
 > 注意：快照版本是功能的尝鲜，并不保证稳定性，请勿在生产环境中使用。
+
+#### 从 GitHub Packages 拉取（SNAPSHOT / 预览版）
+
+当前版本托管在 GitHub Packages。注意 GitHub 的特性：**即使仓库公开，Maven 拉取也必须携带具有 `read:packages` 权限的 PAT**。
+
+1. 在工程 `pom.xml` 中声明仓库：
+
+```xml
+<repositories>
+    <repository>
+        <id>github</id>
+        <url>https://maven.pkg.github.com/mrmrmrwu/content-safe</url>
+    </repository>
+</repositories>
+```
+
+2. 在 `~/.m2/settings.xml` 中配置拉取凭据（PAT 需勾选 `read:packages`，在 GitHub → Settings → Developer settings → Personal access tokens 创建）：
+
+```xml
+<settings>
+    <servers>
+        <server>
+            <id>github</id>
+            <username>你的 GitHub 用户名</username>
+            <password>你的 read:packages PAT</password>
+        </server>
+    </servers>
+</settings>
+```
+
+Gradle（Kotlin DSL）等价配置：
+
+```kotlin
+repositories {
+    maven {
+        url = uri("https://maven.pkg.github.com/mrmrmrwu/content-safe")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+    mavenCentral()
+}
+```
+
+> 正式版后续发布到 Maven Central 后可省略以上配置，直接从 Central 拉取。
 
 ### 配置
 
