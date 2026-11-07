@@ -48,3 +48,7 @@ logs/
 tmp/
 temp/
 *.tmp
+
+# Maven 本地发布凭据（由 .mvn/settings-release-template.xml 复制而来，含真实密钥，严禁入库）
+.mvn/settings-*.xml
+!.mvn/settings-release-template.xml

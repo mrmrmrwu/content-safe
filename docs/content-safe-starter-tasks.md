@@ -46,6 +46,7 @@
 | T-025 | 兼容与 deprecation policy | 文档 + japicmp/revapi ✅ | P1 | M4 | CI 检查 api/spi 破坏变更 |
 | T-026 | AIGC 检测开关 | AuditOptions 请求期开关 + 能力位单向门控 + 腾讯/阿里接入 ✅ | P1 | T-013/T-014 | 支持面见 Feature Matrix 平台级能力节 |
 | T-027 | 人审闭环 | ReviewEvent 发布 + resolveReview 终态归一 + ReviewResultSink 回写 ✅ | P1 | T-007 | MANUAL 终态、sink 先行、任务幂等迁移 |
+| T-028 | 个人依赖仓库发布环境 | `.mvn/settings-release-template.xml`（凭据模板，env 注入）+ release-guide §5（云效/Nexus altDeploymentRepository 实操）+ 全模块 README ✅ | P2 | T-024 | 模板入库无真实凭据；本地副本被 .gitignore 忽略 |
 
 ## 3. 最近两周启动计划
 

@@ -56,7 +56,30 @@ CI（GitHub Actions，`.github/workflows/ci.yml`）在 push 时执行全量 `ver
 向 GitHub Packages 发布 SNAPSHOT 需要 secrets 注入 `GITHUB_TOKEN`（CI 内自动提供）。
 本地如需手动分发 SNAPSHOT：`./mvnw deploy -DskipTests`（走 `distributionManagement` 的 `github` 仓库）。
 
-## 5. 国内加速分发（可选）
+## 5. 发布到个人依赖仓库（云效 Packages / Nexus / Artifactory，可选）
 
-云效 Packages / 私有 Nexus 不在默认流水线内：在发布机 `settings.xml` 增加
-`<server>` 凭据与 `<mirrorOf>`/`<altDeploymentRepository>` 即可，不要改动本仓库默认 profile。
+仓库默认 profile 不绑定任何私有仓库；分发到个人依赖云端使用
+`-DaltDeploymentRepository` 在命令行指定，零 pom 改动。凭据环境文件走模板：
+
+```bash
+# 1. 复制模板（模板不含真实凭据，已入库；本地副本被 .gitignore 忽略，不会误提交）
+cp .mvn/settings-release-template.xml .mvn/settings-local.xml
+
+# 2. 在发布机注入环境变量（建议写入 profile / CI secrets，不要进 shell 历史）
+export REPO_USERNAME=xxx REPO_PASSWORD=xxx          # personal 仓库凭据
+export CENTRAL_USERNAME=xxx CENTRAL_TOKEN=xxx       # 走 Central 时需要
+export GPG_PASSPHRASE=xxx                           # 走 Central（-Prelease 签名）时需要
+
+# 3. 分发到个人依赖仓库（仓库上传地址在云效 Packages / Nexus 页面复制）
+./mvnw -s .mvn/settings-local.xml clean deploy \
+  -DaltDeploymentRepository=personal::default::<仓库上传地址>
+# 云效示例：https://packages.aliyun.com/maven/repository/xxxx-release/maven
+# Nexus 示例：http://nexus.local:8081/repository/maven-releases/
+```
+
+需要签名/SBOM/sources 等完整发布产物时叠加 `-Prelease`（此时还需 `GPG_PASSPHRASE`，
+且 personal 仓库需支持校验签名，否则可省略）。使用方拉取侧：将仓库地址加入业务工程
+`<repositories>`（或 `<mirrorOf>`），下载凭据使用同一 `<server id>` 约定。
+
+> `-DaltDeploymentRepository` 的 `personal` 即 `.mvn/settings-release-template.xml`
+> 中预置的 `<server id>`，更换 id 时两处保持一致即可。
