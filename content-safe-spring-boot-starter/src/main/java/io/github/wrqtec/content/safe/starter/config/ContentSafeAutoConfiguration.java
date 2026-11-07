@@ -23,6 +23,7 @@ import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import io.github.wrqtec.content.safe.spi.ReviewResultSink;
 import io.github.wrqtec.content.safe.spi.SceneDefinitionProvider;
+import io.github.wrqtec.content.safe.starter.diagnostics.SceneCoverageChecker;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -125,8 +126,17 @@ public class ContentSafeAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public AuditTaskStore auditTaskStore() {
-        return new InMemoryAuditTaskStore();
+    public AuditTaskStore auditTaskStore(ContentSafeProperties properties) {
+        ContentSafeProperties.AsyncProperties async = properties.getDefaults().getAsync();
+        return new InMemoryAuditTaskStore(async.getMaxTasks(), async.getExpireAfter());
+    }
+
+    /** 启动期场景覆盖检查：场景无供应商映射提前告警 */
+    @Bean
+    @ConditionalOnMissingBean
+    public SceneCoverageChecker sceneCoverageChecker(SceneRegistry sceneRegistry,
+                                                     ObjectProvider<AuditOperationProvider> providers) {
+        return new SceneCoverageChecker(sceneRegistry, providers.orderedStream().toList());
     }
 
     @Bean
@@ -177,9 +187,16 @@ public class ContentSafeAutoConfiguration {
                                                    ObjectProvider<EvidenceRedactor> redactors,
                                                    AuditTaskStore taskStore,
                                                    ObjectProvider<ReviewResultSink> reviewSinks,
-                                                   ObjectProvider<CallbackDispatcher> callbackDispatcher) {
+                                                   ObjectProvider<CallbackDispatcher> callbackDispatcher,
+                                                   ArbitrationPolicyRegistry arbitrationPolicies,
+                                                   ContentSafeProperties properties) {
+        // 轮询参数为 null/非正时由模板构造器回退内置默认，这里直接透传
+        ContentSafeProperties.AsyncProperties async = properties.getDefaults().getAsync();
         return new DefaultContentSafeTemplate(sceneRegistry, providers.orderedStream().toList(), router,
                 breakers, limiters, listener, redactors.orderedStream().toList(), taskStore,
-                reviewSinks.getIfAvailable(), callbackDispatcher.getIfAvailable());
+                reviewSinks.getIfAvailable(), callbackDispatcher.getIfAvailable(),
+                arbitrationPolicies::forScene,
+                async == null ? null : async.getPollInterval(),
+                async == null ? null : async.getTimeout());
     }
 }

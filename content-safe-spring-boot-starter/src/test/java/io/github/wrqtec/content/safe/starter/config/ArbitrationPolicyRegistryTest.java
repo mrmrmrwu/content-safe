@@ -8,6 +8,7 @@ import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -33,6 +34,7 @@ class ArbitrationPolicyRegistryTest {
     @Test
     void sceneOverrideWinsOverDefault() {
         ContentSafeProperties properties = new ContentSafeProperties();
+        properties.getDefaults().setArbitration("FIRST_NON_PASS");
         ContentSafeProperties.SceneProperties scene = new ContentSafeProperties.SceneProperties();
         scene.setDefaultArbitration("vote");
         properties.getScenes().put("comment", scene);
@@ -71,5 +73,30 @@ class ArbitrationPolicyRegistryTest {
         properties.getScenes().put("comment", scene);
         assertThrows(ConfigInvalidException.class,
                 () -> new ArbitrationPolicyRegistry(List.of(firstNonPass, vote), properties));
+    }
+
+    @Test
+    void offMeansNoArbitrationForScene() {
+        ContentSafeProperties properties = new ContentSafeProperties();
+        properties.getDefaults().setArbitration(ArbitrationPolicyRegistry.OFF);
+        ContentSafeProperties.SceneProperties scene = new ContentSafeProperties.SceneProperties();
+        scene.setDefaultArbitration("none");
+        properties.getScenes().put("comment", scene);
+
+        ArbitrationPolicyRegistry registry =
+                new ArbitrationPolicyRegistry(List.of(firstNonPass), properties);
+
+        // OFF/NONE 表示该场景走主备 failover，不仲裁
+        assertNull(registry.forScene("nickname"));
+        assertNull(registry.forScene("comment"));
+    }
+
+    @Test
+    void blankArbitrationMeansNoArbitration() {
+        ContentSafeProperties properties = new ContentSafeProperties();
+        properties.getDefaults().setArbitration("");
+        ArbitrationPolicyRegistry registry =
+                new ArbitrationPolicyRegistry(List.of(firstNonPass), properties);
+        assertNull(registry.forScene("nickname"));
     }
 }

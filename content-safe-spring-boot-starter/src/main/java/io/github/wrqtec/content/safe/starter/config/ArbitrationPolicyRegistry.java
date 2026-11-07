@@ -18,7 +18,14 @@ import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
  */
 public class ArbitrationPolicyRegistry {
 
+    /** 关闭仲裁的策略名（大小写不敏感）：全部场景走主备 failover */
+    public static final String OFF = "OFF";
+
+    /** 关闭仲裁的策略别名，与 {@link #OFF} 等价 */
+    public static final String NONE = "NONE";
+
     private final Map<String, AuditArbitrationPolicy> byName = new HashMap<>();
+
     private final ContentSafeProperties properties;
 
     public ArbitrationPolicyRegistry(List<AuditArbitrationPolicy> policies, ContentSafeProperties properties) {
@@ -30,7 +37,11 @@ public class ArbitrationPolicyRegistry {
         validate();
     }
 
-    /** 解析指定场景生效的仲裁策略 */
+    /**
+     * 解析指定场景生效的仲裁策略
+     *
+     * @return 生效策略；返回 null 表示该场景不仲裁（主备 failover）
+     */
     public AuditArbitrationPolicy forScene(String scene) {
         return resolve(policyNameFor(scene));
     }
@@ -54,8 +65,19 @@ public class ArbitrationPolicyRegistry {
         });
     }
 
+    /**
+     * 按名解析策略；空白或 OFF/NONE 返回 null（表示不仲裁），
+     * 其余未知名称启动期抛 {@link ConfigInvalidException}
+     */
     private AuditArbitrationPolicy resolve(String name) {
-        AuditArbitrationPolicy policy = byName.get(normalize(name));
+        if (!hasText(name)) {
+            return null;
+        }
+        String normalized = normalize(name);
+        if (OFF.equals(normalized) || NONE.equals(normalized)) {
+            return null;
+        }
+        AuditArbitrationPolicy policy = byName.get(normalized);
         if (policy == null) {
             throw new ConfigInvalidException("unknown arbitration policy: " + name
                     + " (available: " + byName.keySet() + ")");

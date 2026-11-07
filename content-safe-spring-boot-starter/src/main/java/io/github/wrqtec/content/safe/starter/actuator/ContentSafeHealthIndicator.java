@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.starter.actuator;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -7,6 +8,8 @@ import io.github.wrqtec.content.safe.core.SceneRegistry;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
+import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
@@ -30,6 +33,8 @@ public class ContentSafeHealthIndicator implements HealthIndicator {
     private static final String DETAIL_OPEN_CIRCUIT_BREAKERS = "openCircuitBreakers";
     /** 健康详情 key：限流器快照（planKey → 限流器名称） */
     private static final String DETAIL_RATE_LIMITERS = "rateLimiters";
+    /** 健康详情 key：场景 → 供应商映射表（场景无映射时值为空列表） */
+    private static final String DETAIL_SCENE_MAPPINGS = "sceneMappings";
 
     private final SceneRegistry sceneRegistry;
     private final List<AuditOperationProvider> providers;
@@ -59,6 +64,28 @@ public class ContentSafeHealthIndicator implements HealthIndicator {
                 .withDetail(DETAIL_PROVIDERS, providers.size())
                 .withDetail(DETAIL_OPEN_CIRCUIT_BREAKERS, open)
                 .withDetail(DETAIL_RATE_LIMITERS, limiters.snapshot())
+                .withDetail(DETAIL_SCENE_MAPPINGS, sceneMappings())
                 .build();
+    }
+
+    /** 场景 → 已映射供应商列表；供应商构建操作失败按未映射处理 */
+    private Map<String, List<String>> sceneMappings() {
+        Map<String, List<String>> mappings = new LinkedHashMap<>();
+        for (SceneDefinition scene : sceneRegistry.all().values()) {
+            List<String> mapped = providers.stream()
+                    .filter(provider -> !operationsOf(provider, scene).isEmpty())
+                    .map(AuditOperationProvider::provider)
+                    .toList();
+            mappings.put(scene.code(), mapped);
+        }
+        return mappings;
+    }
+
+    private List<AuditOperation> operationsOf(AuditOperationProvider provider, SceneDefinition scene) {
+        try {
+            return provider.operations(scene);
+        } catch (RuntimeException ex) {
+            return List.of();
+        }
     }
 }

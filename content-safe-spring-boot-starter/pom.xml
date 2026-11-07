@@ -37,6 +37,12 @@
             <artifactId>micrometer-core</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- 可选回调端点（content.safe.callback.expose=true）需要 Servlet Web 环境 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
