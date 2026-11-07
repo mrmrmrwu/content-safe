@@ -45,6 +45,6 @@ jobs:
           settings-path: ${{ github.workspace }}
 
       - name: Deploy snapshots
-        run: ./mvnw -B -ntp -DskipTests deploy
+        run: ./mvnw -B -ntp -DskipTests -s "$GITHUB_WORKSPACE/settings.xml" deploy
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

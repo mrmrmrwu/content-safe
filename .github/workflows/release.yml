@@ -33,4 +33,4 @@ jobs:
         run: ./mvnw -B -ntp versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} versions:commit
 
       - name: Deploy to GitHub Packages
-        run: ./mvnw -B -ntp deploy -DskipTests
+        run: ./mvnw -B -ntp -s "$GITHUB_WORKSPACE/settings.xml" deploy -DskipTests
