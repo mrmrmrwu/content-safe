@@ -1,36 +1,146 @@
-# content-safe
+# ContentSafe
 
-#### Description
-面向文本与图片内容安全的多供应商 Spring Boot Starter，统一封装阿里云/腾讯云/百度/火山/数美审核能力，业务只写 yml 即可接入，支持场景扩展与多云路由。
+**Content moderation, so easy.**
 
-#### Software Architecture
-Software architecture description
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![JDK](https://img.shields.io/badge/JDK-17%2B-orange.svg)]()
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)]()
 
-#### Installation
+> 中文文档：[README.md](README.md)（本项目详细文档为中文，本文件是其英文概览。）
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starter. It wraps the text/image moderation APIs of major cloud providers behind one unified API, so business code never touches vendor SDKs or scene-ID details again — just add a dependency, write a bit of YAML, and call one method.
 
-#### Instructions
+## Why ContentSafe?
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+1. **Unified**: one API across multiple cloud moderation providers (text + image). Business code stays provider-agnostic.
+2. **Simple**: the API is designed to be minimal — pass a scene name (e.g. `nickname`, `avatar`), and the provider-specific scene IDs live in configuration, not in your code.
 
-#### Contribution
+## Features
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+- **Unified audit API**: one integration, multi-cloud routing; business code is unaware of provider differences.
+- **Scene decoupling**: built-in common scenes; extensible via YAML / Java / SPI without code changes.
+- **Capability declaration**: providers declare what they support (URL/Base64/batch/OCR/AIGC...); unsupported combinations fail fast instead of silently degrading.
+- **Multi-cloud routing**: primary/backup failover, cost-first routing, multi-result arbitration (e.g. `FIRST_NON_PASS`).
+- **Governance built in**: health probing, circuit breaking & rate limiting (operation-level), unified error codes, audit events, Micrometer metrics.
+- **AIGC detection**: request-time switch (`AuditOptions.withAigcDetect`) gated by declared capabilities.
+- **Manual-review loop**: machine `REVIEW` results flow out via `ReviewEvent`, get finalized through `resolveReview` (source=MANUAL, finalResult=true), and are written back through `ReviewResultSink`.
+- **Clean dependencies**: zero transitive HTTP/JSON dependencies by default (JDK HttpClient + SPI replaceable); all cloud SDKs are optional.
 
+## Quick Start
 
-#### Gitee Feature
+### Add dependencies
 
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>io.github.wrqtec</groupId>
+            <artifactId>content-safe-bom</artifactId>
+            <version>{latest-version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+
+<dependencies>
+    <dependency>
+        <groupId>io.github.wrqtec</groupId>
+        <artifactId>content-safe-spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.github.wrqtec</groupId>
+        <artifactId>content-safe-provider-aliyun</artifactId>
+    </dependency>
+</dependencies>
+```
+
+> `{latest-version}`: see the [releases page](https://github.com/mrmrmrwu/content-safe/releases). SNAPSHOT builds are published to GitHub Packages for preview only — do not use them in production.
+
+### Configure
+
+```yaml
+content.safe:
+  providers:
+    aliyun:
+      enabled: true
+      type: aliyun
+      region: cn-hangzhou
+      credentials:
+        type: static
+        access-key-id: ${ALIYUN_AK}
+        access-key-secret: ${ALIYUN_SK}
+      scenes:
+        nickname: nickname_detection
+        avatar: baselineCheck_face
+```
+
+### Call the API
+
+```java
+// Text moderation
+AuditResult result = contentSafeTemplate.audit(
+    AuditRequest.text("nickname", nickname)
+);
+
+// Image moderation (by URL)
+AuditResult avatarResult = contentSafeTemplate.audit(
+    AuditRequest.image("avatar", ContentRef.url(avatarUrl))
+);
+// PASS -> allow; REVIEW -> manual review; REJECT -> block; ERROR -> apply your fail-safe policy
+
+// Builder style with full context
+AuditResult result = contentSafeTemplate.audit(
+    AuditRequest.builder()
+        .scene("avatar")
+        .type(ContentType.IMAGE)
+        .content(ContentRef.url(avatarUrl))
+        .dataId(userId)
+        .context(AuditContext.ofUser(userId, deviceId))
+        .options(AuditOptions.enableOcr(true))
+        .build()
+);
+
+// Async image moderation
+String taskId = contentSafeTemplate.submitAsync(
+    AuditRequest.image("avatar", ContentRef.url(avatarUrl))
+);
+AuditResult result = contentSafeTemplate.query(taskId);
+```
+
+## Supported Providers
+
+| Provider | Text | Image | Async/Callback | Status |
+|---|---|---|---|---|
+| Alibaba Cloud Content Moderation | ✅ | ✅ | ⏳ not yet | supported |
+| Tencent Cloud TMS/IMS | ✅ | ✅ | ⏳ not yet | supported |
+| Baidu Cloud Content Censorship | ✅ | ✅ | ⏳ not yet | supported |
+| Volcengine Content Security | ✅ | ✅ | ⏳ not yet | supported |
+| Shumei Technology | ✅ | ✅ | ⏳ not yet | supported |
+| Huawei Cloud Moderation | - | - | - | at lifecycle risk, not enabled by default |
+
+> v1 covers **text + image** moderation; abstractions for audio, video, file and live-streaming are reserved.
+
+## Extending
+
+- **Custom provider**: implement the `AuditOperationProvider` SPI — see the integration guide (Chinese).
+- **Custom routing / arbitration / credentials / task store / callback verification**: override the corresponding SPI bean; every default bean can be replaced via `@ConditionalOnMissingBean`.
+
+## Documentation (Chinese)
+
+- [Integration guide](docs/content-safe-starter-guide.md)
+- [Provider feature matrix](docs/provider-feature-matrix.md)
+- [Error code table](docs/error-code-table.md)
+- [Release guide](docs/release-guide.md) / [Compatibility policy](docs/compatibility-policy.md)
+
+## Contributing
+
+Issues and pull requests are welcome. Please run `./mvnw clean verify` before submitting.
+
+## Acknowledgements
+
+- The API design of this project draws inspiration from [JustAuth](https://gitee.com/yadong.zhang/JustAuth).
+
+## License
+
+[Apache-2.0](LICENSE)
