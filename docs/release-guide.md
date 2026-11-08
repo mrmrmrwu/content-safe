@@ -1,6 +1,6 @@
 # 发布指南（Release Guide）
 
-正式发布走 Maven Central（central-publishing-maven-plugin）；SNAPSHOT 预览走 GitHub Packages（CI 自动部署）；国内加速或私有分发可另配云效/Nexus 个人依赖仓库，见 §5。
+正式发布走 GitHub Packages（打 `v*` tag 由 CI 自动执行，带 sources/javadoc/SBOM）；Maven Central 需叠加 `central` profile（见 §2）；SNAPSHOT 预览走 GitHub Packages（CI 自动部署）；国内加速或私有分发可另配云效/Nexus 个人依赖仓库，见 §5。
 
 ## 1. 前置准备（一次性）
 
@@ -17,13 +17,17 @@
 
 ```bash
 # 1. 兼容检查：api/spi 对比基线版本，二进制不兼容即失败
+#    （CI 自动执行；本地跑需能认证拉取基线版本，可参考 .mvn/ci-settings.xml）
 ./mvnw -Pcompat-check -Dcompat.baseline.version=<上一发布版本> verify
 
 # 2. 本地全量验证
 ./mvnw clean verify
 
-# 3. 发布（release profile 自动完成 sources/javadoc/GPG 签名/SBOM）
+# 3a. 发布到 GitHub Packages（打 v* tag 由 CI 自动执行；CI 暂以 -Dgpg.skip=true 跳过签名）
 ./mvnw -Prelease clean deploy
+
+# 3b. 发布到 Maven Central（需 server id=central 与 GPG，见 §1）
+./mvnw -Prelease,central clean deploy
 ```
 
 `release` profile 在父 pom 中定义，包含：
@@ -32,9 +36,9 @@
 |---|---|
 | `maven-source-plugin` | 附带 sources jar（Central 强制） |
 | `maven-javadoc-plugin` | 附带 javadoc jar（Central 强制） |
-| `maven-gpg-plugin` | verify 阶段签名全部构件 |
+| `maven-gpg-plugin` | verify 阶段签名全部构件（CI 走 GitHub Packages 时用 `-Dgpg.skip=true` 跳过） |
 | `cyclonedx-maven-plugin` | package 阶段生成聚合 SBOM（CycloneDX JSON/XML） |
-| `central-publishing-maven-plugin` | 上传 Maven Central（`publishingServerId=central`，校验通过即自动发布） |
+| `central-publishing-maven-plugin` | 仅在独立 `central` profile（`extensions=true` 会接管 deploy 生命周期，不并入默认发布） |
 
 SBOM 产物位于各模块 `target/`（`bom.json` / `bom.xml`），随 release notes 一并归档。
 
@@ -44,7 +48,7 @@ SBOM 产物位于各模块 `target/`（`bom.json` / `bom.xml`），随 release n
 - [ ] `./mvnw -Pcompat-check ... verify` 通过，或破坏变更已走 major 流程
 - [ ] 配置破坏式变更已升 `schema-version` 并在 release notes 提供 migration note
 - [ ] 全量 `clean verify` 通过；provider 变更已更新 [provider-feature-matrix.md](provider-feature-matrix.md)
-- [ ] GPG 签名、sources/javadoc、SBOM 齐备；Central 校验通过
+- [ ] GPG 签名（Central 强制；GitHub Packages 可选）、sources/javadoc、SBOM 齐备；Central 发布需校验通过
 - [ ] release notes：新特性、错误码表变更、Feature Matrix 变更、迁移说明
 
 ## 4. SNAPSHOT 预览（CI）
@@ -75,7 +79,8 @@ export GPG_PASSPHRASE=xxx                           # 走 Central（-Prelease �
 ```
 
 需要签名/SBOM/sources 等完整发布产物时叠加 `-Prelease`（此时还需 `GPG_PASSPHRASE`，
-且 personal 仓库需支持校验签名，否则可省略）。使用方拉取侧：将仓库地址加入业务工程
+且 personal 仓库需支持校验签名，否则可省略）。走 Central 时叠加 `-Prelease,central`。
+使用方拉取侧：将仓库地址加入业务工程
 `<repositories>`（或 `<mirrorOf>`），下载凭据使用同一 `<server id>` 约定。
 
 > `-DaltDeploymentRepository` 的 `personal` 即 `.mvn/settings-release-template.xml`

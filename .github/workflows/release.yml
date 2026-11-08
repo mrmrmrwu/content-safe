@@ -8,7 +8,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -33,7 +33,14 @@ jobs:
         run: ./mvnw -B -ntp versions:set -DnewVersion=${{ steps.version.outputs.VERSION }} versions:commit
 
       - name: Deploy to GitHub Packages
-        run: ./mvnw -B -ntp -s "$GITHUB_WORKSPACE/settings.xml" deploy -DskipTests
+        # -Prelease 附带 sources/javadoc/SBOM；GPG 签名待仓库配置 GPG_PRIVATE_KEY/GPG_PASSPHRASE
+        # secrets 后移除 -Dgpg.skip=true（见 docs/release-guide.md）
+        run: ./mvnw -B -ntp -s "$GITHUB_WORKSPACE/settings.xml" deploy -DskipTests -Prelease -Dgpg.skip=true
         # setup-java 生成的 settings.xml 以 ${env.GITHUB_TOKEN} 引用凭据，缺 env 时为空串导致 401
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

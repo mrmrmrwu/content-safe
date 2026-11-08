@@ -30,8 +30,11 @@
 ## 4. CI 兼容检查（japicmp）
 
 - 覆盖模块：`content-safe-api`、`content-safe-spi`（对外契约的根）。
-- 触发方式：`./mvnw -Pcompat-check -Dcompat.baseline.version=<上一发布版本> verify`；
-  基线版本取上一发布 tag 对应的版本号，发布流程见 [release-guide.md](release-guide.md)。
-- 判定规则：**二进制不兼容修改直接构建失败**；源码级不兼容（如默认方法新增）仅生成报告，由人工评审。
+- CI 强制执行：`.github/workflows/ci.yml` 的 `compat` 作业在每次 push/PR 时运行
+  `./mvnw -Pcompat-check -Dcompat.baseline.version=<上一发布版本> -s .mvn/ci-settings.xml verify -DskipTests`；
+  基线版本取上一发布 tag 对应的版本号（当前 `1.0.0`），发布新版本时随 release-guide 检查单一并更新。
+  基线 artifact 托管在 GitHub Packages（公开包拉取也要认证），凭据由 workflow 注入 `GITHUB_TOKEN`
+  （`.mvn/ci-settings.xml` 内引用 `${env.GITHUB_TOKEN}`，不含任何真实凭据）。
+- 判定规则：**二进制不兼容修改直接构建失败（硬门禁）**；源码级不兼容（如默认方法新增）仅生成报告，由人工评审。
 - `*.internal.*` 与 `*.impl.*` 默认排除。
-- 基线 artifact 不存在（如首次发布前）时该检查跳过即可，发布后 CI 必须常态化执行。
+- 本地执行需自行提供可认证拉取基线的 settings（参考 `.mvn/ci-settings.xml`）。

@@ -275,8 +275,9 @@
     </distributionManagement>
 
     <profiles>
-        <!-- 发布流水线：mvn -Prelease deploy 触发 GPG 签名 + sources/javadoc + SBOM，
-             经 Maven Central Publisher 上传（凭据见 docs/release-guide.md） -->
+        <!-- 发布产物流水线：mvn -Prelease deploy 触发 GPG 签名 + sources/javadoc + SBOM，
+             目标仓库由 -DaltDeploymentRepository 或 distributionManagement 决定
+             （凭据见 docs/release-guide.md） -->
         <profile>
             <id>release</id>
             <build>
@@ -343,6 +344,15 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <!-- 上传 Maven Central：与 release 叠加启用（mvn -Prelease,central clean deploy）。
+             extensions=true 会接管 deploy 生命周期，不能并入默认发布流水线 -->
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>

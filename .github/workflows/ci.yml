@@ -6,11 +6,22 @@ on:
   pull_request:
     branches: [master]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ runner.os }}-
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -21,9 +32,34 @@ jobs:
       - name: Build and verify
         run: ./mvnw -B -ntp clean verify
 
-      # 发布前的兼容检查（基线缺失即跳过）：api/spi 二进制契约守护
+  compat:
+    # api/spi 二进制契约守护：与上一发布版本基线对比，二进制不兼容即失败（硬门禁）。
+    # 基线托管在 GitHub Packages（公开包拉取也要认证），凭据经 .mvn/ci-settings.xml 注入。
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ runner.os }}-
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Compatibility check
-        run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=1.0.0 verify -DskipTests || true
+        run: ./mvnw -B -ntp -Pcompat-check -Dcompat.baseline.version=1.0.0 -s .mvn/ci-settings.xml verify -DskipTests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   snapshot:
     # CI 预览分发：SNAPSHOT 发布到 GitHub Packages
@@ -36,6 +72,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache Maven local repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-${{ runner.os }}-
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -46,5 +89,6 @@ jobs:
 
       - name: Deploy snapshots
         run: ./mvnw -B -ntp -DskipTests -s "$GITHUB_WORKSPACE/settings.xml" deploy
+        # setup-java 生成的 settings.xml 以 ${env.GITHUB_TOKEN} 引用凭据，缺 env 时为空串导致 401
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CI 专用 Maven 设置：供 compat-check 从 GitHub Packages 解析 japicmp 基线版本。
+  公开包拉取同样需要认证；GITHUB_TOKEN 由 workflow 注入（含 packages:read 权限）。
+  用法：./mvnw -Pcompat-check -s .mvn/ci-settings.xml verify
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <server>
+            <id>github</id>
+            <username>mrmrmrwu</username>
+            <password>${env.GITHUB_TOKEN}</password>
+        </server>
+    </servers>
+    <profiles>
+        <profile>
+            <id>github-packages</id>
+            <repositories>
+                <repository>
+                    <id>github</id>
+                    <name>GitHub Packages</name>
+                    <url>https://maven.pkg.github.com/mrmrmrwu/content-safe</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>true</enabled>
+                    </snapshots>
+                </repository>
+            </repositories>
+        </profile>
+    </profiles>
+    <activeProfiles>
+        <activeProfile>github-packages</activeProfile>
+    </activeProfiles>
+</settings>
