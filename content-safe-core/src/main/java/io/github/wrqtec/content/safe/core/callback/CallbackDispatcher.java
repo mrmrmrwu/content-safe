@@ -2,6 +2,8 @@ package io.github.wrqtec.content.safe.core.callback;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -10,6 +12,8 @@ import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.CallbackVerifyException;
+import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
+import io.github.wrqtec.content.safe.core.limiter.TokenBucketRateLimiter;
 import io.github.wrqtec.content.safe.core.security.EvidenceRedactors;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
@@ -25,11 +29,18 @@ import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 回调处理：验签 → 解析 → 脱敏 → 任务终态迁移（幂等）→ 发事件
+ * 回调处理：验签 → 解析 → 脱敏 → 任务终态迁移（幂等）→ 发事件。
  * 任何失败发布 {@link CallbackDeadLetterEvent} 死信事件并返回 {@code accepted=false}，
  * 不得静默丢弃；回调原文与密钥不进日志。
  * 任务引用查不到统一任务（过期逐出/应用重启/外部提交）时发死信事件保可观测，
  * 但返回受理（accepted=true）——重推无法恢复关联，避免供应商反复重试
+ *
+ * <p><b>防滥用分层</b>：防重放的第一责任在 {@link CallbackVerifier}（契约要求校验
+ * 时间窗/nonce，协议不支持的实现须如实声明并由部署方做网络层补偿）；本类在此之上
+ * 提供<b>每 provider 令牌桶限流</b>兜底（构造入参 callbackQps，&le;0 或默认构造不限），
+ * 截获重放、验签泄漏、供应商故障重推风暴等场景下限制解析成本。限流拒绝返回
+ * {@code accepted=false} 且<b>不发死信事件</b>——洪泛场景下事件本身会被放大成风暴，
+ * 可观测性由 WARN 日志承担，非 2xx 应答让供应商按自身策略回退重推
  *
  * @author L.David
  */
@@ -55,18 +66,40 @@ public class CallbackDispatcher {
 
     private final String callbackSecret;
 
+    /** 每 provider 回调限流（qps<=0 表示不限），懒创建且仅在 verifier 命中后创建 */
+    private final double callbackQps;
+
+    private final ConcurrentMap<String, RateLimiter> callbackLimiters = new ConcurrentHashMap<>();
+
+    /**
+     * 构造不限流的调度器（1.0.0 兼容形态）
+     */
     public CallbackDispatcher(List<CallbackVerifier> verifiers,
                               List<AuditOperationProvider> providers,
                               AuditTaskStore taskStore,
                               AuditListener listener,
                               List<EvidenceRedactor> redactors,
                               String callbackSecret) {
+        this(verifiers, providers, taskStore, listener, redactors, callbackSecret, 0D);
+    }
+
+    /**
+     * @param callbackQps 每 provider 回调处理速率上限（令牌桶），&le;0 表示不限流
+     */
+    public CallbackDispatcher(List<CallbackVerifier> verifiers,
+                              List<AuditOperationProvider> providers,
+                              AuditTaskStore taskStore,
+                              AuditListener listener,
+                              List<EvidenceRedactor> redactors,
+                              String callbackSecret,
+                              double callbackQps) {
         this.verifiers = indexBy(verifiers, CallbackVerifier::provider);
         this.providers = indexBy(providers, AuditOperationProvider::provider);
         this.taskStore = taskStore;
         this.listener = listener;
         this.redactors = redactors == null ? List.of() : List.copyOf(redactors);
         this.callbackSecret = callbackSecret;
+        this.callbackQps = callbackQps;
     }
 
     private static <T> Map<String, T> indexBy(List<T> list, Function<T, String> key) {
@@ -83,6 +116,15 @@ public class CallbackDispatcher {
         CallbackVerifier verifier = verifiers.get(request.provider());
         if (verifier == null) {
             return deadLetter(request, "no verifier for provider: " + request.provider());
+        }
+        // 限流器仅在 verifier 命中后创建：未知 provider 的垃圾请求不进入 limiter 表，
+        // 表规模以已注册 provider 数为上界，不构成内存放大点
+        RateLimiter limiter = callbackLimiters.computeIfAbsent(request.provider(),
+                key -> callbackQps > 0D ? new TokenBucketRateLimiter(callbackQps) : RateLimiter.unlimited());
+        if (!limiter.tryAcquire().acquired()) {
+            // 限流拒绝不发死信事件：洪泛下事件会被放大成风暴；非 2xx 让供应商回退重推
+            log.warn("callback rate limited, provider={}, qps={}", request.provider(), callbackQps);
+            return CallbackResult.rejected("callback rate limited for provider: " + request.provider());
         }
         boolean verified;
         try {
@@ -138,7 +180,8 @@ public class CallbackDispatcher {
         if (p == null) {
             return null;
         }
-        // 回调解析与业务场景无关，用占位场景取该供应商任一支持 asyncCallback 的操作
+        // 回调解析与业务场景无关，用占位场景取该供应商任一支持 asyncCallback 的操作。
+        // 契约依据：AuditOperationProvider#operations 的 scene 参数仅供能力参考、不得按 scene 过滤
         return p.supportedTypes().stream()
                 .map(type -> p.operations(SceneDefinition.of(CALLBACK_PROBE_SCENE, type, null)))
                 .flatMap(List::stream)

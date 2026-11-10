@@ -16,6 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 class EvidenceRedactorsTest {
 
     private EvidenceRedactor redactorFor(String provider) {
+        return redactorFor(provider, "***");
+    }
+
+    private EvidenceRedactor redactorFor(String provider, String evidence) {
         return new EvidenceRedactor() {
             @Override
             public String provider() {
@@ -25,7 +29,7 @@ class EvidenceRedactorsTest {
             @Override
             public RiskHit redact(RiskHit hit) {
                 return new RiskHit(hit.labelPath(), hit.labels(), hit.confidence(), hit.confidenceScale(),
-                        hit.source(), "***", hit.coordinates(), hit.raw());
+                        hit.source(), evidence, hit.coordinates(), hit.raw());
             }
         };
     }
@@ -38,10 +42,31 @@ class EvidenceRedactorsTest {
 
     @Test
     void exactProviderMatchWinsOverWildcard() {
+        // 通配脱敏器注册在前（如更高 @Order）也必须被精确命中者压过：
+        // 两个脱敏器输出不同的 evidence，使断言能区分究竟谁执行了脱敏
         AuditResult result = EvidenceRedactors.redactResult(
-                List.of(redactorFor("*"), redactorFor("fake")), resultWithEvidence("abc"), "fake");
+                List.of(redactorFor("*", "[wild]"), redactorFor("fake", "[exact]")),
+                resultWithEvidence("abc"), "fake");
 
-        assertEquals("***", result.hits().get(0).evidence());
+        assertEquals("[exact]", result.hits().get(0).evidence());
+    }
+
+    @Test
+    void wildcardAppliesWhenNoExactMatch() {
+        AuditResult result = EvidenceRedactors.redactResult(
+                List.of(redactorFor("other", "[exact]"), redactorFor("*", "[wild]")),
+                resultWithEvidence("abc"), "fake");
+
+        assertEquals("[wild]", result.hits().get(0).evidence());
+    }
+
+    @Test
+    void firstRegisteredWinsWithinSamePriority() {
+        AuditResult result = EvidenceRedactors.redactResult(
+                List.of(redactorFor("fake", "[first]"), redactorFor("fake", "[second]")),
+                resultWithEvidence("abc"), "fake");
+
+        assertEquals("[first]", result.hits().get(0).evidence());
     }
 
     @Test

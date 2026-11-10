@@ -59,6 +59,21 @@ class ContentSafePropertiesBindingTest {
     }
 
     @Test
+    void callbackRateLimitDefaultsAndBinds() {
+        ContentSafeProperties defaults = bind(Map.of("content.safe.callback-secret", "s"));
+        // 默认 100：回调端点默认就有防重放/重推风暴兜底
+        assertThat(defaults.getCallback().getRateLimit()).isEqualTo(100.0D);
+
+        ContentSafeProperties bound = bind(Map.of(
+                "content.safe.callback.expose", "true",
+                "content.safe.callback.rate-limit", "50"));
+        assertThat(bound.getCallback().getRateLimit()).isEqualTo(50.0D);
+
+        ContentSafeProperties unlimited = bind(Map.of("content.safe.callback.rate-limit", "0"));
+        assertThat(unlimited.getCallback().getRateLimit()).isEqualTo(0.0D);
+    }
+
+    @Test
     void rateLimiterBindsGlobalAndOverrides() {
         ContentSafeProperties bound = bind(Map.of(
                 "content.safe.defaults.rate-limiter.enabled", "true",

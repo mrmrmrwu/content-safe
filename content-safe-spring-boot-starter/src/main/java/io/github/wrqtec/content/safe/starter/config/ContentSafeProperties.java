@@ -146,6 +146,12 @@ public class ContentSafeProperties {
 
         /** 内置回调端点路径前缀，路径变量为供应商 code */
         private String path = "/content-safe/callback";
+
+        /**
+         * 每 provider 回调处理速率上限（令牌桶 QPS），防截获重放/重推风暴下的解析成本放大，
+         * 默认 100；&le;0 或 null 表示不限流。限流拒绝返回非 2xx 且不发死信事件
+         */
+        private Double rateLimit = 100.0D;
     }
 
     @Data

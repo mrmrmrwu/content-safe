@@ -376,10 +376,14 @@ content:
     callback:
       expose: true                # 默认 false
       path: /content-safe/callback
+      rate-limit: 100             # 每 provider 回调 QPS 上限（令牌桶），≤0 不限；默认 100
 ```
 
 开启后 starter 提供 `POST {path}/{provider}` 端点：验签失败回 401、拒绝受理回 400、成功回 200 `ok`。
 返回非 200 时供应商会按各自策略重试（阿里重推 / 腾讯不明确 / 数美 1~8 秒递增重试 8 次）。
+`rate-limit` 是每 provider 的回调处理速率兜底：截获重放、验签配置泄漏、供应商故障重推风暴等
+场景下限制解析成本，被限流的请求按"拒绝受理"应答且<b>不发死信事件</b>（洪泛下事件本身
+会被放大成风暴，可观测性靠 WARN 日志）。
 
 **方式二：自写 Controller**（非 Servlet Web 环境、或需自定义路径/鉴权时）：
 
@@ -410,6 +414,12 @@ public ResponseEntity<String> onCallback(@PathVariable String provider,
 
 > 安全提示：腾讯/数美回调官方均无签名机制，防伪须依赖回调接收侧的 IP 白名单等业务手段；
 > 回调 URL 为公网地址，请勿在回包中回显任何内容原文。
+>
+> **防重放**：防重放的第一责任在 `CallbackVerifier` 实现——契约要求校验时间窗/nonce；
+> 协议不含时间要素时实现须如实声明"不防重放"。本项目三家内置 verifier 均受官方协议所限
+> 不防重放（阿里 Checksum 与腾讯/数美结构校验都不含时间戳），部署方应在网络层补偿：
+> 回调地址仅内网可达、来源 IP 白名单、网关限流，并保持 `rate-limit` 开启作为进程内兜底。
+> 重复投递本身无害（终态迁移幂等，不产生重复事件），重放的代价是解析成本，由限流兜住。
 
 ## 10. 业务侧异常处理
 

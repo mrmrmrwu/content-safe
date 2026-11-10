@@ -175,7 +175,12 @@ public class ContentSafeAutoConfiguration {
                                                  ContentSafeProperties properties) {
         return new CallbackDispatcher(verifiers.orderedStream().toList(),
                 providers.orderedStream().toList(), taskStore, listener,
-                redactors.orderedStream().toList(), properties.getCallbackSecret());
+                redactors.orderedStream().toList(), properties.getCallbackSecret(),
+                callbackQps(properties.getCallback().getRateLimit()));
+    }
+
+    private static double callbackQps(Double rateLimit) {
+        return rateLimit == null || rateLimit <= 0D ? 0D : rateLimit;
     }
 
     @Bean

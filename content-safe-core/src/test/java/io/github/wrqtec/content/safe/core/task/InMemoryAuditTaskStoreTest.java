@@ -7,8 +7,10 @@ import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
@@ -115,6 +117,40 @@ class InMemoryAuditTaskStoreTest {
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(0, Duration.ofHours(1)));
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, Duration.ZERO));
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, null));
+    }
+
+    @Test
+    void deleteRemovesZombieFromInsertionOrder() {
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+        store.save(AuditTask.pending("t2", new AsyncTaskRef("p2", "d2"), "scene", "provider"));
+
+        store.delete("t1");
+
+        // 删除必须同步清理插入顺序索引，否则僵尸 taskId 在队列中只增不减（慢泄漏）
+        assertEquals(1, insertionOrderSize(store));
+    }
+
+    @Test
+    void lazyExpiryRemovesZombieFromInsertionOrder() throws InterruptedException {
+        InMemoryAuditTaskStore ttlStore = new InMemoryAuditTaskStore(10, Duration.ofMillis(50));
+        ttlStore.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));
+        ttlStore.save(AuditTask.pending("t2", new AsyncTaskRef("p2", "d2"), "scene", "provider"));
+
+        Thread.sleep(80);
+        assertTrue(ttlStore.find("t1").isEmpty());
+
+        assertEquals(1, insertionOrderSize(ttlStore));
+    }
+
+    /** 反射读私有插入顺序队列长度，断言无僵尸条目 */
+    private static int insertionOrderSize(InMemoryAuditTaskStore target) {
+        try {
+            Field field = InMemoryAuditTaskStore.class.getDeclaredField("insertionOrder");
+            field.setAccessible(true);
+            return ((Deque<?>) field.get(target)).size();
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Test

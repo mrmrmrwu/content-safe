@@ -3,6 +3,7 @@ package io.github.wrqtec.content.safe.core.callback;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
@@ -195,5 +196,63 @@ class CallbackDispatcherTest {
         assertEquals("provider-task-1", result.taskId());
         assertTrue(events.stream().anyMatch(e -> e instanceof CallbackDeadLetterEvent dle
                 && dle.reason().contains("audit task not found")));
+    }
+
+    @Test
+    void rateLimitedCallbackIsRejectedBeforeVerify() {
+        // qps=1：突发容量只放行 1 个，第二个立刻被拒；限流在验签前生效且不发死信事件
+        AtomicBoolean verified = new AtomicBoolean();
+        CallbackVerifier countingVerifier = new CallbackVerifier() {
+            @Override
+            public String provider() {
+                return "fake";
+            }
+
+            @Override
+            public boolean verify(CallbackRequest request, String secret, Map<String, String> ext) {
+                verified.set(true);
+                return true;
+            }
+        };
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("provider-task-1", "d1"), "avatar", "fake"));
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(countingVerifier),
+                List.of(providerWithCallbackOp()), store, listener, List.of(), "secret", 1.0D);
+
+        CallbackRequest request = new CallbackRequest("fake", Map.of(), "{}");
+        assertTrue(dispatcher.dispatch(request).accepted());
+
+        // 首次成功派发已调用过 verifier，清零后单独观察第二次派发
+        verified.set(false);
+        CallbackResult second = dispatcher.dispatch(request);
+
+        assertFalse(second.accepted());
+        assertTrue(second.message().contains("rate limited"));
+        // 限流在验签前：verifier 未被调用
+        assertFalse(verified.get());
+        // 限流拒绝不发死信事件，仅首个成功回调产生 AUDIT 事件
+        assertEquals(1, events.size());
+        assertTrue(events.get(0) instanceof AuditEvent);
+    }
+
+    @Test
+    void nonPositiveQpsDisablesRateLimiting() {
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(verifierReturning(true)),
+                List.of(providerWithCallbackOp()), store, listener, List.of(), "secret", 0D);
+        CallbackRequest request = new CallbackRequest("fake", Map.of(), "{}");
+
+        for (int i = 0; i < 5; i++) {
+            assertTrue(dispatcher.dispatch(request).accepted());
+        }
+    }
+
+    @Test
+    void legacyConstructorUnlimitedRate() {
+        // 1.0.0 六参构造：不限流，连续多次都应放行
+        CallbackDispatcher dispatcher = dispatcher(verifierReturning(true));
+        CallbackRequest request = new CallbackRequest("fake", Map.of(), "{}");
+
+        for (int i = 0; i < 5; i++) {
+            assertTrue(dispatcher.dispatch(request).accepted());
+        }
     }
 }

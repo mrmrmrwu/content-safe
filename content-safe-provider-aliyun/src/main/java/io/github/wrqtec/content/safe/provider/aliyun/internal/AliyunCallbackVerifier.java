@@ -20,7 +20,11 @@ import lombok.extern.slf4j.Slf4j;
  * {@code Checksum = SHA256_HEX(主账号UID + seed + Content)}，本实现仅支持 SHA256
  * （cryptType 默认值）。seed 取 extra callback-seed，缺省回退 dispatcher 注入的
  * secret；主账号 UID 取 extra callback-uid（非 RAM 用户 UID），未配置时验签直接失败。
- * 日志绝不输出 Content 原文与 seed 值（铁律 §9.4）
+ * 防重放现状（如实声明）：官方协议的 Checksum 不含时间戳/nonce，本验签<b>不防重放</b>——
+ * 一次截获的合法回调可被无限重放（终态迁移幂等，重放无二次事件，但有解析成本）。
+ * 防重放是 CallbackVerifier 的契约责任，本实现受协议所限无法履行，部署方须在网络层
+ * 补偿：回调地址仅内网可达、来源 IP 白名单、网关限流（另见
+ * content.safe.callback.rate-limit）。日志绝不输出 Content 原文与 seed 值（铁律 §9.4）
  *
  * @author L.David
  */

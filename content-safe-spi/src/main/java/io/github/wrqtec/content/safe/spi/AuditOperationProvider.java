@@ -31,8 +31,14 @@ public interface AuditOperationProvider {
     /**
      * 该供应商可用操作列表，必须都是 {@code ACTIVE} 生命周期
      *
-     * @param scene 业务场景定义
-     * @return 该场景下可调用的操作列表，不为 null
+     * <p><b>契约：scene 参数仅供能力参考（读取 type/配置联动），不得用于按场景过滤操作</b>。
+     * core 回调路由会用<b>占位场景</b>（场景名 {@code _callback}、无默认严重级别）探测
+     * 该供应商支持 asyncCallback 的操作；若实现按 scene.code() 查配置过滤，
+     * 占位场景探测将静默返回空列表，回调链路直接失效。实现只能依据 scene.type()
+     * （以及与类型绑定的供应商侧配置）决定返回哪些操作
+     *
+     * @param scene 业务场景定义；探测场景下 severity 可能为 null
+     * @return 可调用的操作列表（探测场景下为该类型全部回调型操作），不为 null
      */
     List<AuditOperation> operations(SceneDefinition scene);
 

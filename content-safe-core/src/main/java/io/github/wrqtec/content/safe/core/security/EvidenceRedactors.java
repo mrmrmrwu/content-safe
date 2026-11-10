@@ -8,7 +8,8 @@ import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 
 /**
  * 证据脱敏统一入口：事件、日志、落库前调用（遵守 {@link EvidenceRedactor} 契约）。
- * 按 provider 匹配脱敏器，精确匹配优先于 {@link #ANY_PROVIDER} 通配，取首个命中者执行
+ * 匹配规则：provider 精确匹配优先于 {@link #ANY_PROVIDER} 通配（与注册顺序无关）；
+ * 同一优先级内多个命中时取注册顺序首个
  *
  * @author L.David
  */
@@ -32,10 +33,15 @@ public final class EvidenceRedactors {
         if (result == null || result.hits().isEmpty() || redactors == null || redactors.isEmpty()) {
             return result;
         }
+        // 精确匹配两遍查找而非排序：先精确后通配，保证 provider 专属脱敏器不被
+        // 排在前面（如更高 @Order）的通配脱敏器架空
         EvidenceRedactor redactor = redactors.stream()
-                .filter(r -> provider.equals(r.provider()) || ANY_PROVIDER.equals(r.provider()))
+                .filter(r -> provider.equals(r.provider()))
                 .findFirst()
-                .orElse(null);
+                .orElseGet(() -> redactors.stream()
+                        .filter(r -> ANY_PROVIDER.equals(r.provider()))
+                        .findFirst()
+                        .orElse(null));
         if (redactor == null) {
             return result;
         }

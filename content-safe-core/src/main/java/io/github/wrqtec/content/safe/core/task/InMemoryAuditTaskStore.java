@@ -2,7 +2,9 @@ package io.github.wrqtec.content.safe.core.task;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -18,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * 默认内存任务存储，生产环境应替换为 DB/Redis 实现（对外 Bean 默认可被覆盖）。
  * 有界：容量超限时按插入顺序驱逐最旧任务；TTL 惰性过期（读取/迁移时淘汰），
- * 防止回调丢失的 PENDING 任务无限累积占满内存
+ * 防止回调丢失的 PENDING 任务无限累积占满内存。
+ * 任务从 store 移除的所有路径（delete/惰性过期/容量驱逐）都会同步清理
+ * {@code insertionOrder} 索引，避免僵尸 taskId 在队列中累积
  *
  * @author L.David
  */
@@ -126,7 +130,9 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
 
     @Override
     public void delete(String taskId) {
-        store.remove(taskId);
+        if (store.remove(taskId) != null) {
+            insertionOrder.remove(taskId);
+        }
     }
 
     /** 读取仍存活（存在且未过期）的任务；过期任务顺带淘汰 */
@@ -144,6 +150,7 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
             return true;
         }
         if (store.remove(task.taskId(), task)) {
+            insertionOrder.remove(task.taskId());
             log.debug("audit task expired: taskId={}, createdAt={}", task.taskId(), task.createdAt());
         }
         return false;
@@ -152,13 +159,18 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
     /** 淘汰全部过期任务，释放容量 */
     private void evictExpired() {
         Instant now = Instant.now();
-        store.values().removeIf(task -> {
-            boolean expired = task.createdAt().plus(expireAfter).isBefore(now);
-            if (expired) {
-                log.debug("audit task expired: taskId={}, createdAt={}", task.taskId(), task.createdAt());
+        List<String> expiredIds = new ArrayList<>();
+        for (AuditTask task : store.values()) {
+            if (!task.createdAt().plus(expireAfter).isAfter(now)) {
+                expiredIds.add(task.taskId());
             }
-            return expired;
-        });
+        }
+        for (String id : expiredIds) {
+            if (store.remove(id) != null) {
+                insertionOrder.remove(id);
+                log.debug("audit task expired: taskId={}", id);
+            }
+        }
     }
 
     /** 按插入顺序驱逐最旧任务；队列耗尽（并发竞态）返回 false */
