@@ -515,7 +515,11 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         return candidates(scene).stream()
                 // 任务记录了提交操作的 planKey 时按它精确路由（同一供应商可挂多个异步操作，
                 // 仅按 provider 匹配会张冠李戴）；operation 为空回退 provider 匹配不是死代码——
-                // 1.0.0 已发布的任务记录没有 planKey 字段，存量 PENDING 任务升级后走这里
+                // 1.0.0 已发布（tag v1.0.0，2026-11-07），其 AuditTask 无 operation 字段、
+                // pending 仅 4 参（git show v1.0.0:content-safe-model/src/main/java/io/github/wrqtec/
+                // content/safe/model/AuditTask.java 可验证），
+                // 该版本落库的 PENDING 任务升级到本版本后 operation() 为 null，只能回退 provider 匹配；
+                // 存量任务随终态自然消亡，此分支可在确认无 1.0.0 存量后（≥2.0.0）收紧
                 .filter(op -> task.operation() != null && !task.operation().isBlank()
                         ? op.plan().planKey().equals(task.operation())
                         : op.plan().provider().equals(task.provider()))

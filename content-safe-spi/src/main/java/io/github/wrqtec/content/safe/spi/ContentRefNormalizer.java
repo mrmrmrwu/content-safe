@@ -8,13 +8,14 @@ import io.github.wrqtec.content.safe.api.ContentRef;
  *
  * <p>输入治理职责边界：公共形状校验（内容非空、URL scheme/host 白名单）由 core 编排层
  * 在路由前统一执行一次；供应商特有的大小/像素/格式限制由各 provider 自行预检。
- * 本接口不是输入治理入口，而是 provider 侧到统一模型的<b>表达转换</b>预留扩展点。
- * 另注：签名 URL 由云服务商服务端拉取，core 与 provider 均不主动请求用户 URL
+ * 本接口与输入治理无关，也不是任何已接入的扩展点
  *
  * @author L.David
- * @deprecated 自 1.0.0 发布以来无任何调用方：输入治理由 core 编排层内聚执行，
- *     provider 侧表达转换暂无真实插拔需求（YAGNI）。已在 1.1.0 标记移除意向，
- *     计划 2.0.0 删除；如有依赖请反馈 issue 说明场景
+ * @deprecated 自 1.0.0 发布以来全仓库无任何调用方：core 编排层与全部 provider 实现
+ *     均不读取本接口的实现 Bean，<b>实现它不会产生任何效果</b>，请勿接入。
+ *     公共形状校验内聚于 core，provider 侧表达转换暂无真实插拔需求（YAGNI）。
+ *     因 1.0.0 已发布无法物理删除（二进制兼容门禁），计划 2.0.0 移除；
+ *     如有真实场景需要请提 issue 说明，超过零个真实需求则重新设计而非复活本接口
  */
 @Deprecated(since = "1.1.0", forRemoval = true)
 public interface ContentRefNormalizer {
