@@ -96,6 +96,17 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
     }
 
     @Override
+    public Optional<AuditTask> findActiveByDataId(String sceneCode, String dataId) {
+        return store.values().stream()
+                .filter(this::notExpired)
+                // 只复用 PENDING 任务：已终态说明内容已审完，业务重新提交应创建新任务
+                .filter(t -> t.status() == TaskStatus.PENDING)
+                .filter(t -> t.scene().equals(sceneCode))
+                .filter(t -> dataId.equals(t.ref().dataId()))
+                .findFirst();
+    }
+
+    @Override
     public boolean markTerminal(String taskId, TaskStatus status, AuditResult result) {
         while (true) {
             AuditTask current = live(taskId);

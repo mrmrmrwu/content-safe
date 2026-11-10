@@ -27,6 +27,7 @@ import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
+import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
 import io.github.wrqtec.content.safe.core.arbitration.FirstNonPassArbitrationPolicy;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
@@ -545,6 +546,81 @@ class DefaultContentSafeTemplateTest {
                 () -> template.submitAsync(request));
 
         assertTrue(ex.getMessage().contains("no async provider supports"));
+    }
+
+    @Test
+    void submitAsyncReusesActiveTaskForSameDataId() {
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        int[] submits = {0};
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                submits[0]++;
+                return new AsyncTaskRef("task-" + submits[0], request.dataId());
+            }
+        };
+        DefaultContentSafeTemplate template = new DefaultContentSafeTemplate(scenes,
+                List.of(providerOf(async)), new PriorityAuditRouter(), new CircuitBreakerRegistry(),
+                new RateLimiterRegistry(), new CompositeAuditListener(List.of(recording)),
+                List.of(new DefaultEvidenceRedactor()), store, null);
+        AuditRequest request = AuditRequest.builder()
+                .scene(Scenes.NICKNAME)
+                .type(ContentType.TEXT)
+                .content(ContentRef.text("hello"))
+                .dataId("biz-order-1")
+                .build();
+
+        String first = template.submitAsync(request);
+        // 调用方超时重试是幂等提交的高频来源：同 dataId 活跃任务存在时复用既有 taskId，
+        // 云侧不产生第二个计费任务
+        String second = template.submitAsync(request);
+
+        assertEquals(first, second);
+        assertEquals(1, submits[0]);
+    }
+
+    @Test
+    void submitAsyncCreatesNewTaskAfterTerminalTask() {
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        int[] submits = {0};
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                submits[0]++;
+                return new AsyncTaskRef("task-" + submits[0], request.dataId());
+            }
+        };
+        DefaultContentSafeTemplate template = new DefaultContentSafeTemplate(scenes,
+                List.of(providerOf(async)), new PriorityAuditRouter(), new CircuitBreakerRegistry(),
+                new RateLimiterRegistry(), new CompositeAuditListener(List.of(recording)),
+                List.of(new DefaultEvidenceRedactor()), store, null);
+        AuditRequest request = AuditRequest.builder()
+                .scene(Scenes.NICKNAME)
+                .type(ContentType.TEXT)
+                .content(ContentRef.text("hello"))
+                .dataId("biz-order-1")
+                .build();
+        String first = template.submitAsync(request);
+        store.markTerminal(first, TaskStatus.SUCCEEDED,
+                AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS).build());
+
+        // 已终态任务不参与复用：业务重新提交同一 dataId 应创建新任务
+        String second = template.submitAsync(request);
+
+        assertTrue(!first.equals(second));
+        assertEquals(2, submits[0]);
     }
 
     @Test

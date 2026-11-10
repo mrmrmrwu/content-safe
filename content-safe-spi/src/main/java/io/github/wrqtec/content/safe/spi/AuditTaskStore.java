@@ -39,6 +39,23 @@ public interface AuditTaskStore {
     Optional<AuditTask> findByRef(String providerTaskId, String dataId);
 
     /**
+     * 按场景 + 业务 dataId 查找活跃（非终态）任务，用于 submitAsync 幂等去重：
+     * 调用方显式传入 dataId 重复提交时复用既有任务，避免云侧产生重复计费任务。
+     * 只匹配 status == PENDING 的任务，已终态任务不参与匹配（业务重新提交应创建新任务）
+     *
+     * <p>默认返回 empty 表示实现不支持按 dataId 查找，幂等去重随之失效（不影响正确性，
+     * 只影响成本）。生产实现（DB/Redis）建议覆盖本方法。尽力而为语义：查重与保存之间
+     * 无事务边界，极端并发下同一 dataId 仍可能重复提交
+     *
+     * @param sceneCode 场景 code，非空
+     * @param dataId    业务侧数据唯一标识，调用方保证非空白
+     * @return 命中的活跃任务；不存在或不支持时返回 {@link Optional#empty()}
+     */
+    default Optional<AuditTask> findActiveByDataId(String sceneCode, String dataId) {
+        return Optional.empty();
+    }
+
+    /**
      * 终态迁移（CAS 语义）：仅非终态任务可迁移，迁移成功返回 true；
      * 已终态或任务不存在返回 false。并发调用同一任务时仅首个迁移返回 true，
      * 后续调用返回 false，实现须保证该判定原子

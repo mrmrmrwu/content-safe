@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.core;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -161,6 +162,8 @@ class DefaultContentSafeTemplateReviewTest {
         assertEquals("d-1", manual.dataId());
         assertNotNull(manual.finalResult());
         assertTrue(manual.finalResult());
+        // 人审非机审调用无外部耗时，cost 恒非 null（指标侧取值安全）
+        assertEquals(Duration.ZERO, manual.cost());
     }
 
     @Test

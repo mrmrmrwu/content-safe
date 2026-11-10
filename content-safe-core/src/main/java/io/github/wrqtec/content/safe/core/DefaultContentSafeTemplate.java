@@ -6,7 +6,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import io.github.wrqtec.content.safe.api.AuditRequest;
@@ -131,14 +133,13 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     }
 
     /**
-     * 全参构造
+     * 全参构造器：与 {@link #builder()} 全属性设置等价，是其委托落点，保持稳定不弃用。
+     * 新增参数继续通过 Builder 暴露（命名参数、可演进），代码装配建议优先用 builder()
      *
      * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
      * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
      * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
-     * @deprecated 改用 {@link #builder()}；本构造器仅为兼容保留，不再扩展新参数
      */
-    @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
@@ -279,39 +280,74 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      */
     private Attempt tryExecute(AuditOperation operation, SceneDefinition scene, AuditRequest request) {
         String planKey = operation.plan().planKey();
-        // 限流先于熔断：避免在半开状态下因本地限流跳过而泄漏探测名额
-        RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
-        if (!permit.acquired()) {
-            listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
-                    operation.plan().operation(), scene.code(), "rate limited", null));
-            log.debug("provider {} throttled on scene {}, fail over to next", planKey, scene.code());
-            return Attempt.failure(planKey + ": rate limited", null);
-        }
-        CircuitBreaker breaker = breakers.get(planKey);
-        if (!breaker.tryAcquire()) {
-            permit.release();
-            return Attempt.failure(planKey + ": circuit open", null);
-        }
         try {
-            AuditResult result = operation.audit(request);
-            breaker.onSuccess();
+            AuditResult result = executeGuarded(operation, scene, () -> operation.audit(request));
             AuditResult redacted = EvidenceRedactors.redactResult(redactors, result, operation.plan().provider());
             eventPublisher.publish(scene.code(), redacted);
             // 成功路径可观测：只含路由与结论元数据，不含用户内容原文
             log.debug("audit success: scene={}, provider={}, suggestion={}, hits={}, cost={}",
                     scene.code(), planKey, redacted.suggestion(), redacted.hits().size(), redacted.cost());
             return Attempt.success(redacted);
+        } catch (GuardRejection e) {
+            // 限流/熔断未放行：不计 provider 失败（熔断记账已在护栏外），转移到下一候选
+            return Attempt.failure(planKey + ": " + e.reason(), null);
+        } catch (RuntimeException e) {
+            // provider 已对自身异常脱敏，此处再兜底净化一次，防止第三方 SDK 异常夹带敏感片段
+            return Attempt.failure(planKey + ": " + e.getClass().getSimpleName()
+                    + describeFailure(e), e);
+        }
+    }
+
+    /**
+     * 统一执行护栏：限流 → 熔断放行 → 执行 → 熔断记账。audit() 失败转移与
+     * submitAsync 异常传播共用同一护栏，保证限流/熔断语义单点维护。
+     * 限流先于熔断：避免在半开状态下因本地限流跳过而泄漏探测名额。
+     * 限流/熔断未放行抛 {@link GuardRejection}，与 provider 自身异常区分
+     */
+    private <T> T executeGuarded(AuditOperation operation, SceneDefinition scene, Supplier<T> action) {
+        String planKey = operation.plan().planKey();
+        RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
+        if (!permit.acquired()) {
+            listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
+                    operation.plan().operation(), scene.code(), "rate limited", null));
+            log.debug("provider {} throttled on scene {}", planKey, scene.code());
+            throw new GuardRejection("rate limited", "rate limited for " + planKey);
+        }
+        CircuitBreaker breaker = breakers.get(planKey);
+        if (!breaker.tryAcquire()) {
+            permit.release();
+            throw new GuardRejection("circuit open", "circuit open for " + planKey);
+        }
+        try {
+            T value = action.get();
+            breaker.onSuccess();
+            return value;
         } catch (RuntimeException e) {
             breaker.onFailure();
             listener.onEvent(new ProviderDegradedEvent(operation.plan().provider(),
                     operation.plan().operation(), scene.code(), e.getClass().getSimpleName(), null));
-            log.warn("provider {} degraded on scene {}, fail over to next",
-                    operation.plan().planKey(), scene.code(), e);
-            // provider 已对自身异常脱敏，此处再兜底净化一次，防止第三方 SDK 异常夹带敏感片段
-            return Attempt.failure(planKey + ": " + e.getClass().getSimpleName()
-                    + describeFailure(e), e);
+            log.warn("provider {} degraded on scene {}", planKey, scene.code(), e);
+            throw e;
         } finally {
             permit.release();
+        }
+    }
+
+    /**
+     * 护栏拒绝信号（限流/熔断未放行）。继承 {@link ProviderNotAvailableException}
+     * 使 submitAsync 路径的对外语义不变；reason 供失败转移路径拼装明细
+     */
+    private static final class GuardRejection extends ProviderNotAvailableException {
+
+        private final String reason;
+
+        GuardRejection(String reason, String message) {
+            super(message);
+            this.reason = reason;
+        }
+
+        String reason() {
+            return reason;
         }
     }
 
@@ -372,6 +408,17 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         Asserts.notNull(request, "request");
         validateContent(request.content());
         SceneDefinition scene = sceneRegistry.require(request.scene());
+        // 幂等去重：调用方显式传入的 dataId 即幂等键，活跃任务已存在时复用既有 taskId，
+        // 避免超时重试在云侧产生第二个计费任务；快捷构造（text/image）自动生成 UUID，
+        // 天然不受影响。dataId 未传时无法去重，直接提交
+        if (request.dataId() != null && !request.dataId().isBlank()) {
+            Optional<AuditTask> active = taskStore.findActiveByDataId(scene.code(), request.dataId());
+            if (active.isPresent()) {
+                AuditTask existing = active.get();
+                log.debug("async submit deduplicated: scene={}, taskId={}", scene.code(), existing.taskId());
+                return existing.taskId();
+            }
+        }
         List<AuditOperation> async = candidates(scene).stream()
                 .filter(op -> op.capabilities().asyncQuery() || op.capabilities().asyncCallback())
                 .filter(op -> op.supports(request))
@@ -383,29 +430,15 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         AuditOperation operation = router.route(request, async);
 
         String planKey = operation.plan().planKey();
-        RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
-        if (!permit.acquired()) {
-            listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
-                    operation.plan().operation(), scene.code(), "rate limited", null));
-            throw new ProviderNotAvailableException("rate limited for " + planKey);
-        }
-        CircuitBreaker breaker = breakers.get(planKey);
-        if (!breaker.tryAcquire()) {
-            permit.release();
-            throw new ProviderNotAvailableException("circuit open for " + planKey);
-        }
         try {
-            AsyncTaskRef ref = operation.submitAsync(request);
-            breaker.onSuccess();
+            AsyncTaskRef ref = executeGuarded(operation, scene, () -> operation.submitAsync(request));
             String taskId = UUID.randomUUID().toString();
             taskStore.save(AuditTask.pending(taskId, ref, scene.code(),
                     operation.plan().provider(), planKey));
             return taskId;
-        } catch (RuntimeException e) {
-            breaker.onFailure();
-            throw e;
-        } finally {
-            permit.release();
+        } catch (GuardRejection e) {
+            // 对外语义不变：限流/熔断未放行抛 ProviderNotAvailableException（单操作路径无失败转移）
+            throw new ProviderNotAvailableException(e.getMessage());
         }
     }
 
@@ -427,7 +460,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 eventPublisher.publish(task.scene(), result);
                 return result;
             }
-            // 并发下已被迁移，返回存储中的终态结果（同样已脱敏）
+            // 并发下已被其他线程迁移，返回存储中的终态结果；orElse 兜底的是
+            // "实现会驱逐终态记录"的 store（如按读取消费/终态 TTL 清理），此时返回本次结果
             return taskStore.find(taskId).map(AuditTask::result).orElse(result);
         }
         return result;
@@ -480,7 +514,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         SceneDefinition scene = sceneRegistry.require(task.scene());
         return candidates(scene).stream()
                 // 任务记录了提交操作的 planKey 时按它精确路由（同一供应商可挂多个异步操作，
-                // 仅按 provider 匹配会张冠李戴）；历史任务（operation 为空）回退 provider 匹配
+                // 仅按 provider 匹配会张冠李戴）；operation 为空回退 provider 匹配不是死代码——
+                // 1.0.0 已发布的任务记录没有 planKey 字段，存量 PENDING 任务升级后走这里
                 .filter(op -> task.operation() != null && !task.operation().isBlank()
                         ? op.plan().planKey().equals(task.operation())
                         : op.plan().provider().equals(task.provider()))
@@ -491,7 +526,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                         : "no async-query operation for provider: " + task.provider()));
     }
 
-    /** 决议 -> 终态结果：source=MANUAL、finalResult=true，回链机审 dataId 供业务对账 */
+    /** 决议 -> 终态结果：source=MANUAL、finalResult=true，回链机审 dataId 供业务对账。
+     * cost=ZERO：非机审调用无外部耗时，保证指标侧取值恒非 null */
     private AuditResult manualResultOf(ReviewResolution resolution) {
         return AuditResult.builder()
                 .ok(true)
@@ -500,6 +536,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 .finalResult(true)
                 .source(AuditSource.MANUAL)
                 .dataId(resolution.dataId())
+                .cost(Duration.ZERO)
                 .build();
     }
 

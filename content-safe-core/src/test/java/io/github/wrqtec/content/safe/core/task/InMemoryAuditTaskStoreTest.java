@@ -68,6 +68,25 @@ class InMemoryAuditTaskStoreTest {
     }
 
     @Test
+    void findActiveByDataIdMatchesOnlyPendingInSameScene() {
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "nickname", "provider"));
+
+        assertTrue(store.findActiveByDataId("nickname", "d1").isPresent());
+        assertEquals("t1", store.findActiveByDataId("nickname", "d1").orElseThrow().taskId());
+        // 场景不同不复用
+        assertTrue(store.findActiveByDataId("comment", "d1").isEmpty());
+    }
+
+    @Test
+    void findActiveByDataIdSkipsTerminalTasks() {
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "nickname", "provider"));
+        store.markTerminal("t1", TaskStatus.SUCCEEDED, AuditResult.builder().ok(true).build());
+
+        // 已终态任务不参与幂等复用：业务重新提交应创建新任务
+        assertTrue(store.findActiveByDataId("nickname", "d1").isEmpty());
+    }
+
+    @Test
     void boundedStoreEvictsOldestWhenCapacityReached() {
         InMemoryAuditTaskStore bounded = new InMemoryAuditTaskStore(2, Duration.ofHours(1));
         bounded.save(AuditTask.pending("t1", new AsyncTaskRef("p1", "d1"), "scene", "provider"));

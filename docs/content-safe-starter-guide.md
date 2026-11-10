@@ -359,6 +359,13 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 阿里结果保留 3 天（官方建议 30 秒轮询间隔）。
 `AuditRequest.text()/image()` 工厂默认自动生成 32 位 `dataId`（对账场景请用 builder 显式传入）。
 
+**提交幂等**：显式传入的 `dataId` 同时是提交幂等键——同一场景下存在同 `dataId` 的
+PENDING 任务时，重复 `submitAsync` 直接返回既有 `taskId`，不再调用供应商（避免超时重试
+在云侧产生重复计费任务）。已终态的任务不参与复用，重新提交会创建新任务。语义为尽力而为：
+查重与落库之间无事务边界，极端并发下仍可能重复提交；需要严格幂等时应在业务侧加分布式锁。
+默认内存存储已支持该查重；自定义 `AuditTaskStore`（DB/Redis）建议覆盖
+`findActiveByDataId`，未覆盖时幂等去重自动失效（不影响正确性）。
+
 ### 9.2 回调接入（三家通用）
 
 **方式一：内置端点（推荐）**。引入 Servlet Web 环境后开启即可，无需自写 Controller：
