@@ -8,7 +8,7 @@
 
 | 类型 | 说明 |
 | --- | --- |
-| `ContentSafeTemplate` | 统一门面：`audit` / `auditMulti` / `submitAsync` / `query` / `handleCallback` / `resolveReview`，附 `text()` / `image()` 便捷方法 |
+| `ContentSafeTemplate` | 统一门面：`audit` / `submitAsync` / `query` / `handleCallback` / `resolveReview`，附 `text()` / `image()` 便捷方法 |
 | `AuditRequest` | 审核请求：scene + type + `ContentRef` + 可选 dataId/context/options/passThrough |
 | `AuditResult` | 归一化终态结果：`pass()` / suggestion / finalResult / source / hits / provider 等 |
 | `ContentRef` | 内容载体：URL / BASE64 / BYTES / TEXT 四通道 |

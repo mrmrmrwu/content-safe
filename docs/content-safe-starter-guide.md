@@ -66,8 +66,6 @@ result.hits();        // 命中的风险明细（证据已脱敏）
 
 **自定义场景**：`src/main/resources/content-safe/scenes.json`（JSON 数组，元素含 `code`/`type`/`defaultSeverity`），与内置场景合并，重复 code 以自定义为准；也可直接声明 `SceneRegistry` Bean 全量接管。
 
-**多场景**：`template.auditMulti(sceneCodes, request)` 一次请求跨多个场景审核，按仲裁策略（默认 `FIRST_NON_PASS`）汇总。
-
 ## 3. 供应商接入
 
 ### 3.1 阿里云（content-safe-provider-aliyun）
@@ -196,6 +194,7 @@ content:
 content:
   safe:
     defaults:
+      failover: true                # false 时主候选首次失败即抛原始异常，不再转移下一候选
       circuit-breaker:              # 按 planKey（provider:operation）隔离
         window-size: 20
         failure-rate-threshold: 0.5
@@ -212,9 +211,11 @@ content:
             max-concurrency: 2
 ```
 
+- **主备 failover**：`content.safe.defaults.failover` 默认 `true`——按 `order()` 升序逐候选转移；置 `false` 后单供应商场景主候选失败直接上抛原始异常（根因类型与堆栈保留），多供应商场景不再转移。
+
 - **路由**：`PriorityAuditRouter` 按 `order()`（数值小优先）选主，主失败自动 failover 下一候选。
 - **仲裁**：`content.safe.defaults.arbitration` 选多供应商结果仲裁策略，默认 `OFF`（主备 failover，成本最优）；
-  配置为 `FIRST_NON_PASS` 或自定义 `AuditArbitrationPolicy` Bean 名称后，同步审核改为全量候选并行采集 +
+  配置为 `FIRST_NON_PASS` 或自定义 `AuditArbitrationPolicy` Bean 名称后，同步审核改为全量候选顺序采集 +
   仲裁合并（成本 = 每个候选各调用一次），结果 `source=ARBITRATION`。场景可用
   `content.safe.scenes.<code>.default-arbitration` 单独覆盖，配 `OFF`/`NONE` 表示该场景不仲裁。
 - **熔断**：失败率超阈值 OPEN → 冷却 → 半开探测；触发发布 `ProviderDegradedEvent`。

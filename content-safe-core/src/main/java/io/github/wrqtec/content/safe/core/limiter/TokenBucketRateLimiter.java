@@ -4,7 +4,7 @@ import java.util.Locale;
 
 /**
  * 令牌桶 QPS 限流器（纯 JDK）。
- * 容量 = 速率（突发容忍 1 秒），按 nanoTime 懒补充
+ * 容量 = max(1, 速率)（突发至少容忍 1 个许可，速率 &lt; 1 时按 1 秒一个放行），按 nanoTime 懒补充
  *
  * @author L.David
  */
@@ -14,7 +14,12 @@ public class TokenBucketRateLimiter implements RateLimiter {
 
     private static final double MIN_PERMITS_PER_SECOND = 0.000_001D;
 
+    /** 容量下限：低于 1 时桶永远凑不足单次许可，会导致全部拒绝 */
+    private static final double MIN_CAPACITY = 1.0D;
+
     private final double permitsPerSecond;
+
+    private final double capacity;
 
     private double storedPermits;
 
@@ -28,7 +33,8 @@ public class TokenBucketRateLimiter implements RateLimiter {
             throw new IllegalArgumentException("permitsPerSecond must be positive: " + permitsPerSecond);
         }
         this.permitsPerSecond = permitsPerSecond;
-        this.storedPermits = permitsPerSecond;
+        this.capacity = Math.max(MIN_CAPACITY, permitsPerSecond);
+        this.storedPermits = this.capacity;
         this.lastRefillNanos = System.nanoTime();
     }
 
@@ -51,7 +57,7 @@ public class TokenBucketRateLimiter implements RateLimiter {
             return;
         }
         double newPermits = (double) elapsed / NANOS_PER_SECOND * permitsPerSecond;
-        storedPermits = Math.min(permitsPerSecond, storedPermits + newPermits);
+        storedPermits = Math.min(capacity, storedPermits + newPermits);
         lastRefillNanos = now;
     }
 

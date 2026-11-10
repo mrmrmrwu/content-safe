@@ -80,7 +80,7 @@ public class TencentProviderAutoConfiguration {
                         properties.getSessionToken(),
                         System::getenv)
                 .orElseThrow(() -> new ConfigInvalidException(
-                        "tencent credentials required: set content.safe.providers.tencent.secret-id/secret-key"
+                        "missing credentials for provider 'tencent': set content.safe.providers.tencent.secret-id/secret-key"
                                 + " or env CONTENT_SAFE_TENCENT_AK / CONTENT_SAFE_TENCENT_SK"
                                 + " / CONTENT_SAFE_TENCENT_STSTOKEN"));
     }

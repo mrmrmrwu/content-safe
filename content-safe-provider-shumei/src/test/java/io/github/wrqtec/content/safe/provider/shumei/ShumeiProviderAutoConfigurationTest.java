@@ -45,7 +45,7 @@ class ShumeiProviderAutoConfigurationTest {
                         .getFailure()
                         .rootCause()
                         .isInstanceOf(ConfigInvalidException.class)
-                        .hasMessageContaining("shumei accessKey required"));
+                        .hasMessageContaining("missing credentials for provider 'shumei'"));
     }
 
     @Test

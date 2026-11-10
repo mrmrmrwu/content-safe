@@ -16,6 +16,9 @@ public final class ShumeiProviderConstants {
     /** 接口版本 */
     public static final String API_VERSION = "v4";
 
+    /** 业务成功返回码（文本/图片同步与异步查询共用，官方文档 2026-11-06 调研） */
+    public static final int CODE_SUCCESS = 1100;
+
     /** 文本同步检测操作名 */
     public static final String OPERATION_TEXT_DETECT = "TextDetect";
 

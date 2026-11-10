@@ -7,7 +7,7 @@
 
 ```
 io.github.wrqtec.content.safe.core
-├── DefaultContentSafeTemplate     # ContentSafeTemplate 默认实现：audit/auditMulti/submitAsync/query/handleCallback
+├── DefaultContentSafeTemplate     # ContentSafeTemplate 默认实现：audit/submitAsync/query/handleCallback/resolveReview
 ├── SceneRegistry                  # 场景注册表（内置 6 场景 + scenes.json 合并）
 ├── router/                        # AuditRouter、PriorityAuditRouter（按 order 升序选主）
 ├── arbitration/                   # AuditArbitrationPolicy、ArbitrationPolicyRegistry（多场景汇总策略）
@@ -44,7 +44,7 @@ audit(request)
 |---|---|---|---|
 | 熔断 | planKey（`provider:operation`） | 滑窗（20 次/50%/最小 10 样本），OPEN 30s 后半开探测 3 次 | 失败记账，OPEN 期间直接 failover |
 | 限流 | planKey | 令牌桶（QPS）+ 信号量（并发）组合 | 额度取 `ProviderPlan.limits()` 声明；并发许可 try/finally 归还 |
-| 仲裁 | scene | `FIRST_NON_PASS` | `auditMulti` 多场景结果汇总策略 |
+| 仲裁 | scene | `FIRST_NON_PASS`（按场景配置） | 多候选顺序全量采集后按策略汇总合并（成本 = 全部候选，默认 OFF 不启用） |
 | 异步任务 | taskId / providerTaskId | 内存存储（默认容量 10 万、24h 过期） | `markTerminal` 为 CAS，重复回调/乱序回调幂等 |
 | 回调 | provider | `CallbackDispatcher` | 验签失败进死信（`CallbackDeadLetterEvent`）；按 providerTaskId 反查任务 |
 

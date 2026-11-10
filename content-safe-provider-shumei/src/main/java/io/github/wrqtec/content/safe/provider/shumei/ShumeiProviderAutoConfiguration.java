@@ -87,7 +87,7 @@ public class ShumeiProviderAutoConfiguration {
             return fromEnv;
         }
         throw new ConfigInvalidException(
-                "shumei accessKey required: set content.safe.providers.shumei.access-key"
+                "missing credentials for provider 'shumei': set content.safe.providers.shumei.access-key"
                         + " or env CONTENT_SAFE_SHUMEI_AK");
     }
 

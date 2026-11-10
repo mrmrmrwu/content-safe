@@ -82,6 +82,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private final AuditArbitrationSelector arbitrationSelector;
     private final Duration pollInterval;
     private final Duration pollTimeout;
+    /** 同步审核主备转移开关：false 时主 provider 首败即抛，不再尝试备用候选 */
+    private final boolean failover;
 
     /**
      * @param sceneRegistry      场景注册表
@@ -114,7 +116,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      * @deprecated 改用 {@link #builder()}；本构造器仅为兼容保留，不再扩展新参数
      * @see #DefaultContentSafeTemplate(SceneRegistry, List, AuditRouter, CircuitBreakerRegistry,
      * RateLimiterRegistry, AuditListener, List, AuditTaskStore, ReviewResultSink, CallbackDispatcher,
-     * AuditArbitrationSelector, Duration, Duration)
+     * AuditArbitrationSelector, Duration, Duration, boolean)
      */
     @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
@@ -129,17 +131,17 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                                       CallbackDispatcher callbackDispatcher) {
         this(sceneRegistry, providers, router, breakers, limiters, listener,
                 redactors, taskStore, reviewSink, callbackDispatcher, null,
-                DEFAULT_POLL_INTERVAL, DEFAULT_POLL_TIMEOUT);
+                DEFAULT_POLL_INTERVAL, DEFAULT_POLL_TIMEOUT, true);
     }
 
     /**
-     * 全参构造器：与 {@link #builder()} 全属性设置等价，是其委托落点，保持稳定不弃用。
-     * 新增参数继续通过 Builder 暴露（命名参数、可演进），代码装配建议优先用 builder()
-     *
      * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
      * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
      * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
+     * @deprecated 改用 {@link #builder()} 或 {@link #DefaultContentSafeTemplate} 14 参构造器；
+     * 失败转移开关已由 Builder/全参构造器显式暴露，本构造器默认开启转移
      */
+    @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
@@ -153,6 +155,34 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                                       AuditArbitrationSelector arbitrationSelector,
                                       Duration pollInterval,
                                       Duration pollTimeout) {
+        this(sceneRegistry, providers, router, breakers, limiters, listener,
+                redactors, taskStore, reviewSink, callbackDispatcher,
+                arbitrationSelector, pollInterval, pollTimeout, true);
+    }
+
+    /**
+     * 全参构造器：与 {@link #builder()} 全属性设置等价，是其委托落点，保持稳定不弃用。
+     * 新增参数继续通过 Builder 暴露（命名参数、可演进），代码装配建议优先用 builder()
+     *
+     * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
+     * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
+     * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
+     * @param failover            同步审核主备转移开关，true 转移到下一候选、false 主候选首败即抛
+     */
+    public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
+                                      List<AuditOperationProvider> providers,
+                                      AuditRouter router,
+                                      CircuitBreakerRegistry breakers,
+                                      RateLimiterRegistry limiters,
+                                      AuditListener listener,
+                                      List<EvidenceRedactor> redactors,
+                                      AuditTaskStore taskStore,
+                                      ReviewResultSink reviewSink,
+                                      CallbackDispatcher callbackDispatcher,
+                                      AuditArbitrationSelector arbitrationSelector,
+                                      Duration pollInterval,
+                                      Duration pollTimeout,
+                                      boolean failover) {
         this.sceneRegistry = Asserts.notNull(sceneRegistry, "sceneRegistry");
         this.providers = providers == null ? List.of() : List.copyOf(providers);
         this.router = Asserts.notNull(router, "router");
@@ -169,6 +199,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 ? pollInterval : DEFAULT_POLL_INTERVAL;
         this.pollTimeout = pollTimeout != null && !pollTimeout.isNegative() && !pollTimeout.isZero()
                 ? pollTimeout : DEFAULT_POLL_TIMEOUT;
+        this.failover = failover;
     }
 
     @Override
@@ -217,6 +248,14 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             failures.add(attempt.failure());
             if (attempt.cause() != null) {
                 lastFailure = attempt.cause();
+            }
+            if (!failover) {
+                // failover 关闭：主候选首败即抛（底层异常原样上抛保留根因类型与堆栈；
+                // 限流/熔断等本地拒绝无底层异常，按不可用语义抛出）。仅在至少一个候选失败后
+                // 到达此处，必为真实失败而非"无候选"
+                throw attempt.cause() != null
+                        ? attempt.cause()
+                        : new ProviderNotAvailableException(attempt.failure());
             }
         }
         // 最后一次底层异常挂为 cause，保留根因链
@@ -571,6 +610,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         private AuditArbitrationSelector arbitrationSelector;
         private Duration pollInterval;
         private Duration pollTimeout;
+        private boolean failover = true;
 
         public Builder sceneRegistry(SceneRegistry sceneRegistry) {
             this.sceneRegistry = sceneRegistry;
@@ -639,10 +679,16 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             return this;
         }
 
+        /** 同步审核主备转移开关，默认 true；false 时主候选首败即抛原始异常，不转移备用 */
+        public Builder failover(boolean failover) {
+            this.failover = failover;
+            return this;
+        }
+
         public DefaultContentSafeTemplate build() {
             return new DefaultContentSafeTemplate(sceneRegistry, providers, router, breakers,
                     limiters, listener, redactors, taskStore, reviewSink, callbackDispatcher,
-                    arbitrationSelector, pollInterval, pollTimeout);
+                    arbitrationSelector, pollInterval, pollTimeout, failover);
         }
     }
 }

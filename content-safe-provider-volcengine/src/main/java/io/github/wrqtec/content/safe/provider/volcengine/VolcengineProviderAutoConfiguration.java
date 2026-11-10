@@ -67,7 +67,7 @@ public class VolcengineProviderAutoConfiguration {
                         properties.getSessionToken(),
                         System::getenv)
                 .orElseThrow(() -> new ConfigInvalidException(
-                        "volcengine credentials required: set content.safe.providers.volcengine.ak/sk"
+                        "missing credentials for provider 'volcengine': set content.safe.providers.volcengine.ak/sk"
                                 + " or env CONTENT_SAFE_VOLCENGINE_AK / CONTENT_SAFE_VOLCENGINE_SK"
                                 + " / CONTENT_SAFE_VOLCENGINE_STSTOKEN"));
     }

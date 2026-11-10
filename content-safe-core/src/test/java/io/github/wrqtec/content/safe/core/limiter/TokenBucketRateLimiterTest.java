@@ -38,6 +38,16 @@ class TokenBucketRateLimiterTest {
     }
 
     @Test
+    void subOneQpsStillAdmitsFirstCall() throws InterruptedException {
+        // 容量下限 1：qps < 1 时首次调用必须放行，随后按速率补充（0.5 QPS 约 2 秒 1 个）
+        TokenBucketRateLimiter limiter = new TokenBucketRateLimiter(0.5D);
+        assertTrue(limiter.tryAcquire().acquired());
+        assertFalse(limiter.tryAcquire().acquired());
+        Thread.sleep(2_100L);
+        assertTrue(limiter.tryAcquire().acquired());
+    }
+
+    @Test
     void releaseIsNoOpForQpsPermit() {
         TokenBucketRateLimiter limiter = new TokenBucketRateLimiter(1D);
         RateLimiter.Permit permit = limiter.tryAcquire();

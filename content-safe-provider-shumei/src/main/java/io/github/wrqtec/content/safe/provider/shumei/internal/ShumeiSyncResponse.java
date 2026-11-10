@@ -3,6 +3,7 @@ package io.github.wrqtec.content.safe.provider.shumei.internal;
 import java.util.List;
 
 import com.google.gson.JsonObject;
+import io.github.wrqtec.content.safe.provider.shumei.ShumeiProviderConstants;
 
 /**
  * 数美 v4 同步检测响应（text/v4 与 image/v4 同构）
@@ -104,7 +105,7 @@ public class ShumeiSyncResponse {
      * 业务成功（返回码 1100）
      */
     public boolean isSuccess() {
-        return code != null && code == 1100;
+        return code != null && code == ShumeiProviderConstants.CODE_SUCCESS;
     }
 
     /**

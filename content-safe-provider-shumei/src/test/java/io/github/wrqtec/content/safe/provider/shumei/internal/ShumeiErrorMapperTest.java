@@ -70,8 +70,7 @@ class ShumeiErrorMapperTest {
 
         String sanitized = ShumeiErrorMapper.sanitize(longMessage);
 
-        assertThat(sanitized.length()).isLessThanOrEqualTo(124);
-        assertThat(sanitized).endsWith("...");
+        assertThat(sanitized.length()).isLessThanOrEqualTo(120);
     }
 
     @Test

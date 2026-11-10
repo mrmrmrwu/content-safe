@@ -2,6 +2,8 @@ package io.github.wrqtec.content.safe.provider.shumei.internal;
 
 import java.util.List;
 
+import io.github.wrqtec.content.safe.provider.shumei.ShumeiProviderConstants;
+
 /**
  * 数美图片异步主动查询响应（/v4/image/query）
  *
@@ -45,6 +47,6 @@ public class ShumeiAsyncQueryResponse {
      * 业务成功（返回码 1100）
      */
     public boolean isSuccess() {
-        return code != null && code == 1100;
+        return code != null && code == ShumeiProviderConstants.CODE_SUCCESS;
     }
 }

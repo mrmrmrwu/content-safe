@@ -1,9 +1,9 @@
 package io.github.wrqtec.content.safe.provider.baidu.internal;
 
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.ErrorMessages;
 
 /**
  * 百度错误映射：error_code 与异常 → {@link ProviderCallException}
@@ -23,12 +23,6 @@ public final class BaiduErrorMapper {
 
     /** token 无效/过期错误码（触发 token 失效重取） */
     private static final Set<Integer> TOKEN_CODES = Set.of(110, 111);
-
-    /** 长 token 掩码（签名材料、access_token 等） */
-    private static final Pattern LONG_TOKEN = Pattern.compile("[A-Za-z0-9+/=_\\-.]{16,}");
-
-    /** message 截断长度 */
-    private static final int MAX_MESSAGE_LENGTH = 120;
 
     private BaiduErrorMapper() {
     }
@@ -64,13 +58,9 @@ public final class BaiduErrorMapper {
     }
 
     /**
-     * 脱敏：长 token 掩码 + 截断
+     * 脱敏：长 token 掩码 + 截断（委托 api 统一实现，本类不维护正则副本）
      */
     public static String sanitize(String message) {
-        if (message == null) {
-            return "";
-        }
-        String masked = LONG_TOKEN.matcher(message).replaceAll("***");
-        return masked.length() <= MAX_MESSAGE_LENGTH ? masked : masked.substring(0, MAX_MESSAGE_LENGTH) + "...";
+        return ErrorMessages.sanitize(message);
     }
 }

@@ -72,8 +72,7 @@ class BaiduErrorMapperTest {
 
         String sanitized = BaiduErrorMapper.sanitize(longMessage);
 
-        assertThat(sanitized.length()).isLessThanOrEqualTo(124);
-        assertThat(sanitized).endsWith("...");
+        assertThat(sanitized.length()).isLessThanOrEqualTo(120);
     }
 
     @Test

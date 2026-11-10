@@ -21,12 +21,6 @@ public final class VolcengineProviderConstants {
     /** 图片内容检测 ImageContentRiskV2 的 API 版本 */
     public static final String API_VERSION_IMAGE_RISK = "2021-11-29";
 
-    /** V4 签名 service 名（内容安全产品线约定） */
-    public static final String SIGN_SERVICE = "BusinessSecurity";
-
-    /** 签名 region */
-    public static final String SIGN_REGION = "cn-north-1";
-
     /** 文本同步检测操作 */
     public static final String OPERATION_TEXT_RISK = "TextRisk";
 

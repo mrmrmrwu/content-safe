@@ -78,7 +78,7 @@ public class BaiduProviderAutoConfiguration {
                         null,
                         System::getenv)
                 .orElseThrow(() -> new ConfigInvalidException(
-                        "baidu credentials required: set content.safe.providers.baidu.api-key/secret-key"
+                        "missing credentials for provider 'baidu': set content.safe.providers.baidu.api-key/secret-key"
                                 + " or env CONTENT_SAFE_BAIDU_AK / CONTENT_SAFE_BAIDU_SK"));
     }
 

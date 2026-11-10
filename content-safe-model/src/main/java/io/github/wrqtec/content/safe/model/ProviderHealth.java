@@ -10,7 +10,11 @@ import io.github.wrqtec.content.safe.model.enums.HealthStatus;
  * 供应商操作健康快照，由后台 {@code ProviderHealthProbe} 异步刷新。不可变
  *
  * @author L.David
+ * @deprecated 配套的 {@code ProviderHealthProbe} 自 1.0.0 发布以来无任何调用方
+ *     （core 无健康注册表与探测调度），本记录不会在生产路径上产生实例，请勿使用。
+ *     因 1.0.0 已发布无法物理删除（二进制兼容门禁），计划 2.0.0 随探测接口一并移除
  */
+@Deprecated(since = "1.1.0", forRemoval = true)
 public record ProviderHealth(
         String provider,
         String operation,

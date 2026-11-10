@@ -213,6 +213,7 @@ public class ContentSafeAutoConfiguration {
                 .arbitrationSelector(arbitrationPolicies::forScene)
                 .pollInterval(async == null ? null : async.getPollInterval())
                 .pollTimeout(async == null ? null : async.getTimeout())
+                .failover(properties.getDefaults().isFailover())
                 .build();
     }
 }

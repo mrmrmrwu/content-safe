@@ -226,6 +226,67 @@ class DefaultContentSafeTemplateTest {
     }
 
     @Test
+    void failoverDisabledThrowsPrimaryFailureWithoutTryingNext() {
+        StubOperation bad = new StubOperation("bad", 0);
+        ProviderCallException boom = new ProviderCallException("boom");
+        bad.failWith(boom);
+        StubOperation good = new StubOperation("good", 1);
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(bad), providerOf(good)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .failover(false)
+                .build();
+
+        // failover 关闭：主候选首败即抛原始异常（保留根因类型），不再转移备用候选
+        ProviderCallException thrown = assertThrows(ProviderCallException.class,
+                () -> template.text(Scenes.NICKNAME, "t"));
+        assertEquals(boom, thrown);
+        assertEquals(1, bad.calls());
+        assertEquals(0, good.calls());
+    }
+
+    @Test
+    void failoverDisabledWithGuardRejectionThrowsNotAvailable() {
+        StubOperation bad = new StubOperation("bad", 0);
+        StubOperation good = new StubOperation("good", 1);
+        // 全局限流拒绝工厂：所有 planKey 一律不放行（本地护栏拒绝，无底层异常）
+        RateLimiterRegistry rejecting = new RateLimiterRegistry((key, limits) -> new RateLimiter() {
+            @Override
+            public Permit tryAcquire() {
+                return Permit.rejected();
+            }
+
+            @Override
+            public String name() {
+                return "always-reject";
+            }
+        });
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(bad), providerOf(good)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(rejecting)
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .failover(false)
+                .build();
+
+        ProviderNotAvailableException thrown = assertThrows(ProviderNotAvailableException.class,
+                () -> template.text(Scenes.NICKNAME, "t"));
+        assertTrue(thrown.getMessage().contains("bad"));
+        assertEquals(0, bad.calls());
+        assertEquals(0, good.calls());
+    }
+
+    @Test
     void allProvidersFailedThrows() {
         StubOperation a = new StubOperation("a", 0);
         a.failWith(new ProviderCallException("boom"));

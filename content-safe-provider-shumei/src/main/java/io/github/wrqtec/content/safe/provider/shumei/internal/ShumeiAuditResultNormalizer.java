@@ -42,15 +42,6 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
     public static final String CONTEXT_DATA_ID = "dataId";
     public static final String CONTEXT_COST = "cost";
 
-    /** riskSource：无风险 */
-    public static final int RISK_SOURCE_NONE = 1000;
-
-    /** riskSource：文字风险 */
-    public static final int RISK_SOURCE_TEXT = 1001;
-
-    /** riskSource：视觉图片风险 */
-    public static final int RISK_SOURCE_IMAGE = 1002;
-
     /** 最终结果取值：1=最终 */
     private static final int FINAL_RESULT_FINAL = 1;
 

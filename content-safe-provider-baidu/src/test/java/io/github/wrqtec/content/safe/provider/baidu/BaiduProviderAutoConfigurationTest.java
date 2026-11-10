@@ -44,7 +44,7 @@ class BaiduProviderAutoConfigurationTest {
                         .getFailure()
                         .rootCause()
                         .isInstanceOf(ConfigInvalidException.class)
-                        .hasMessageContaining("baidu credentials required"));
+                        .hasMessageContaining("missing credentials for provider 'baidu'"));
     }
 
     @Test

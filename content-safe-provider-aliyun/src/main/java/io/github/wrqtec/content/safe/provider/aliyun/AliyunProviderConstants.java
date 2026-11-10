@@ -25,9 +25,6 @@ public final class AliyunProviderConstants {
     /** 图片异步检测提交操作名（来源：help.aliyun.com/doc-detail/2638108，查阅 2026-11-07） */
     public static final String OPERATION_IMAGE_ASYNC_MODERATION = "ImageAsyncModeration";
 
-    /** 图片异步检测结果查询操作名（按 reqId 轮询，结果保留 3 天） */
-    public static final String OPERATION_IMAGE_ASYNC_QUERY = "DescribeImageModerationResult";
-
     /** extra 配置键：异步检测回调地址（配置后提交任务携带 callback，启用回调推送） */
     public static final String EXTRA_CALLBACK_URL = "callback-url";
 
