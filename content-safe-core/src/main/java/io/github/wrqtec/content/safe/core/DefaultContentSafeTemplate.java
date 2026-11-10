@@ -1,8 +1,11 @@
 package io.github.wrqtec.content.safe.core;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -10,6 +13,7 @@ import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
+import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
 import io.github.wrqtec.content.safe.api.ReviewResolution;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
@@ -19,6 +23,7 @@ import io.github.wrqtec.content.safe.api.exception.AllProvidersFailedException;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
+import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.AuditTask;
@@ -86,7 +91,9 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      * @param redactors          证据脱敏器列表，可为 null（视为空）
      * @param taskStore          异步任务存储
      * @param callbackDispatcher 回调分发器，可为 null（不支持回调）
+     * @deprecated 改用 {@link #builder()}；本构造器仅为兼容保留，不再扩展新参数
      */
+    @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
@@ -102,10 +109,12 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
 
     /**
      * @param reviewSink 人审终态回写出口，可为 null（仅做终态归一与事件发布）
+     * @deprecated 改用 {@link #builder()}；本构造器仅为兼容保留，不再扩展新参数
      * @see #DefaultContentSafeTemplate(SceneRegistry, List, AuditRouter, CircuitBreakerRegistry,
      * RateLimiterRegistry, AuditListener, List, AuditTaskStore, ReviewResultSink, CallbackDispatcher,
      * AuditArbitrationSelector, Duration, Duration)
      */
+    @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
@@ -127,7 +136,9 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
      * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
      * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
+     * @deprecated 改用 {@link #builder()}；本构造器仅为兼容保留，不再扩展新参数
      */
+    @Deprecated(since = "1.1.0", forRemoval = false)
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
                                       List<AuditOperationProvider> providers,
                                       AuditRouter router,
@@ -162,6 +173,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     @Override
     public AuditResult audit(AuditRequest request) {
         Asserts.notNull(request, "request");
+        validateContent(request.content());
         SceneDefinition scene = sceneRegistry.require(request.scene());
         if (scene.type() != request.type()) {
             throw new InvalidRequestException(
@@ -312,6 +324,44 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         return ": " + ErrorMessages.sanitize(message);
     }
 
+    /**
+     * 最小公共输入治理：在任何 provider 之前统一拦截明显非法的内容引用。
+     * 职责边界——公共形状校验（非空、URL scheme 白名单）在 core 只做一次；
+     * 供应商特有的大小/像素/格式限制由各 provider 自行预检（它们最懂自己的 limits）。
+     * 错误消息只描述问题，不回显内容值（URL 可能携带签名参数，见安全约束）
+     */
+    private static void validateContent(ContentRef content) {
+        Asserts.notNull(content, "content");
+        switch (content.type()) {
+            case TEXT, BASE64, OBJECT_KEY -> Asserts.notBlank(content.value(), "content value");
+            case BYTES -> {
+                if (content.bytes() == null || content.bytes().length == 0) {
+                    throw new InvalidRequestException("content bytes must not be empty");
+                }
+            }
+            case URL -> validateUrl(content.value());
+            default -> throw new InvalidRequestException("unsupported content type: " + content.type());
+        }
+    }
+
+    /** URL 仅放行带主机的 http/https 绝对地址：scheme/主机合法性属于公共契约，供应商侧不再各自校验 */
+    private static void validateUrl(String url) {
+        Asserts.notBlank(url, "content url");
+        URI uri;
+        try {
+            uri = new URI(url.trim());
+        } catch (URISyntaxException e) {
+            throw new InvalidRequestException("content url is not a valid URI");
+        }
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+        if (!scheme.equals("http") && !scheme.equals("https")) {
+            throw new InvalidRequestException("content url scheme must be http/https");
+        }
+        if (uri.getHost() == null || uri.getHost().isBlank()) {
+            throw new InvalidRequestException("content url is missing host");
+        }
+    }
+
     @Override
     public AuditResult submitAndWait(AuditRequest request) {
         return ContentSafeTemplate.super.submitAndWait(request, pollInterval, pollTimeout);
@@ -320,6 +370,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     @Override
     public String submitAsync(AuditRequest request) {
         Asserts.notNull(request, "request");
+        validateContent(request.content());
         SceneDefinition scene = sceneRegistry.require(request.scene());
         List<AuditOperation> async = candidates(scene).stream()
                 .filter(op -> op.capabilities().asyncQuery() || op.capabilities().asyncCallback())
@@ -347,7 +398,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             AsyncTaskRef ref = operation.submitAsync(request);
             breaker.onSuccess();
             String taskId = UUID.randomUUID().toString();
-            taskStore.save(AuditTask.pending(taskId, ref, scene.code(), operation.plan().provider()));
+            taskStore.save(AuditTask.pending(taskId, ref, scene.code(),
+                    operation.plan().provider(), planKey));
             return taskId;
         } catch (RuntimeException e) {
             breaker.onFailure();
@@ -384,7 +436,11 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     @Override
     public CallbackResult handleCallback(CallbackRequest callback) {
         Asserts.notNull(callback, "callback");
-        Asserts.notNull(callbackDispatcher, "callbackDispatcher");
+        if (callbackDispatcher == null) {
+            // 未装配回调分发器是功能未启用，不是参数断言失败
+            throw new UnsupportedFeatureException(
+                    "callback dispatching is not configured (content.safe.callback not enabled)");
+        }
         return callbackDispatcher.dispatch(callback);
     }
 
@@ -423,11 +479,16 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private AuditOperation findAsyncQueryOperation(AuditTask task) {
         SceneDefinition scene = sceneRegistry.require(task.scene());
         return candidates(scene).stream()
-                .filter(op -> op.plan().provider().equals(task.provider()))
+                // 任务记录了提交操作的 planKey 时按它精确路由（同一供应商可挂多个异步操作，
+                // 仅按 provider 匹配会张冠李戴）；历史任务（operation 为空）回退 provider 匹配
+                .filter(op -> task.operation() != null && !task.operation().isBlank()
+                        ? op.plan().planKey().equals(task.operation())
+                        : op.plan().provider().equals(task.provider()))
                 .filter(op -> op.capabilities().asyncQuery())
                 .findFirst()
-                .orElseThrow(() -> new ProviderNotAvailableException(
-                        "no async-query operation for provider: " + task.provider()));
+                .orElseThrow(() -> new ProviderNotAvailableException(task.operation() != null
+                        ? "no async-query operation for planKey: " + task.operation()
+                        : "no async-query operation for provider: " + task.provider()));
     }
 
     /** 决议 -> 终态结果：source=MANUAL、finalResult=true，回链机审 dataId 供业务对账 */
@@ -445,7 +506,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     /**
      * 创建构建器（推荐的装配方式）。
      * 必填项：{@code sceneRegistry/providers/router/breakers/limiters/listener/taskStore}，
-     * 校验在 {@link Builder#build()} 时统一进行；可选项缺省时与旧构造器语义一致
+     * build() 委托构造器统一做参数校验；可选项缺省时与旧构造器语义一致
      *
      * @return 构建器
      */

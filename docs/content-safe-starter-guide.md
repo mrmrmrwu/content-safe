@@ -438,3 +438,8 @@ try {
   `retryable=false`，重试无意义，应修调用方代码。
 - 异常消息已脱敏（不含密钥/签名 URL/内容原文），可直接落日志。
 - 启动期配置错误（`CONFIG_INVALID`）由 FailureAnalyzer 翻译为可读报告（见 §7），无需业务处理。
+
+输入治理的职责边界：公共形状校验在 core 编排层路由前统一执行一次——内容非空
+（TEXT/BASE64/OBJECT_KEY 非空白、BYTES 非空数组）、URL 仅接受带主机的
+http/https 绝对地址（`file:` 等协议直接抛 `INVALID_REQUEST`）；供应商特有的
+大小/像素/格式限制由各 provider 自行预检。校验错误消息只描述问题，不回显内容值。

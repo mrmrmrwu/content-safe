@@ -36,7 +36,7 @@ class AuditTaskTest {
     @Test
     void invalidStateRejected() {
         assertThrows(InvalidRequestException.class,
-                () -> new AuditTask(null, new AsyncTaskRef("p", "d"), null, null, null, null, 0L, null, null));
+                () -> new AuditTask(null, new AsyncTaskRef("p", "d"), null, null, null, null, null, 0L, null, null));
     }
 
     @Test
@@ -50,7 +50,7 @@ class AuditTaskTest {
     void timestampsPreservedOnCopy() {
         Instant created = Instant.now().minusSeconds(60);
         AuditTask task = new AuditTask("t1", new AsyncTaskRef("p", "d"), "s", "p",
-                TaskStatus.PENDING, null, 0L, created, created);
+                null, TaskStatus.PENDING, null, 0L, created, created);
         assertEquals(created, task.createdAt());
     }
 }

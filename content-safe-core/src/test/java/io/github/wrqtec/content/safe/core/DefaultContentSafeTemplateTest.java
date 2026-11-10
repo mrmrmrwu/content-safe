@@ -19,6 +19,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
 import io.github.wrqtec.content.safe.api.exception.SceneNotConfiguredException;
+import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
 import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.AuditCapabilities;
@@ -251,13 +252,6 @@ class DefaultContentSafeTemplateTest {
         assertEquals(RiskSuggestion.REJECT, result.suggestion());
         assertTrue(result.hits().get(0).evidence().contains("***"));
         assertTrue(events.stream().anyMatch(e -> "RISK_HIT".equals(e.eventType())));
-    }
-
-    @Test
-    void callbackRequiresDispatcher() {
-        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
-        assertThrows(InvalidRequestException.class,
-                () -> template.handleCallback(new CallbackRequest("fake", Map.of(), "{}")));
     }
 
     @Test
@@ -587,5 +581,113 @@ class DefaultContentSafeTemplateTest {
                 .build();
 
         assertTrue(template.text(Scenes.NICKNAME, "你好").pass());
+    }
+
+    @Test
+    void queryRoutesByStoredPlanKeyNotProvider() {
+        boolean[] queried = {false, false};
+        StubOperation imageAsync = asyncQueryStub("fake", 0, "imageAsync", () -> queried[0] = true);
+        StubOperation textAsync = asyncQueryStub("fake", 1, "textAsync", () -> queried[1] = true);
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("fake", "remote-1"),
+                Scenes.NICKNAME, "fake", "fake:textAsync"));
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(imageAsync, textAsync)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .taskStore(store)
+                .build();
+
+        template.query("t1");
+
+        // 同一供应商挂多个异步操作时按 planKey 精确路由，不能张冠李戴
+        assertTrue(queried[1]);
+        assertTrue(!queried[0]);
+    }
+
+    @Test
+    void queryFallsBackToProviderWhenTaskHasNoPlanKey() {
+        boolean[] queried = {false};
+        StubOperation legacy = asyncQueryStub("fake", 0, "imageAsync", () -> queried[0] = true);
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("fake", "remote-1"),
+                Scenes.NICKNAME, "fake"));
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(legacy)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .taskStore(store)
+                .build();
+
+        assertTrue(template.query("t1").pass());
+        assertTrue(queried[0]);
+    }
+
+    /** ASYNC_QUERY 模式的探测桩，query 被调用时置位 probe */
+    private static StubOperation asyncQueryStub(String provider, int order, String operation,
+                                                Runnable probe) {
+        return new StubOperation(provider, order) {
+            @Override
+            public ProviderPlan plan() {
+                return new ProviderPlan(provider, "p", "1", operation, null,
+                        AuditMode.ASYNC_QUERY, null, null);
+            }
+
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT).asyncQuery(true).build();
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                probe.run();
+                return AuditResult.builder()
+                        .ok(true)
+                        .suggestion(RiskSuggestion.PASS)
+                        .finalResult(true)
+                        .provider(provider)
+                        .build();
+            }
+        };
+    }
+
+    @Test
+    void auditRejectsNonHttpUrlBeforeRouting() {
+        StubOperation op = new StubOperation("fake", 0);
+        DefaultContentSafeTemplate template = templateOf(providerOf(op));
+        AuditRequest request = AuditRequest.image(Scenes.AVATAR, ContentRef.url("file:///etc/passwd"));
+
+        assertThrows(InvalidRequestException.class, () -> template.audit(request));
+        assertEquals(0, op.calls());
+    }
+
+    @Test
+    void auditRejectsBlankContent() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
+
+        assertThrows(InvalidRequestException.class,
+                () -> template.audit(AuditRequest.text(Scenes.NICKNAME, "   ")));
+    }
+
+    @Test
+    void auditRejectsEmptyBytesContent() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
+
+        assertThrows(InvalidRequestException.class,
+                () -> template.audit(AuditRequest.image(Scenes.AVATAR, ContentRef.bytes(new byte[0]))));
+    }
+
+    @Test
+    void handleCallbackWithoutDispatcherThrowsUnsupportedFeature() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
+
+        assertThrows(UnsupportedFeatureException.class,
+                () -> template.handleCallback(new CallbackRequest("fake", Map.of(), "{}")));
     }
 }
