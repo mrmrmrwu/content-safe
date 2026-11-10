@@ -74,8 +74,8 @@ class ActuatorComponentsTest {
         AuditResult result = AuditResult.builder().ok(true).suggestion(RiskSuggestion.REJECT).build();
         metrics.onEvent(new AuditEvent("comment", result, null));
         metrics.onEvent(new AuditEvent("comment", result, null));
-        metrics.onEvent(new ProviderDegradedEvent("aliyun", "textScan", "boom", null));
-        metrics.onEvent(new ProviderThrottledEvent("aliyun", "textScan", "rate limited", null));
+        metrics.onEvent(new ProviderDegradedEvent("aliyun", "textScan", "comment", "boom", null));
+        metrics.onEvent(new ProviderThrottledEvent("aliyun", "textScan", "comment", "rate limited", null));
 
         assertEquals(2.0, meterRegistry.get(ContentSafeMetrics.METRIC_AUDIT)
                 .tags("scene", "comment", "suggestion", "REJECT").counter().count());

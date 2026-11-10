@@ -8,7 +8,7 @@ import java.time.Instant;
  *
  * @author L.David
  */
-public record ProviderThrottledEvent(String provider, String operation, String reason, Instant occurredAt)
+public record ProviderThrottledEvent(String provider, String operation, String scene, String reason, Instant occurredAt)
         implements ContentSafeEvent {
 
     public ProviderThrottledEvent {

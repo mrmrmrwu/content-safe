@@ -56,6 +56,24 @@ public record AuditResult(
         return ok && RiskSuggestion.PASS == suggestion;
     }
 
+    /** 派生副本：仅替换来源标记，其余字段原样保留（仲裁合并结果标 ARBITRATION 等） */
+    public AuditResult withSource(AuditSource source) {
+        return new AuditResult(ok, suggestion, finalResult, source, hits, requestId,
+                dataId, provider, product, service, cost, raw);
+    }
+
+    /** 派生副本：仅替换审核建议，其余字段原样保留 */
+    public AuditResult withSuggestion(RiskSuggestion suggestion) {
+        return new AuditResult(ok, suggestion, finalResult, source, hits, requestId,
+                dataId, provider, product, service, cost, raw);
+    }
+
+    /** 派生副本：仅替换命中详情，其余字段原样保留（证据脱敏后重建） */
+    public AuditResult withHits(List<RiskHit> hits) {
+        return new AuditResult(ok, suggestion, finalResult, source, hits, requestId,
+                dataId, provider, product, service, cost, raw);
+    }
+
     /**
      * 创建构建器，默认 ok=true、suggestion=PASS、finalResult=true、source=SYNC
      *

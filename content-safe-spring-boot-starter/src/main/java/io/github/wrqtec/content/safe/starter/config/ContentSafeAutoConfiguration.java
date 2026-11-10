@@ -192,13 +192,22 @@ public class ContentSafeAutoConfiguration {
                                                    ObjectProvider<CallbackDispatcher> callbackDispatcher,
                                                    ArbitrationPolicyRegistry arbitrationPolicies,
                                                    ContentSafeProperties properties) {
-        // 轮询参数为 null/非正时由模板构造器回退内置默认，这里直接透传
+        // 轮询参数为 null/非正时由模板回退内置默认，这里直接透传
         ContentSafeProperties.AsyncProperties async = properties.getDefaults().getAsync();
-        return new DefaultContentSafeTemplate(sceneRegistry, providers.orderedStream().toList(), router,
-                breakers, limiters, listener, redactors.orderedStream().toList(), taskStore,
-                reviewSinks.getIfAvailable(), callbackDispatcher.getIfAvailable(),
-                arbitrationPolicies::forScene,
-                async == null ? null : async.getPollInterval(),
-                async == null ? null : async.getTimeout());
+        return DefaultContentSafeTemplate.builder()
+                .sceneRegistry(sceneRegistry)
+                .providers(providers.orderedStream().toList())
+                .router(router)
+                .breakers(breakers)
+                .limiters(limiters)
+                .listener(listener)
+                .redactors(redactors.orderedStream().toList())
+                .taskStore(taskStore)
+                .reviewSink(reviewSinks.getIfAvailable())
+                .callbackDispatcher(callbackDispatcher.getIfAvailable())
+                .arbitrationSelector(arbitrationPolicies::forScene)
+                .pollInterval(async == null ? null : async.getPollInterval())
+                .pollTimeout(async == null ? null : async.getTimeout())
+                .build();
     }
 }

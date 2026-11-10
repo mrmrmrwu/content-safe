@@ -509,4 +509,83 @@ class DefaultContentSafeTemplateTest {
         assertEquals("***", cached.hits().get(0).evidence());
         assertEquals("***", store.find("t1").orElseThrow().result().hits().get(0).evidence());
     }
+
+    @Test
+    void auditSkipsProvidersNotSupportingContentForm() {
+        StubOperation urlOnly = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT).sync(true).url(true).build();
+            }
+        };
+        DefaultContentSafeTemplate template = templateOf(providerOf(urlOnly));
+
+        AuditRequest request = AuditRequest.builder()
+                .scene(Scenes.NICKNAME)
+                .type(ContentType.TEXT)
+                .content(ContentRef.base64("5L2g5aW977yM5LiW55WM"))
+                .dataId("d-1")
+                .build();
+
+        ProviderNotAvailableException ex = assertThrows(ProviderNotAvailableException.class,
+                () -> template.audit(request));
+
+        // 能力过滤前置于路由：内容形态不被支持的操作不进入候选，既不调用也不消耗熔断计数
+        assertEquals(0, urlOnly.calls());
+        assertTrue(ex.getMessage().contains("no provider supports"));
+        assertTrue(events.stream().noneMatch(e -> "PROVIDER_DEGRADED".equals(e.eventType())));
+    }
+
+    @Test
+    void submitAsyncWithoutAsyncProviderFailsFast() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(new StubOperation("fake", 0)));
+
+        AuditRequest request = AuditRequest.builder()
+                .scene(Scenes.NICKNAME)
+                .type(ContentType.TEXT)
+                .content(ContentRef.text("hello"))
+                .dataId("d-1")
+                .build();
+
+        ProviderNotAvailableException ex = assertThrows(ProviderNotAvailableException.class,
+                () -> template.submitAsync(request));
+
+        assertTrue(ex.getMessage().contains("no async provider supports"));
+    }
+
+    @Test
+    void allProvidersFailedExposesSanitizedMessagesAndCause() {
+        StubOperation first = new StubOperation("fake-a", 0);
+        StubOperation second = new StubOperation("fake-a", 1);
+        first.failWith(new ProviderCallException(
+                "upstream 500, token abcdef1234567890abcdef1234 expired"));
+        second.failWith(new ProviderCallException("gateway timeout"));
+        DefaultContentSafeTemplate template = templateOf(providerOf(first, second));
+
+        AllProvidersFailedException ex = assertThrows(AllProvidersFailedException.class,
+                () -> template.text(Scenes.NICKNAME, "你好"));
+
+        // 失败明细带供应商 key 与净化后的 message，根因链保留最后一次底层异常
+        assertTrue(ex.getMessage().contains("fake-a"));
+        assertTrue(ex.getMessage().contains("gateway timeout"));
+        assertTrue(ex.getMessage().contains("***"));
+        assertTrue(!ex.getMessage().contains("abcdef1234567890abcdef1234"));
+        assertTrue(ex.getCause() instanceof ProviderCallException);
+    }
+
+    @Test
+    void builderProducesWorkingTemplate() {
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(new StubOperation("fake", 0))))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .build();
+
+        assertTrue(template.text(Scenes.NICKNAME, "你好").pass());
+    }
 }

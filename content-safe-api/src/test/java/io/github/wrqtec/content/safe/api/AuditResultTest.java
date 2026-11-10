@@ -54,4 +54,30 @@ class AuditResultTest {
                 () -> result.hits().add(new RiskHit(null, null, null, null, null, null, null, null)));
         assertEquals(Duration.ofMillis(120), result.cost());
     }
+
+    @Test
+    void withersReplaceOnlyTargetField() {
+        RiskHit hit = new RiskHit("porn", List.of("porn"), 0.99, null, null, null, null, null);
+        AuditResult result = AuditResult.builder()
+                .ok(true)
+                .suggestion(RiskSuggestion.PASS)
+                .source(AuditSource.SYNC)
+                .provider("fake")
+                .hits(List.of(hit))
+                .build();
+
+        AuditResult arbitrated = result.withSource(AuditSource.ARBITRATION);
+        assertEquals(AuditSource.ARBITRATION, arbitrated.source());
+        assertEquals(AuditSource.SYNC, result.source());
+
+        AuditResult reviewed = result.withSuggestion(RiskSuggestion.REJECT);
+        assertEquals(RiskSuggestion.REJECT, reviewed.suggestion());
+        assertFalse(reviewed.pass());
+        assertEquals(result.hits(), reviewed.hits());
+        assertEquals("fake", reviewed.provider());
+
+        AuditResult redacted = result.withHits(List.of());
+        assertEquals(List.of(), redacted.hits());
+        assertEquals(result.suggestion(), redacted.suggestion());
+    }
 }

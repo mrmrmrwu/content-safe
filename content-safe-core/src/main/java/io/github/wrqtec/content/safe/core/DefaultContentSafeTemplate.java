@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
@@ -24,16 +25,15 @@ import io.github.wrqtec.content.safe.model.AuditTask;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.model.enums.TaskStatus;
-import io.github.wrqtec.content.safe.model.event.AuditEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderDegradedEvent;
 import io.github.wrqtec.content.safe.model.event.ProviderThrottledEvent;
-import io.github.wrqtec.content.safe.model.event.ReviewEvent;
-import io.github.wrqtec.content.safe.model.event.RiskHitEvent;
 import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreaker;
 import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
+import io.github.wrqtec.content.safe.core.listener.AuditEventPublisher;
+import io.github.wrqtec.content.safe.core.security.ErrorMessages;
 import io.github.wrqtec.content.safe.core.security.EvidenceRedactors;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
@@ -67,6 +67,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     private final CircuitBreakerRegistry breakers;
     private final RateLimiterRegistry limiters;
     private final AuditListener listener;
+    private final AuditEventPublisher eventPublisher;
     private final List<EvidenceRedactor> redactors;
     private final AuditTaskStore taskStore;
     private final ReviewResultSink reviewSink;
@@ -146,6 +147,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         this.breakers = Asserts.notNull(breakers, "breakers");
         this.limiters = Asserts.notNull(limiters, "limiters");
         this.listener = Asserts.notNull(listener, "listener");
+        this.eventPublisher = new AuditEventPublisher(this.listener);
         this.redactors = redactors == null ? List.of() : List.copyOf(redactors);
         this.taskStore = Asserts.notNull(taskStore, "taskStore");
         this.reviewSink = reviewSink;
@@ -166,13 +168,22 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                     "scene " + scene.code() + " expects " + scene.type() + " but got " + request.type());
         }
 
-        List<AuditOperation> remaining = new ArrayList<>(candidates(scene));
-        // 异步操作不参与同步路由：audit() 在异步操作上始终抛 UnsupportedFeatureException，
-        // 若混入候选会被熔断器记为失败导致误熔断
-        remaining.removeIf(op -> op.plan().mode() == AuditMode.ASYNC_QUERY
-                || op.plan().mode() == AuditMode.ASYNC_CALLBACK);
-        if (remaining.isEmpty()) {
+        List<AuditOperation> configured = candidates(scene);
+        if (configured.isEmpty()) {
             throw new ProviderNotAvailableException("no provider configured for scene: " + scene.code());
+        }
+        List<AuditOperation> remaining = configured.stream()
+                // 异步操作不参与同步路由：audit() 在异步操作上始终抛 UnsupportedFeatureException，
+                // 若混入候选会被熔断器记为失败导致误熔断
+                .filter(op -> op.plan().mode() != AuditMode.ASYNC_QUERY
+                        && op.plan().mode() != AuditMode.ASYNC_CALLBACK)
+                // 能力过滤前置于路由（与 submitAsync 一致）：内容形态不被支持的操作不进入候选，
+                // 避免注定失败的调用消耗熔断计数；主备路由与仲裁路径拿到的都是已过滤集合
+                .filter(op -> op.supports(request))
+                .collect(Collectors.toCollection(ArrayList::new));
+        if (remaining.isEmpty()) {
+            throw new ProviderNotAvailableException("no provider supports scene " + scene.code()
+                    + " for content " + request.content().type());
         }
 
         AuditArbitrationPolicy policy = arbitrationSelector == null
@@ -182,16 +193,23 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         }
 
         List<String> failures = new ArrayList<>();
+        RuntimeException lastFailure = null;
         while (!remaining.isEmpty()) {
             AuditOperation operation = router.route(request, remaining);
             remaining.remove(operation);
-            AuditResult result = tryExecute(operation, scene, request, failures);
-            if (result != null) {
-                return result;
+            Attempt attempt = tryExecute(operation, scene, request);
+            if (attempt.result() != null) {
+                return attempt.result();
+            }
+            failures.add(attempt.failure());
+            if (attempt.cause() != null) {
+                lastFailure = attempt.cause();
             }
         }
+        // 最后一次底层异常挂为 cause，保留根因链
         throw new AllProvidersFailedException(
-                "all providers failed for scene " + scene.code() + ": " + String.join("; ", failures));
+                "all providers failed for scene " + scene.code() + ": " + String.join("; ", failures),
+                lastFailure);
     }
 
     /**
@@ -203,65 +221,95 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                                              List<AuditOperation> operations, AuditArbitrationPolicy policy) {
         List<String> failures = new ArrayList<>();
         List<AuditResult> results = new ArrayList<>();
+        RuntimeException lastFailure = null;
         for (AuditOperation operation : operations) {
-            AuditResult result = tryExecute(operation, scene, request, failures);
-            if (result != null) {
-                results.add(result);
+            Attempt attempt = tryExecute(operation, scene, request);
+            if (attempt.result() != null) {
+                results.add(attempt.result());
+                continue;
+            }
+            failures.add(attempt.failure());
+            if (attempt.cause() != null) {
+                lastFailure = attempt.cause();
             }
         }
         if (results.isEmpty()) {
             throw new AllProvidersFailedException(
-                    "all providers failed for scene " + scene.code() + ": " + String.join("; ", failures));
+                    "all providers failed for scene " + scene.code() + ": " + String.join("; ", failures),
+                    lastFailure);
         }
-        AuditResult arbitrated = withSource(policy.arbitrate(results), AuditSource.ARBITRATION);
+        AuditResult arbitrated = policy.arbitrate(results).withSource(AuditSource.ARBITRATION);
         log.debug("audit arbitrated: scene={}, policy={}, providers={}, suggestion={}",
                 scene.code(), policy.name(), results.size(), arbitrated.suggestion());
-        publishAuditEvents(scene.code(), arbitrated);
+        eventPublisher.publish(scene.code(), arbitrated);
         return arbitrated;
     }
 
     /**
-     * 单次尝试：限流 → 熔断 → 执行 → 脱敏 → 发布事件。
-     * 成功返回脱敏结果；被限流/熔断或调用失败返回 null 并登记 failures（含调试日志）
+     * 单次尝试结果：成功仅 {@code result} 非空；失败仅 {@code failure}（明细）非空，
+     * {@code cause} 为底层异常（限流/熔断等本地拒绝时为 null）
      */
-    private AuditResult tryExecute(AuditOperation operation, SceneDefinition scene,
-                                   AuditRequest request, List<String> failures) {
+    private record Attempt(AuditResult result, String failure, RuntimeException cause) {
+
+        static Attempt success(AuditResult result) {
+            return new Attempt(result, null, null);
+        }
+
+        static Attempt failure(String failure, RuntimeException cause) {
+            return new Attempt(null, failure, cause);
+        }
+    }
+
+    /**
+     * 单次尝试：限流 → 熔断 → 执行 → 脱敏 → 发布事件。
+     * 成功返回 {@link Attempt#success}；被限流/熔断或调用失败返回 {@link Attempt#failure}（含调试日志）。
+     * 失败明细只含异常类名与净化后的 message，不含用户内容
+     */
+    private Attempt tryExecute(AuditOperation operation, SceneDefinition scene, AuditRequest request) {
         String planKey = operation.plan().planKey();
         // 限流先于熔断：避免在半开状态下因本地限流跳过而泄漏探测名额
         RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
         if (!permit.acquired()) {
-            failures.add(planKey + ": rate limited");
             listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
-                    operation.plan().operation(), "rate limited", null));
+                    operation.plan().operation(), scene.code(), "rate limited", null));
             log.debug("provider {} throttled on scene {}, fail over to next", planKey, scene.code());
-            return null;
+            return Attempt.failure(planKey + ": rate limited", null);
         }
         CircuitBreaker breaker = breakers.get(planKey);
         if (!breaker.tryAcquire()) {
             permit.release();
-            failures.add(planKey + ": circuit open");
-            return null;
+            return Attempt.failure(planKey + ": circuit open", null);
         }
         try {
             AuditResult result = operation.audit(request);
             breaker.onSuccess();
             AuditResult redacted = EvidenceRedactors.redactResult(redactors, result, operation.plan().provider());
-            publishAuditEvents(scene.code(), redacted);
+            eventPublisher.publish(scene.code(), redacted);
             // 成功路径可观测：只含路由与结论元数据，不含用户内容原文
             log.debug("audit success: scene={}, provider={}, suggestion={}, hits={}, cost={}",
                     scene.code(), planKey, redacted.suggestion(), redacted.hits().size(), redacted.cost());
-            return redacted;
+            return Attempt.success(redacted);
         } catch (RuntimeException e) {
             breaker.onFailure();
-            failures.add(planKey + ": " + e.getClass().getSimpleName());
             listener.onEvent(new ProviderDegradedEvent(operation.plan().provider(),
-                    operation.plan().operation(), e.getClass().getSimpleName(), null));
+                    operation.plan().operation(), scene.code(), e.getClass().getSimpleName(), null));
             log.warn("provider {} degraded on scene {}, fail over to next",
                     operation.plan().planKey(), scene.code(), e);
-            return null;
+            // provider 已对自身异常脱敏，此处再兜底净化一次，防止第三方 SDK 异常夹带敏感片段
+            return Attempt.failure(planKey + ": " + e.getClass().getSimpleName()
+                    + describeFailure(e), e);
         } finally {
             permit.release();
         }
+    }
+
+    /** 失败明细附加段：message 空返回空串，否则追加净化限长后的 message */
+    private static String describeFailure(RuntimeException e) {
+        String message = e.getMessage();
+        if (message == null || message.isBlank()) {
+            return "";
+        }
+        return ": " + ErrorMessages.sanitize(message);
     }
 
     @Override
@@ -277,13 +325,17 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 .filter(op -> op.capabilities().asyncQuery() || op.capabilities().asyncCallback())
                 .filter(op -> op.supports(request))
                 .toList();
+        if (async.isEmpty()) {
+            throw new ProviderNotAvailableException("no async provider supports scene " + scene.code()
+                    + " for content " + request.content().type());
+        }
         AuditOperation operation = router.route(request, async);
 
         String planKey = operation.plan().planKey();
         RateLimiter.Permit permit = limiters.get(planKey, operation.plan().limits()).tryAcquire();
         if (!permit.acquired()) {
             listener.onEvent(new ProviderThrottledEvent(operation.plan().provider(),
-                    operation.plan().operation(), "rate limited", null));
+                    operation.plan().operation(), scene.code(), "rate limited", null));
             throw new ProviderNotAvailableException("rate limited for " + planKey);
         }
         CircuitBreaker breaker = breakers.get(planKey);
@@ -320,7 +372,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 operation.query(task.ref()), operation.plan().provider());
         if (result.finalResult()) {
             if (taskStore.markTerminal(taskId, TaskStatus.SUCCEEDED, result)) {
-                publishAuditEvents(task.scene(), result);
+                eventPublisher.publish(task.scene(), result);
                 return result;
             }
             // 并发下已被迁移，返回存储中的终态结果（同样已脱敏）
@@ -340,18 +392,25 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
     public AuditResult resolveReview(ReviewResolution resolution) {
         Asserts.notNull(resolution, "resolution");
         AuditResult manualResult = manualResultOf(resolution);
-        if (reviewSink != null) {
-            // 回写先行：sink 失败在任务终态迁移前暴露，业务可整体重试
-            reviewSink.resolve(resolution);
-        }
         if (resolution.taskId() != null) {
             AuditTask task = taskStore.find(resolution.taskId())
                     .orElseThrow(() -> new InvalidRequestException("unknown taskId: " + resolution.taskId()));
-            if (!taskStore.markTerminal(resolution.taskId(), TaskStatus.SUCCEEDED, manualResult)) {
+            if (task.status().isTerminal()) {
+                // 终态预检先行：任务已被处理时直接拒绝，避免 sink 副作用已发出却报错、业务不可整体重试
                 throw new InvalidRequestException("task already terminal: " + resolution.taskId());
             }
         }
-        publishAuditEvents(resolution.scene(), manualResult);
+        if (reviewSink != null) {
+            // 回写先行：sink 失败在任务终态迁移前暴露，业务可整体重试；
+            // 预检与 markTerminal 之间仍存在极小竞态窗口，严格并发场景要求 sink 幂等
+            reviewSink.resolve(resolution);
+        }
+        if (resolution.taskId() != null) {
+            if (!taskStore.markTerminal(resolution.taskId(), TaskStatus.SUCCEEDED, manualResult)) {
+                throw new InvalidRequestException("task already terminal (raced): " + resolution.taskId());
+            }
+        }
+        eventPublisher.publish(resolution.scene(), manualResult);
         return manualResult;
     }
 
@@ -371,13 +430,6 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                         "no async-query operation for provider: " + task.provider()));
     }
 
-    /** 仅替换来源标记，其余字段原样保留（仲裁合并结果标 ARBITRATION） */
-    private AuditResult withSource(AuditResult result, AuditSource source) {
-        return new AuditResult(result.ok(), result.suggestion(), result.finalResult(), source,
-                result.hits(), result.requestId(), result.dataId(), result.provider(), result.product(),
-                result.service(), result.cost(), result.raw());
-    }
-
     /** 决议 -> 终态结果：source=MANUAL、finalResult=true，回链机审 dataId 供业务对账 */
     private AuditResult manualResultOf(ReviewResolution resolution) {
         return AuditResult.builder()
@@ -390,14 +442,105 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 .build();
     }
 
-    private void publishAuditEvents(String scene, AuditResult result) {
-        listener.onEvent(new AuditEvent(scene, result, null));
-        if (!result.pass() && !result.hits().isEmpty()
-                && result.suggestion() != RiskSuggestion.ERROR) {
-            listener.onEvent(new RiskHitEvent(scene, result.dataId(), result.hits(), null));
+    /**
+     * 创建构建器（推荐的装配方式）。
+     * 必填项：{@code sceneRegistry/providers/router/breakers/limiters/listener/taskStore}，
+     * 校验在 {@link Builder#build()} 时统一进行；可选项缺省时与旧构造器语义一致
+     *
+     * @return 构建器
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** {@link DefaultContentSafeTemplate} 构建器：可选属性链式设置，替代多参构造器重载 */
+    public static final class Builder {
+
+        private SceneRegistry sceneRegistry;
+        private List<AuditOperationProvider> providers;
+        private AuditRouter router;
+        private CircuitBreakerRegistry breakers;
+        private RateLimiterRegistry limiters;
+        private AuditListener listener;
+        private List<EvidenceRedactor> redactors;
+        private AuditTaskStore taskStore;
+        private ReviewResultSink reviewSink;
+        private CallbackDispatcher callbackDispatcher;
+        private AuditArbitrationSelector arbitrationSelector;
+        private Duration pollInterval;
+        private Duration pollTimeout;
+
+        public Builder sceneRegistry(SceneRegistry sceneRegistry) {
+            this.sceneRegistry = sceneRegistry;
+            return this;
         }
-        if (result.suggestion() == RiskSuggestion.REVIEW) {
-            listener.onEvent(new ReviewEvent(scene, result.dataId(), result, null));
+
+        public Builder providers(List<AuditOperationProvider> providers) {
+            this.providers = providers;
+            return this;
+        }
+
+        public Builder router(AuditRouter router) {
+            this.router = router;
+            return this;
+        }
+
+        public Builder breakers(CircuitBreakerRegistry breakers) {
+            this.breakers = breakers;
+            return this;
+        }
+
+        public Builder limiters(RateLimiterRegistry limiters) {
+            this.limiters = limiters;
+            return this;
+        }
+
+        public Builder listener(AuditListener listener) {
+            this.listener = listener;
+            return this;
+        }
+
+        public Builder redactors(List<EvidenceRedactor> redactors) {
+            this.redactors = redactors;
+            return this;
+        }
+
+        public Builder taskStore(AuditTaskStore taskStore) {
+            this.taskStore = taskStore;
+            return this;
+        }
+
+        public Builder reviewSink(ReviewResultSink reviewSink) {
+            this.reviewSink = reviewSink;
+            return this;
+        }
+
+        public Builder callbackDispatcher(CallbackDispatcher callbackDispatcher) {
+            this.callbackDispatcher = callbackDispatcher;
+            return this;
+        }
+
+        public Builder arbitrationSelector(AuditArbitrationSelector arbitrationSelector) {
+            this.arbitrationSelector = arbitrationSelector;
+            return this;
+        }
+
+        /** {@link #submitAndWait(AuditRequest)} 默认轮询间隔，null 时回退 2 秒 */
+        public Builder pollInterval(Duration pollInterval) {
+            this.pollInterval = pollInterval;
+            return this;
+        }
+
+        /** {@link #submitAndWait(AuditRequest)} 默认等待超时，null 时回退 5 分钟 */
+        public Builder pollTimeout(Duration pollTimeout) {
+            this.pollTimeout = pollTimeout;
+            return this;
+        }
+
+        public DefaultContentSafeTemplate build() {
+            return new DefaultContentSafeTemplate(sceneRegistry, providers, router, breakers,
+                    limiters, listener, redactors, taskStore, reviewSink, callbackDispatcher,
+                    arbitrationSelector, pollInterval, pollTimeout);
         }
     }
 }

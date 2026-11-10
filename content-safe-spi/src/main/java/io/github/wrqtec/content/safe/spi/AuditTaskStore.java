@@ -39,7 +39,9 @@ public interface AuditTaskStore {
     Optional<AuditTask> findByRef(String providerTaskId, String dataId);
 
     /**
-     * 终态迁移：成功返回 true；已终态返回 false（幂等）
+     * 终态迁移（CAS 语义）：仅非终态任务可迁移，迁移成功返回 true；
+     * 已终态或任务不存在返回 false。并发调用同一任务时仅首个迁移返回 true，
+     * 后续调用返回 false，实现须保证该判定原子
      *
      * @param taskId 任务 ID
      * @param status 目标终态

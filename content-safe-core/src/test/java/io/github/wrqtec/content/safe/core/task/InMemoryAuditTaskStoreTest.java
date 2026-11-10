@@ -8,6 +8,12 @@ import io.github.wrqtec.content.safe.model.enums.TaskStatus;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -90,5 +96,35 @@ class InMemoryAuditTaskStoreTest {
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(0, Duration.ofHours(1)));
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, Duration.ZERO));
         assertThrows(IllegalArgumentException.class, () -> new InMemoryAuditTaskStore(10, null));
+    }
+
+    @Test
+    void concurrentMarkTerminalMigratesExactlyOnce() throws Exception {
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("p-1", "d-1"), "nickname", "fake"));
+        int threads = 16;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CyclicBarrier barrier = new CyclicBarrier(threads);
+        List<Future<Boolean>> futures = new ArrayList<>();
+        try {
+            for (int i = 0; i < threads; i++) {
+                futures.add(pool.submit(() -> {
+                    barrier.await();
+                    return store.markTerminal("t1", TaskStatus.SUCCEEDED, null);
+                }));
+            }
+            long migrated = futures.stream().filter(f -> {
+                try {
+                    return f.get();
+                } catch (Exception e) {
+                    return false;
+                }
+            }).count();
+            // CAS 契约：并发竞争同一任务时仅首个迁移成功
+            assertEquals(1, migrated);
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(TaskStatus.SUCCEEDED, store.find("t1").orElseThrow().status());
     }
 }

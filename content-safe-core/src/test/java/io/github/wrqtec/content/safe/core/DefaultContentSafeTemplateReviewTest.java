@@ -201,8 +201,9 @@ class DefaultContentSafeTemplateReviewTest {
     }
 
     @Test
-    void resolveReviewAlreadyTerminalTaskThrows() {
-        ContentSafeTemplate template = templateOf(null,
+    void resolveReviewAlreadyTerminalTaskThrowsBeforeSink() {
+        RecordingSink sink = new RecordingSink();
+        ContentSafeTemplate template = templateOf(sink,
                 providerOf(new FixedSuggestionOperation("fake", RiskSuggestion.REVIEW)));
         taskStore.save(AuditTask.pending("task-1", new AsyncTaskRef("p-1", "d-1"),
                 Scenes.NICKNAME, "fake"));
@@ -212,6 +213,9 @@ class DefaultContentSafeTemplateReviewTest {
         assertThrows(InvalidRequestException.class, () -> template.resolveReview(
                 ReviewResolution.of(Scenes.NICKNAME, "d-1", "task-1",
                         ReviewDecision.APPROVE, "alice", null)));
+
+        // 终态预检先行：sink 副作用不得在已终态任务上发出
+        assertEquals(0, sink.resolutions.size());
     }
 
     @Test

@@ -7,7 +7,7 @@ import java.time.Instant;
  *
  * @author L.David
  */
-public record ProviderDegradedEvent(String provider, String operation, String reason, Instant occurredAt)
+public record ProviderDegradedEvent(String provider, String operation, String scene, String reason, Instant occurredAt)
         implements ContentSafeEvent {
 
     public ProviderDegradedEvent {

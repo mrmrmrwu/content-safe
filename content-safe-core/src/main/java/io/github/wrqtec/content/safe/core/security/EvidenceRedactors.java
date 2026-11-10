@@ -40,8 +40,6 @@ public final class EvidenceRedactors {
             return result;
         }
         List<RiskHit> redactedHits = result.hits().stream().map(redactor::redact).toList();
-        return new AuditResult(result.ok(), result.suggestion(), result.finalResult(), result.source(),
-                redactedHits, result.requestId(), result.dataId(), result.provider(), result.product(),
-                result.service(), result.cost(), result.raw());
+        return result.withHits(redactedHits);
     }
 }
