@@ -62,6 +62,16 @@ public final class TencentLimits {
     }
 
     /**
+     * 视频异步审核限额。官方未公示并发上限（任务提交后云侧排队执行，
+     * 查询接口 DescribeTaskDetail 建议轮询间隔见官方文档），本地不限流，
+     * 仅超时兜底（查阅 2026-11-11）
+     */
+    public static OperationLimits videoAsync() {
+        return new OperationLimits(null, null, DEFAULT_TIMEOUT,
+                0, 0, false);
+    }
+
+    /**
      * 文本最大字符数（供超限校验）
      */
     public static int maxTextChars() {

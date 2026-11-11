@@ -1,0 +1,84 @@
+{
+  "TaskId": "t-video-001",
+  "DataId": "data-req-1",
+  "BizType": "short_video",
+  "Status": "FINISH",
+  "Suggestion": "Block",
+  "Labels": [
+    {
+      "Label": "Porn",
+      "SubLabel": "SexBehavior",
+      "Score": 98,
+      "Suggestion": "Block"
+    },
+    {
+      "Label": "Normal",
+      "SubLabel": "",
+      "Score": 0,
+      "Suggestion": "Pass"
+    }
+  ],
+  "AudioSegments": [
+    {
+      "OffsetTime": "12",
+      "Result": {
+        "HitFlag": 1,
+        "Label": "Abuse",
+        "SubLabel": "",
+        "Score": 90,
+        "Suggestion": "Block",
+        "Text": "加微信领福利",
+        "Url": "https://cos.example.com/audio-clip-001.mp3",
+        "Duration": "3"
+      }
+    },
+    {
+      "OffsetTime": "30",
+      "Result": {
+        "HitFlag": 0,
+        "Label": "Polity",
+        "SubLabel": "",
+        "Score": 99,
+        "Suggestion": "Block",
+        "Text": "未命中段不应产出 hit",
+        "Url": "",
+        "Duration": "2"
+      }
+    }
+  ],
+  "ImageSegments": [
+    {
+      "OffsetTime": "5",
+      "Result": {
+        "HitFlag": 1,
+        "Label": "Teenager",
+        "Score": 95,
+        "Suggestion": "Review",
+        "Url": "https://cos.example.com/frame-001.jpg"
+      }
+    }
+  ],
+  "VideoSegments": [
+    {
+      "OffsetTime": "12",
+      "Result": {
+        "HitFlag": 1,
+        "Suggestion": "Block",
+        "Text": "片段文本不应透传",
+        "VideoUrl": "https://cos.example.com/seg-001.mp4",
+        "AudioUrl": "https://cos.example.com/seg-001-audio.mp3",
+        "Duration": "3"
+      }
+    }
+  ],
+  "HitSnippetInfos": [
+    {
+      "Snippet": "命中片段文本不应透传",
+      "Url": "https://cos.example.com/snippet-001.mp4"
+    }
+  ],
+  "AudioText": "完整语音转写原文不应透传",
+  "ErrorType": "",
+  "ErrorDescription": "",
+  "RequestId": "req-query-001"
+}

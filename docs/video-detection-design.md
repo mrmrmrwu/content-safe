@@ -113,22 +113,23 @@
 ## 6. 腾讯云视频（T-028，P1）
 
 **API**：`com.tencentcloudapi.vm.v20210922.VmClient`（全家桶 `tencentcloud-sdk-java:3.2.52` 已含，本地 jar javap 验证，**零新增依赖**）。
-来源：cloud.tencent.com/document/product/1265/80017（CreateVideoModerationTask）、80019（数据结构）、DescribeTaskDetail（同产品目录），查阅 2026-11-11。
+来源：cloud.tencent.com/document/product/1265/80017（CreateVideoModerationTask）、80018（DescribeTaskDetail）、80019（数据结构），查阅 2026-11-11。
 
 | 项 | 值 |
 |----|----|
 | 提交 | `CreateVideoModerationTask{BizType=plan.service, Tasks[{DataId, Input.StorageInfo{Type="URL", Url}}], CallbackUrl?, Seed?}` |
-| 提交响应 | `Tasks[].TaskId` → `AsyncTaskRef(taskId, dataId)`（实现时 javap 核对 Response 字段名） |
-| 查询 | `DescribeTaskDetail{TaskId, ShowAllSegments?}` |
-| 查询响应 | `{Status, Suggestion, Labels[TaskLabel{Label, SubLabel, Score}], VideoSegments[{OffsetTime, Result}], HitSnippetInfos[], AudioText, MediaInfo, ErrorType, ErrorDescription}` |
+| 提交响应 | `Results[].TaskId`（**是 Results[] 不是 Tasks[]**，实现时 javap 核实；`Results[].Code="OK"` 表示受理成功）→ `AsyncTaskRef(taskId, dataId)` |
+| 查询 | `DescribeTaskDetail{TaskId, ShowAllSegments?}`（实现传 `ShowAllSegments=true` 取全量分段） |
+| 查询响应 | `{Status, Suggestion, Labels[TaskLabel{Label, SubLabel, Score}], AudioSegments[{OffsetTime, Result{HitFlag, Label, Score, Text, Url}}], ImageSegments[{OffsetTime, Result{HitFlag, Label, Score, Url}}], VideoSegments[], HitSnippetInfos[], AudioText, Asrs, SegmentCosUrlList, ErrorType, ErrorDescription}` |
 
 **映射**：
-- `Suggestion`（Pass/Review/Block）→ suggestion，复用 `TencentAuditResultNormalizer` 现有映射；
-- in-progress 判定：`Status != "FINISH"` → `finalResult=false, suggestion=null`（Status 字面量实现时以官方数据结构页为准核实）；
-- `Labels[]` → hits（labelPath=`Label+"."+SubLabel`，confidence=Score）；`VideoSegments[].OffsetTime` → `hit.raw.offsetTime`；
-- `HitSnippetInfo.Snippet`、`AudioText`、片段截图 URL 一律不透传。
+- `Status` 枚举 `PENDING/RUNNING/ERROR/FINISH/CANCELLED`：仅 `PENDING/RUNNING` → in-progress（`finalResult=false, suggestion=null, raw.status`）；`FINISH` → 终态归一化；`ERROR/CANCELLED` → `ProviderCallException`（终态失败，不无限轮询）；
+- `Suggestion`（Pass/Review/Block）→ suggestion，复用 `TencentAuditResultNormalizer` 现有映射（`fromSuggestion` 返回 null 时按 `Label=="Normal"` 回退 PASS/REJECT）；
+- hits 三来源：`Labels[]`（`Normal` 段跳过，labelPath=`Label/SubLabel` 用 "/" 连接，confidence=Score 0~100 PERCENTAGE）+ `AudioSegments[]` 命中段（`HitFlag==1`，`OffsetTime` → `hit.raw.offsetTime`）+ `ImageSegments[]` 命中段（同上）；
+- `VideoSegments[]` 不参与 hits（元素模型无标签字段）；`HitSnippetInfo.Snippet`、`AudioText`、`Asrs`、`SegmentCosUrlList`、片段 `Text/Url/VideoUrl/AudioUrl` 一律不透传。
 
-**模式**：plan.mode=ASYNC_QUERY；配了 extra callback-url 时 `asyncCallback(true)` + 覆写 `handleCallback`（回调 payload 与 DescribeTaskDetail 响应同构，`AbstractModel.fromJsonString` 解析，`DataId` 为关联键必查——对齐 `TencentImageAsyncOperation.handleCallback` 现有模式）。
+**模式**：plan.mode=ASYNC_QUERY；配了 extra callback-url 时 `asyncCallback(true)` + 覆写 `handleCallback`（回调 payload 与 DescribeTaskDetail 响应同构，`AbstractModel.fromJsonString` 解析；非终态 Status 拒收进死信不中断派发；关联键 `TaskId` 回退 `DataId`——对齐 `TencentImageAsyncOperation.handleCallback` 现有模式）。
+**勘误**：SDK 客户端 endpoint 按产品独立（`vm.<region>.tencentcloudapi.com`），实现时顺带修复了存量缺陷——原 `TencentSdkClientInvoker` 构造让 TMS/IMS 共用单一 HttpProfile 且 endpoint 恒为 tms 域名。
 
 ## 7. 存量缺陷清单（设计期发现，随视频工作顺带修）
 
@@ -178,9 +179,9 @@
 
 | 任务 | 优先级 | 内容 | 依赖 |
 |------|--------|------|------|
-| T-026 | P0 | 契约打通：`AuditRequest.video()` + `videoAudit` + `Scenes.SHORT_VIDEO` + SceneRegistry 注册 + core 端到端测试（fake VIDEO op 全流程）+ 接入指南视频节 | — |
-| T-027 | P1 | provider-aliyun 视频：VideoAsyncOperation（ASYNC_QUERY）+ normalizer + contracts + 测试 | T-026 |
-| T-028 | P1 | provider-tencent 视频：VideoAsyncOperation（ASYNC_QUERY + 可选回调 handleCallback）+ normalizer + contracts + 测试 | T-026 |
+| T-026 | P0 | ✅ 契约打通：`AuditRequest.video()` + `video()` + `Scenes.SHORT_VIDEO` + SceneRegistry 注册 + core 端到端测试（fake VIDEO op 全流程）+ 接入指南视频节（c64b559） | — |
+| T-027 | P1 | ✅ provider-aliyun 视频：VideoAsyncOperation（ASYNC_QUERY）+ normalizer + contracts + 测试 + D-1 图片回调解析（677d0d5） | T-026 |
+| T-028 | P1 | ✅ provider-tencent 视频：VideoAsyncOperation（ASYNC_QUERY + 可选回调 handleCallback）+ normalizer + contracts + 测试 + VmClient endpoint 修复 | T-026 |
 | T-029 | P2 | provider-baidu 长视频异步 + 回调 verifier/解析 | T-026 |
 | T-030 | P2 | provider-shumei video/v4 文件审核 | T-026 |
 | T-031 | P3 | provider-volcengine 视频（先核实官方文档） | T-026 |

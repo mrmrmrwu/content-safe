@@ -13,6 +13,7 @@ import io.github.wrqtec.content.safe.provider.tencent.internal.TencentClientInvo
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentTextModerationOperation;
+import io.github.wrqtec.content.safe.provider.tencent.internal.TencentVideoAsyncOperation;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,7 +34,7 @@ class TencentAuditOperationProviderTest {
     @Test
     void declaresProviderAndTypes() {
         assertThat(provider.provider()).isEqualTo("tencent");
-        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE);
+        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     @Test
@@ -113,5 +114,21 @@ class TencentAuditOperationProviderTest {
         List<AuditOperation> withoutCallback =
                 provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
         assertThat(withoutCallback.get(1).capabilities().asyncCallback()).isFalse();
+    }
+
+    @Test
+    void videoSceneYieldsVideoAsyncOperation() {
+        properties.getScenes().put("short_video", "biz-video");
+        List<AuditOperation> operations =
+                provider.operations(SceneDefinition.of("short_video", ContentType.VIDEO, Severity.HIGH));
+        assertThat(operations).hasSize(1);
+        assertThat(operations.get(0)).isInstanceOf(TencentVideoAsyncOperation.class);
+        assertThat(operations.get(0).plan().operation()).isEqualTo("CreateVideoModerationTask");
+        assertThat(operations.get(0).plan().apiVersion()).isEqualTo("2021-09-22");
+        assertThat(operations.get(0).plan().mode()).isEqualTo(AuditMode.ASYNC_QUERY);
+        assertThat(operations.get(0).plan().service()).isEqualTo("biz-video");
+        assertThat(operations.get(0).capabilities().asyncQuery()).isTrue();
+        // 未配置 callback-url 时回调能力关闭，仅轮询
+        assertThat(operations.get(0).capabilities().asyncCallback()).isFalse();
     }
 }

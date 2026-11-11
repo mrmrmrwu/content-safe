@@ -31,6 +31,15 @@ public final class TencentProviderConstants {
     /** 图片异步审核任务创建操作（IMS，结果经回调推送） */
     public static final String OPERATION_IMAGE_ASYNC_CREATE = "CreateImageModerationAsyncTask";
 
+    /** 视频审核产品（VM）API 版本，独立于 TMS/IMS 的 2020-12-29（官方 vm.v20210922） */
+    public static final String VIDEO_API_VERSION = "2021-09-22";
+
+    /** 视频异步审核任务创建操作（VM，cloud.tencent.com/document/product/1265/79255，查阅 2026-11-11） */
+    public static final String OPERATION_VIDEO_CREATE = "CreateVideoModerationTask";
+
+    /** 视频审核任务结果查询操作（VM，cloud.tencent.com/document/product/1265/80018，查阅 2026-11-11） */
+    public static final String OPERATION_VIDEO_QUERY = "DescribeTaskDetail";
+
     /** extra 配置键：异步任务回调地址（官方 CallbackUrl，必填） */
     public static final String EXTRA_CALLBACK_URL = "callback-url";
 

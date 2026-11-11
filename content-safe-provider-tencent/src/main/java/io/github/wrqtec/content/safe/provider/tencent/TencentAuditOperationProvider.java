@@ -20,12 +20,13 @@ import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageAsync
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentLimits;
 import io.github.wrqtec.content.safe.provider.tencent.internal.TencentTextModerationOperation;
+import io.github.wrqtec.content.safe.provider.tencent.internal.TencentVideoAsyncOperation;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * 腾讯云内容安全操作提供者：把场景（SceneDefinition）按配置映射为
- * 对应的 TMS TextModeration / IMS ImageModeration 操作。未映射的场景
- * 返回空列表由路由跳过（铁律 §5.3 场景解耦，禁止硬编码场景 ID）
+ * 对应的 TMS TextModeration / IMS ImageModeration / VM 视频异步操作。
+ * 未映射的场景返回空列表由路由跳过（铁律 §5.3 场景解耦，禁止硬编码场景 ID）
  *
  * @author L.David
  */
@@ -51,7 +52,7 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
 
     @Override
     public List<ContentType> supportedTypes() {
-        return List.of(ContentType.TEXT, ContentType.IMAGE);
+        return List.of(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     @Override
@@ -94,6 +95,12 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
                                 invoker, normalizer),
                         new TencentImageAsyncOperation(asyncPlan, gifInterval, gifMaxFrames, callbackUrl,
                                 invoker, normalizer));
+            }
+            case VIDEO -> {
+                // 视频任务以轮询 DescribeTaskDetail 为主，回调可选（callback-url 同时驱动图片异步回调）
+                String callbackUrl = properties.getExtra().get(TencentProviderConstants.EXTRA_CALLBACK_URL);
+                return List.of(new TencentVideoAsyncOperation(
+                        videoPlan(bizType), callbackUrl, invoker, normalizer));
             }
             default -> {
                 log.debug("tencent provider skip scene={} unsupported type={}", scene.code(), scene.type());
@@ -143,5 +150,16 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
                 TencentProviderConstants.OPERATION_IMAGE_ASYNC_CREATE,
                 service,
                 AuditMode.ASYNC_CALLBACK, TencentLimits.imageAsync(), ProviderLifecycle.ACTIVE);
+    }
+
+    /** 视频异步审核操作计划（VM 独立 API 版本，轮询为主、回调可选） */
+    public static ProviderPlan videoPlan(String service) {
+        return new ProviderPlan(
+                TencentProviderConstants.PROVIDER,
+                TencentProviderConstants.PRODUCT,
+                TencentProviderConstants.VIDEO_API_VERSION,
+                TencentProviderConstants.OPERATION_VIDEO_CREATE,
+                service,
+                AuditMode.ASYNC_QUERY, TencentLimits.videoAsync(), ProviderLifecycle.ACTIVE);
     }
 }

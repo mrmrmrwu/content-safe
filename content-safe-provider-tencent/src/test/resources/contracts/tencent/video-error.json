@@ -1,0 +1,9 @@
+{
+  "TaskId": "t-video-001",
+  "DataId": "data-req-1",
+  "BizType": "short_video",
+  "Status": "ERROR",
+  "ErrorType": "DecodeError",
+  "ErrorDescription": "视频解码失败",
+  "RequestId": "req-query-003"
+}

@@ -9,8 +9,10 @@ import java.util.Map;
 import com.tencentcloudapi.common.AbstractModel;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationResponse;
 import com.tencentcloudapi.tms.v20201229.models.TextModerationResponse;
+import com.tencentcloudapi.vm.v20210922.models.DescribeTaskDetailResponse;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.RiskHit;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.model.OperationLimits;
@@ -40,6 +42,8 @@ class TencentAuditResultNormalizerContractTest {
     private final ProviderPlan imagePlan = TencentAuditOperationProvider.syncPlan(
             "ImageModeration", "ugc-image", new OperationLimits(null, 100.0, Duration.ofSeconds(10),
                     10485760, 0, false));
+
+    private final ProviderPlan videoPlan = TencentAuditOperationProvider.videoPlan("short_video");
 
     @Test
     void textPass() {
@@ -118,6 +122,58 @@ class TencentAuditResultNormalizerContractTest {
         assertThat(hit.labelPath()).isEqualTo("Terrorism/Weapon/Gun");
         assertThat(hit.confidence()).isEqualTo(95.0);
         assertThat(hit.raw()).containsKey("details");
+    }
+
+    @Test
+    void videoQueryFinish() {
+        DescribeTaskDetailResponse response = load("video-finish.json", DescribeTaskDetailResponse.class);
+        AuditResult result = normalizer.normalizeVideoQuery(response,
+                TencentAuditResultNormalizer.context(videoPlan, "data-req-1", Duration.ofMillis(30)));
+        assertThat(result.finalResult()).isTrue();
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_QUERY);
+        assertThat(result.provider()).isEqualTo("tencent");
+        assertThat(result.service()).isEqualTo("short_video");
+        assertThat(result.dataId()).isEqualTo("data-req-1");
+        assertThat(result.requestId()).isEqualTo("req-query-001");
+        // 任务级标签（Normal 跳过）+ 音频命中段 + 截帧命中段
+        assertThat(result.hits()).hasSize(3);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("Porn/SexBehavior");
+        assertThat(result.hits().get(0).confidence()).isEqualTo(98.0);
+        assertThat(result.hits().get(0).confidenceScale()).isEqualTo(ConfidenceScale.PERCENTAGE);
+        assertThat(result.hits().get(1).raw()).containsEntry("offsetTime", "12");
+        assertThat(result.hits().get(2).labelPath()).isEqualTo("Teenager");
+        // 脱敏红线：转写原文/片段地址/截帧地址/命中片段全部不透传
+        String serialized = String.valueOf(result);
+        assertThat(serialized).doesNotContain("加微信领福利");
+        assertThat(serialized).doesNotContain("audio-clip-001.mp3");
+        assertThat(serialized).doesNotContain("frame-001.jpg");
+        assertThat(serialized).doesNotContain("seg-001.mp4");
+        assertThat(serialized).doesNotContain("snippet-001.mp4");
+        assertThat(serialized).doesNotContain("完整语音转写原文");
+    }
+
+    @Test
+    void videoQueryInProgressKeepsTaskOpen() {
+        DescribeTaskDetailResponse response = load("video-running.json", DescribeTaskDetailResponse.class);
+        AuditResult result = normalizer.inProgressVideo(response, "RUNNING",
+                TencentAuditResultNormalizer.context(videoPlan, "data-req-1", Duration.ofMillis(8)));
+        assertThat(result.ok()).isTrue();
+        assertThat(result.finalResult()).isFalse();
+        assertThat(result.suggestion()).isNull();
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_QUERY);
+        assertThat(result.raw()).containsEntry("status", "RUNNING");
+        assertThat(result.requestId()).isEqualTo("req-query-002");
+    }
+
+    @Test
+    void videoCallbackUsesAsyncCallbackSource() {
+        DescribeTaskDetailResponse response = load("video-finish.json", DescribeTaskDetailResponse.class);
+        AuditResult result = normalizer.normalizeVideoCallback(response,
+                TencentAuditResultNormalizer.context(videoPlan, "data-req-1", Duration.ZERO));
+        assertThat(result.finalResult()).isTrue();
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_CALLBACK);
     }
 
     private <T> T load(String fileName, Class<T> modelClass) {

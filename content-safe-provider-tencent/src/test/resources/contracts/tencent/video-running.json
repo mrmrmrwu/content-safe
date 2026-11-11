@@ -1,0 +1,7 @@
+{
+  "TaskId": "t-video-001",
+  "DataId": "data-req-1",
+  "BizType": "short_video",
+  "Status": "RUNNING",
+  "RequestId": "req-query-002"
+}
