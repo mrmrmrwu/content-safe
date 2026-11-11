@@ -29,7 +29,7 @@ class ActuatorComponentsTest {
                 new RateLimiterRegistry());
         Health health = indicator.health();
         assertEquals(Status.UP, health.getStatus());
-        assertEquals(6, health.getDetails().get("scenes"));
+        assertEquals(7, health.getDetails().get("scenes")); // 内置场景 7 个（T-026 起 short_video）
     }
 
     @Test

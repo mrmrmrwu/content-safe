@@ -1,0 +1,17 @@
+{
+  "dataId": "data-cb-001",
+  "reqId": "req-cb-001",
+  "riskLevel": "high",
+  "result": [
+    {
+      "label": "porn",
+      "confidence": 95.1,
+      "riskLevel": "high",
+      "description": "疑似色情"
+    }
+  ],
+  "frameNum": 1,
+  "frame": "{\"screenshot\":\"https://oss.example.com/shot-001.jpg\"}",
+  "accountId": "acc-1",
+  "manualTaskId": "mt-1"
+}

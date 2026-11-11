@@ -1,0 +1,10 @@
+{
+  "code": 200,
+  "message": "OK",
+  "requestId": "req-video-pass-001",
+  "data": {
+    "TaskId": "task-v-002",
+    "DataId": "data-v-002",
+    "RiskLevel": "none"
+  }
+}

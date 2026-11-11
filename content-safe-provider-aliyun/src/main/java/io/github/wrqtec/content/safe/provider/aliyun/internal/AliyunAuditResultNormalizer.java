@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody;
 import com.aliyun.green20220302.models.ImageModerationResponseBody;
 import com.aliyun.green20220302.models.TextModerationResponseBody;
+import com.aliyun.green20220302.models.VideoModerationResultResponseBody;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
@@ -160,7 +161,29 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
     AuditResult normalizeImageAsyncResult(DescribeImageModerationResultResponseBody body,
                                           Map<String, Object> context) {
         AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
-        DescribeImageModerationResultResponseBody.DescribeImageModerationResultResponseBodyData data = body.getData();
+        return imageAsyncResultOf(body.getData(), builder);
+    }
+
+    /**
+     * 图片异步回调 Content 归一化。回调报文的 Content 字段与查询结果 Data 字段同构
+     * （官方 2638108），复用同一套提取逻辑；回调报文无顶层 code/requestId，raw 留空。
+     * 脱敏：截图 URL（customImage/logoData/publicFigure）与 OCR 文本（textInImage）不透传
+     *
+     * @param data    回调 Content 反序列化出的 Data 结构
+     * @param context 归一化上下文（service / dataId / cost）
+     * @return 终态审核结果
+     */
+    AuditResult normalizeImageAsyncCallbackData(DescribeImageModerationResultResponseBody
+                                                        .DescribeImageModerationResultResponseBodyData data,
+                                                Map<String, Object> context) {
+        AuditResult.Builder builder = baseBuilder(null, null, context);
+        return imageAsyncResultOf(data, builder);
+    }
+
+    /** 图片异步结果提取（查询与回调共用；result 为空时视为 PASS） */
+    private AuditResult imageAsyncResultOf(DescribeImageModerationResultResponseBody
+                                                   .DescribeImageModerationResultResponseBodyData data,
+                                           AuditResult.Builder builder) {
         if (data == null || data.getResult() == null || data.getResult().isEmpty()) {
             return builder.suggestion(RiskSuggestion.PASS).build();
         }
@@ -184,6 +207,129 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         RiskSuggestion suggestion = byRiskLevel != null ? byRiskLevel
                 : hits.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
         return builder.suggestion(suggestion).hits(hits).build();
+    }
+
+    /**
+     * 视频文件审核增强版结果归一化（VideoModerationResult）。suggestion 优先取顶层
+     * riskLevel 三档映射；缺失时回退命中判空（空 → PASS，非空 → REJECT）。
+     * 帧命中取 frames[].results[]，帧级 offset(秒)/timestamp(毫秒) 与帧汇总
+     * frameSummarys 的 labelSum 并入 hit.raw；语音片段命中取 audioResult.sliceDetails，
+     * 逗号分隔 labels 拆分为标签列表，起止偏移并入 hit.raw。
+     * 脱敏（铁律 §5.6）：截帧图 URL（tempUrl）、语音转写原文（text）、命中词
+     * （riskWords/riskTips）一律不透传
+     *
+     * @param body    查询响应体（code=280/288 检测中不走本方法）
+     * @param context 归一化上下文（service / dataId / cost）
+     * @return 终态审核结果
+     */
+    AuditResult normalizeVideoAsyncResult(VideoModerationResultResponseBody body, Map<String, Object> context) {
+        AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
+        VideoModerationResultResponseBody.VideoModerationResultResponseBodyData data = body.getData();
+        if (data == null) {
+            return builder.suggestion(RiskSuggestion.PASS).build();
+        }
+        List<RiskHit> hits = new ArrayList<>();
+        appendVideoFrameHits(data.getFrameResult(), hits);
+        appendVideoAudioHits(data.getAudioResult(), hits);
+        RiskSuggestion byRiskLevel = fromRiskLevel(data.getRiskLevel());
+        RiskSuggestion suggestion = byRiskLevel != null ? byRiskLevel
+                : hits.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+        return builder.suggestion(suggestion).hits(hits).build();
+    }
+
+    /** 帧命中提取：帧级 offset/timestamp/frameRiskLevel 与帧汇总 labelSum 进 hit.raw，tempUrl 丢弃 */
+    private void appendVideoFrameHits(VideoModerationResultResponseBody.VideoModerationResultResponseBodyDataFrameResult
+                                              frameResult,
+                                      List<RiskHit> hits) {
+        if (frameResult == null || frameResult.getFrames() == null) {
+            return;
+        }
+        Map<String, Integer> labelSums = frameSummarySums(frameResult.getFrameSummarys());
+        for (var frame : frameResult.getFrames()) {
+            if (frame == null || frame.getResults() == null) {
+                continue;
+            }
+            for (var frameItem : frame.getResults()) {
+                if (frameItem == null || frameItem.getResult() == null) {
+                    continue;
+                }
+                for (var item : frameItem.getResult()) {
+                    if (item == null || item.getLabel() == null || item.getLabel().isBlank()) {
+                        continue;
+                    }
+                    Map<String, Object> hitRaw = new LinkedHashMap<>();
+                    if (frame.getOffset() != null) {
+                        hitRaw.put("offset", frame.getOffset());
+                    }
+                    if (frame.getTimestamp() != null) {
+                        hitRaw.put("timestamp", frame.getTimestamp());
+                    }
+                    if (frame.getRiskLevel() != null && !frame.getRiskLevel().isBlank()) {
+                        hitRaw.put("frameRiskLevel", frame.getRiskLevel());
+                    }
+                    Integer labelSum = labelSums.get(item.getLabel());
+                    if (labelSum != null) {
+                        hitRaw.put("labelSum", labelSum);
+                    }
+                    if (item.getDescription() != null && !item.getDescription().isBlank()) {
+                        hitRaw.put("description", item.getDescription());
+                    }
+                    Double confidence = item.getConfidence() == null ? null : item.getConfidence().doubleValue();
+                    hits.add(new RiskHit(item.getLabel(), List.of(item.getLabel()), confidence,
+                            scaleOf(confidence), HitSource.MACHINE, null, null, hitRaw));
+                }
+            }
+        }
+    }
+
+    /** 语音片段命中提取：labels 逗号拆分为标签列表，起止偏移/片段分进 hit.raw，转写原文丢弃 */
+    private void appendVideoAudioHits(VideoModerationResultResponseBody.VideoModerationResultResponseBodyDataAudioResult
+                                              audioResult,
+                                      List<RiskHit> hits) {
+        if (audioResult == null || audioResult.getSliceDetails() == null) {
+            return;
+        }
+        for (var slice : audioResult.getSliceDetails()) {
+            if (slice == null) {
+                continue;
+            }
+            List<String> labels = splitLabels(slice.getLabels());
+            if (labels.isEmpty()) {
+                continue;
+            }
+            Map<String, Object> hitRaw = new LinkedHashMap<>();
+            if (slice.getStartTime() != null) {
+                hitRaw.put("startTime", slice.getStartTime());
+            }
+            if (slice.getEndTime() != null) {
+                hitRaw.put("endTime", slice.getEndTime());
+            }
+            if (slice.getRiskLevel() != null && !slice.getRiskLevel().isBlank()) {
+                hitRaw.put("sliceRiskLevel", slice.getRiskLevel());
+            }
+            if (slice.getScore() != null) {
+                hitRaw.put("score", slice.getScore());
+            }
+            hits.add(new RiskHit(String.join(LABEL_PATH_SEPARATOR, labels), labels,
+                    null, null, HitSource.MACHINE, null, null, hitRaw));
+        }
+    }
+
+    /** 帧汇总 label → labelSum 索引（与帧命中按 label 关联并入 hit.raw） */
+    private static Map<String, Integer> frameSummarySums(
+            List<VideoModerationResultResponseBody.VideoModerationResultResponseBodyDataFrameResultFrameSummarys>
+                    summaries) {
+        if (summaries == null || summaries.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Integer> sums = new LinkedHashMap<>();
+        for (var summary : summaries) {
+            if (summary != null && summary.getLabel() != null && !summary.getLabel().isBlank()
+                    && summary.getLabelSum() != null) {
+                sums.put(summary.getLabel(), summary.getLabelSum());
+            }
+        }
+        return sums;
     }
 
     private AuditResult.Builder baseBuilder(Integer code, String requestId, Map<String, Object> context) {

@@ -1,0 +1,57 @@
+{
+  "code": 200,
+  "message": "OK",
+  "requestId": "req-video-reject-001",
+  "data": {
+    "TaskId": "task-v-001",
+    "DataId": "data-v-001",
+    "RiskLevel": "high",
+    "FrameResult": {
+      "RiskLevel": "high",
+      "FrameNum": 3,
+      "Frames": [
+        {
+          "Offset": 12.5,
+          "Timestamp": 12500,
+          "RiskLevel": "high",
+          "TempUrl": "https://oss.example.com/frame-001.jpg",
+          "Results": [
+            {
+              "Service": "videoDetection",
+              "Result": [
+                {
+                  "Label": "porn",
+                  "Confidence": 96.5,
+                  "Description": "疑似色情内容"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "FrameSummarys": [
+        {
+          "Label": "porn",
+          "LabelSum": 2,
+          "Description": "2 帧命中"
+        }
+      ]
+    },
+    "AudioResult": {
+      "RiskLevel": "medium",
+      "SliceDetails": [
+        {
+          "StartTime": 5,
+          "EndTime": 9,
+          "StartTimestamp": 5000,
+          "EndTimestamp": 9000,
+          "Text": "加微信领福利",
+          "RiskLevel": "medium",
+          "Labels": "ad,qrcode",
+          "Score": 88.2,
+          "RiskWords": "加微信,领福利"
+        }
+      ]
+    }
+  }
+}

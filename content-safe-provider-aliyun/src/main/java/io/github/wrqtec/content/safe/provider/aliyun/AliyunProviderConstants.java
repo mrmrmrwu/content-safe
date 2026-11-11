@@ -25,6 +25,15 @@ public final class AliyunProviderConstants {
     /** 图片异步检测提交操作名（来源：help.aliyun.com/doc-detail/2638108，查阅 2026-11-07） */
     public static final String OPERATION_IMAGE_ASYNC_MODERATION = "ImageAsyncModeration";
 
+    /** 视频文件审核增强版提交操作名（来源：help.aliyun.com/zh/document_detail/2505810，查阅 2026-11-11） */
+    public static final String OPERATION_VIDEO_MODERATION = "VideoModeration";
+
+    /** 视频文件审核增强版结果查询操作名（来源同上） */
+    public static final String OPERATION_VIDEO_MODERATION_RESULT = "VideoModerationResult";
+
+    /** 视频文件审核增强版 Service 固定值（官方默认，来源同上） */
+    public static final String SERVICE_VIDEO_DETECTION = "videoDetection";
+
     /** extra 配置键：异步检测回调地址（配置后提交任务携带 callback，启用回调推送） */
     public static final String EXTRA_CALLBACK_URL = "callback-url";
 

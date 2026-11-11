@@ -6,8 +6,11 @@ import java.util.Map;
 
 import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody;
 import com.aliyun.green20220302.models.ImageAsyncModerationResponseBody;
+import com.google.gson.Gson;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
+import io.github.wrqtec.content.safe.api.CallbackRequest;
+import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
@@ -43,6 +46,8 @@ public class AliyunImageAsyncOperation implements AuditOperation {
 
     /** 查询业务码：任务检测中（官方 code=280） */
     static final int CODE_DETECTING = 280;
+
+    private static final Gson GSON = new Gson();
 
     private final ProviderPlan plan;
     private final AuditCapabilities capabilities;
@@ -138,6 +143,40 @@ public class AliyunImageAsyncOperation implements AuditOperation {
         }
     }
 
+    /**
+     * 图片异步回调解析。官方契约（help.aliyun.com/zh/document_detail/2638108，查阅 2026-11-11）：
+     * 回调表单 Content 字段与查询结果 Data 字段同构，直接复用归一化提取逻辑；
+     * 验签由 dispatcher 前置的 AliyunCallbackVerifier 完成，本方法只负责解析。
+     * Content 缺失或解析失败一律 rejected（消息不回显内容原文，铁律 §9.4）
+     */
+    @Override
+    public CallbackResult handleCallback(CallbackRequest request) {
+        Map<String, String> form = AliyunCallbackVerifier.parseForm(request.rawBody());
+        String content = form.get(AliyunCallbackVerifier.FIELD_CONTENT);
+        if (content == null || content.isBlank()) {
+            return CallbackResult.rejected("aliyun callback content field is missing");
+        }
+        try {
+            // Gson 按模型公有 camelCase 字段映射；TeaModel.toModel 仅认 @NameInMap
+            // PascalCase 键，无法解析官方回调的 camelCase Content
+            var data = GSON.fromJson(content,
+                    DescribeImageModerationResultResponseBody.DescribeImageModerationResultResponseBodyData.class);
+            if (data == null) {
+                return CallbackResult.rejected("aliyun callback content is not a json object");
+            }
+            Map<String, Object> context = AliyunAuditResultNormalizer.context(plan, data.getDataId(),
+                    Duration.ZERO);
+            AuditResult result = normalizer.normalizeImageAsyncCallbackData(data, context);
+            // 任务引用：Content.reqId 即提交时返回的 reqId；缺省回退表单 ReqId
+            String taskId = data.getReqId() != null && !data.getReqId().isBlank()
+                    ? data.getReqId() : form.get(AliyunCallbackVerifier.FIELD_REQ_ID);
+            return CallbackResult.accepted(taskId, result);
+        } catch (Exception e) {
+            log.warn("aliyun callback content parse failed: {}", AliyunErrorMapper.sanitize(e.getMessage()));
+            return CallbackResult.rejected("aliyun callback content parse failed");
+        }
+    }
+
     /** 任务引用：data.reqId 优先，缺省回退顶层 requestId（两者均为提交时返回的请求 ID） */
     private static String reqIdOf(ImageAsyncModerationResponseBody body) {
         String reqId = body.getData() == null ? null : body.getData().getReqId();
@@ -158,7 +197,10 @@ public class AliyunImageAsyncOperation implements AuditOperation {
     private AuditResult inProgress(DescribeImageModerationResultResponseBody body, AsyncTaskRef ref) {
         Map<String, Object> raw = new LinkedHashMap<>();
         raw.put("code", CODE_DETECTING);
-        raw.put("requestId", body.getRequestId());
+        // AuditResult 对 raw 做 Map.copyOf，null 值直接 NPE，故仅在非空时记录
+        if (body.getRequestId() != null) {
+            raw.put("requestId", body.getRequestId());
+        }
         return AuditResult.builder()
                 .ok(true)
                 .suggestion(null)

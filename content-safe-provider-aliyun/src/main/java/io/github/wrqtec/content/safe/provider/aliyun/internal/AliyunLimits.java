@@ -1,5 +1,7 @@
 package io.github.wrqtec.content.safe.provider.aliyun.internal;
 
+import java.time.Duration;
+
 import io.github.wrqtec.content.safe.model.OperationLimits;
 
 /**
@@ -64,5 +66,17 @@ public final class AliyunLimits {
      */
     public static OperationLimits imageAsync() {
         return new OperationLimits(null, IMAGE_ASYNC_QPS, null, IMAGE_MAX_CONTENT_BYTES, 0L, false);
+    }
+
+    /**
+     * 视频文件审核增强版限额。官方未公示视频提交/查询的默认 QPS 与并发
+     * （提交后任务进云侧排队，本地不设保护性限流）；提交与查询接口调用超时 10 秒。
+     * 内容为 URL（视频文件本体 ≤500MB 由云侧校验），本地无字节约束
+     * （来源：help.aliyun.com/zh/document_detail/2505810，查阅 2026-11-11）
+     *
+     * @return 限额声明
+     */
+    public static OperationLimits videoModeration() {
+        return new OperationLimits(null, null, Duration.ofSeconds(10), 0L, 0L, false);
     }
 }

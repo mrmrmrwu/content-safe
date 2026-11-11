@@ -92,12 +92,13 @@
 
 | 项 | 值 |
 |----|----|
-| Service | `videoModeration`（固定值；scenes.<sceneCode> 配置语义 = 开启该场景的视频异步审核，service 默认 videoModeration） |
-| 提交 serviceParameters | `videoUrl`（必，公网 URL 或 OSS）、`dataId`（必）、`callback`（选）、`seed`（选） |
+| Service | `videoDetection`（固定默认值，官方文档 2505810；scenes.<sceneCode> 配置语义 = 开启该场景的视频异步审核） |
+| 提交 serviceParameters | `url`（必，公网 URL 或 OSS）、`dataId`（选） |
 | 查询 serviceParameters | `taskId`（必） |
+| 业务码 | 200=完成、280=检测中、288=排队中（280/288 → in-progress 中间态） |
 | 提交响应 | `data{taskId, dataId}` → `AsyncTaskRef(taskId, dataId)` |
 | 查询响应 | `data{dataId, taskId, riskLevel, frameResult{frames[{offset, timestamp, riskLevel, tempUrl, results[]}], frameSummarys[{label, description, labelSum}]}, audioResult{riskLevel, sliceDetails[]}, extAigcData}` |
-| 结果保留 | 3 天；建议 30s 轮询间隔 |
+| 结果保留 | 24 小时（官方 2505810；超期查询报错，core 异步任务 expireAfter 默认 1h 安全）；建议 30s 轮询间隔；视频 ≤500MB 云侧校验 |
 
 **映射**：
 - `data.riskLevel`（none/low/medium/high）→ suggestion，复用 `AliyunAuditResultNormalizer` 现有映射；
@@ -105,7 +106,9 @@
 - `audioResult.sliceDetails[]` → `RiskHit{raw={起止偏移}}`，转写 `text` 丢弃；
 - `frameSummarys` → `hit.raw.frameSummarys` 汇总（label+labelSum）。
 
-**模式**：plan.mode=ASYNC_QUERY；本期不做阿里视频回调解析（能力位 false），仅轮询——阿里回调报文结构留 P2 核实后再实现。
+**模式**：plan.mode=ASYNC_QUERY；本期不做阿里视频回调解析（能力位 false），仅轮询——阿里视频回调报文结构留 P2 核实后再实现（图片异步回调已实现，见 D-1）。
+
+**实现勘误记录**（官方文档核实后修正本节原稿）：Service 为 `videoDetection` 而非 `videoModeration`（后者是 API 方法名）；参数键为 `url` 而非 `videoUrl`；结果保留 24 小时而非 3 天；业务码除 280 检测中外加 288 排队中。
 
 ## 6. 腾讯云视频（T-028，P1）
 
@@ -142,7 +145,7 @@
 - **shumei（T-030）**：`video/v4` 文件审核（自定义截帧；提交+回调或主动查询 queryInterface）。来源：help.ishumei.com/docs/tj/video/versionV4/{developDoc, queryInterface/developDoc}，查阅 2026-11-11。流式 `video/stream/v4` 不做（D-2）。
 - **volcengine（T-031）**：BusinessSecurity VideoRisk。SDK 有异步建模；实现前按铁律重新核实官方文档（本次调研未直接命中文档页），不得凭记忆写契约。
 - **T-032**：samples 增 video-async 样例工程（fake provider + 真实 provider 可切换）。
-- **T-033**：文档收口——provider-feature-matrix.md 各家视频节、接入指南视频章节（§含 arbitration=OFF 建议、3 天结果保留、30s 轮询）、错误码表核对（预计零新增，复用 PROVIDER_CALL_ERROR 等）。
+- **T-033**：文档收口——provider-feature-matrix.md 各家视频节、接入指南视频章节（§含 arbitration=OFF 建议、各家结果保留期（阿里 24h）、30s 轮询）、错误码表核对（预计零新增，复用 PROVIDER_CALL_ERROR 等）。
 
 ## 9. 测试设计
 

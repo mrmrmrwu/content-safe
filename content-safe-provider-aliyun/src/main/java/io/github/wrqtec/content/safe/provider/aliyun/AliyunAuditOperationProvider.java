@@ -16,12 +16,16 @@ import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageAsyncOp
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunLimits;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunTextModerationOperation;
+import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunVideoAsyncOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.GreenClientInvoker;
 
 /**
- * 阿里云内容安全 provider：按场景配置生成同步 TextModeration / ImageModeration 操作。
- * 数据驱动（铁律 §9.2）：云厂商 service 标识只来自配置 {@code content.safe.providers.aliyun.scenes}，
- * 场景未映射则返回空操作列表，由路由跳过该供应商
+ * 阿里云内容安全 provider：按场景配置生成同步 TextModeration / ImageModeration、
+ * 异步 ImageAsyncModeration / VideoModeration 操作。
+ * 数据驱动（铁律 §9.2）：文本/图片同步的云厂商 service 标识只来自配置
+ * {@code content.safe.providers.aliyun.scenes}；视频文件审核的 Service 为官方
+ * 固定值 videoDetection，scenes 配置值仅作场景开关。场景未映射则返回空操作列表，
+ * 由路由跳过该供应商
  *
  * @author L.David
  */
@@ -44,7 +48,7 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
 
     @Override
     public List<ContentType> supportedTypes() {
-        return List.of(ContentType.TEXT, ContentType.IMAGE);
+        return List.of(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     @Override
@@ -67,6 +71,8 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
                     asyncPlan(service), invoker, normalizer,
                     properties.getExtra().get(AliyunProviderConstants.EXTRA_CALLBACK_URL),
                     properties.getExtra().get(AliyunProviderConstants.EXTRA_CALLBACK_SEED)));
+        } else if (ContentType.VIDEO == scene.type()) {
+            operations.add(new AliyunVideoAsyncOperation(videoAsyncPlan(), invoker, normalizer));
         }
         return List.copyOf(operations);
     }
@@ -92,6 +98,19 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
                 service,
                 AuditMode.ASYNC_QUERY,
                 AliyunLimits.imageAsync(),
+                null);
+    }
+
+    /** 视频文件审核 Service 为官方固定值 videoDetection（scenes 配置值仅作场景开关） */
+    private ProviderPlan videoAsyncPlan() {
+        return new ProviderPlan(
+                AliyunProviderConstants.PROVIDER,
+                AliyunProviderConstants.PRODUCT,
+                AliyunProviderConstants.API_VERSION,
+                AliyunProviderConstants.OPERATION_VIDEO_MODERATION,
+                AliyunProviderConstants.SERVICE_VIDEO_DETECTION,
+                AuditMode.ASYNC_QUERY,
+                AliyunLimits.videoModeration(),
                 null);
     }
 }

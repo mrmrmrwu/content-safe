@@ -60,12 +60,12 @@
             <artifactId>archunit-junit5</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- 契约样本（src/test/resources/contracts/）解析 -->
+        <!-- 回调 Content 反序列化（Gson 按模型公有 camelCase 字段映射）+ 契约样本解析；optional 不传使用者 -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>${gson.version}</version>
-            <scope>test</scope>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

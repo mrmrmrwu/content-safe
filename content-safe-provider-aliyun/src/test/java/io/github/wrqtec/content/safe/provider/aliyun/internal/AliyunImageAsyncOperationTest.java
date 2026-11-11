@@ -7,6 +7,8 @@ import com.aliyun.green20220302.models.DescribeImageModerationResultResponseBody
 import com.aliyun.green20220302.models.ImageAsyncModerationResponseBody;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
+import io.github.wrqtec.content.safe.api.CallbackRequest;
+import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
@@ -182,5 +184,40 @@ class AliyunImageAsyncOperationTest {
         // AsyncTaskRef 构造已强制 providerTaskId 非空，此处验证 query 内部断言为纵深防御
         assertThatThrownBy(() -> operation().query(new AsyncTaskRef(" ", null)))
                 .isInstanceOf(InvalidRequestException.class);
+    }
+
+    @Test
+    void handleCallbackParsesFormContentAndAccepts() throws Exception {
+        // 回调 Content 与查询 Data 同构（官方 2638108，camelCase JSON），验签由 dispatcher 前置完成
+        String content = new com.google.gson.Gson()
+                .toJson(AliyunAuditResultNormalizerContractTest.loadJson("image-callback-content.json"));
+        String rawBody = "ReqId=req-cb-001&Checksum=ignored&Content="
+                + java.net.URLEncoder.encode(content, java.nio.charset.StandardCharsets.UTF_8);
+
+        CallbackResult result = operation().handleCallback(new CallbackRequest("aliyun", Map.of(), rawBody));
+
+        assertThat(result.accepted()).isTrue();
+        // Content.reqId 即提交时返回的 reqId（存储的任务引用）
+        assertThat(result.taskId()).isEqualTo("req-cb-001");
+        assertThat(result.result().suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.result().hits()).hasSize(1);
+        // frame 字段内的截图 URL 不透传（铁律 §5.6）
+        assertThat(String.valueOf(result)).doesNotContain("oss.example.com");
+    }
+
+    @Test
+    void handleCallbackRejectsMissingContent() {
+        CallbackResult result = operation().handleCallback(
+                new CallbackRequest("aliyun", Map.of(), "ReqId=req-1&Checksum=abc"));
+        assertThat(result.accepted()).isFalse();
+    }
+
+    @Test
+    void handleCallbackRejectsNonObjectContent() {
+        String rawBody = "ReqId=req-1&Content="
+                + java.net.URLEncoder.encode("[1,2]", java.nio.charset.StandardCharsets.UTF_8);
+        CallbackResult result = operation().handleCallback(new CallbackRequest("aliyun", Map.of(), rawBody));
+        assertThat(result.accepted()).isFalse();
+        assertThat(result.message()).doesNotContain("[1,2]");
     }
 }

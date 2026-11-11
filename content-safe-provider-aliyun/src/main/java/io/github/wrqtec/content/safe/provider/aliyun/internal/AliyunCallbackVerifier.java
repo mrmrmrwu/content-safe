@@ -34,6 +34,7 @@ public class AliyunCallbackVerifier implements CallbackVerifier {
     /** 回调表单字段名（官方固定） */
     static final String FIELD_CHECKSUM = "Checksum";
     static final String FIELD_CONTENT = "Content";
+    static final String FIELD_REQ_ID = "ReqId";
 
     private final String uid;
     private final String seed;

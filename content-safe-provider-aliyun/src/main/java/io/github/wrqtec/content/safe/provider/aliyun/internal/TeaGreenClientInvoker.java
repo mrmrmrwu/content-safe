@@ -11,6 +11,10 @@ import com.aliyun.green20220302.models.ImageModerationRequest;
 import com.aliyun.green20220302.models.ImageModerationResponseBody;
 import com.aliyun.green20220302.models.TextModerationRequest;
 import com.aliyun.green20220302.models.TextModerationResponseBody;
+import com.aliyun.green20220302.models.VideoModerationRequest;
+import com.aliyun.green20220302.models.VideoModerationResultRequest;
+import com.aliyun.green20220302.models.VideoModerationResultResponseBody;
+import com.aliyun.green20220302.models.VideoModerationResponseBody;
 import com.aliyun.teaopenapi.models.Config;
 import com.aliyun.teautil.models.RuntimeOptions;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
@@ -109,5 +113,23 @@ public final class TeaGreenClientInvoker implements GreenClientInvoker {
         DescribeImageModerationResultRequest request = new DescribeImageModerationResultRequest()
                 .setReqId(reqId);
         return client.describeImageModerationResultWithOptions(request, runtimeOptions).getBody();
+    }
+
+    @Override
+    public VideoModerationResponseBody videoModeration(String service, Map<String, String> serviceParameters)
+            throws Exception {
+        VideoModerationRequest request = new VideoModerationRequest()
+                .setService(service)
+                .setServiceParameters(JsonParams.toJson(serviceParameters));
+        return client.videoModerationWithOptions(request, runtimeOptions).getBody();
+    }
+
+    @Override
+    public VideoModerationResultResponseBody videoModerationResult(String service, Map<String, String> serviceParameters)
+            throws Exception {
+        VideoModerationResultRequest request = new VideoModerationResultRequest()
+                .setService(service)
+                .setServiceParameters(JsonParams.toJson(serviceParameters));
+        return client.videoModerationResultWithOptions(request, runtimeOptions).getBody();
     }
 }

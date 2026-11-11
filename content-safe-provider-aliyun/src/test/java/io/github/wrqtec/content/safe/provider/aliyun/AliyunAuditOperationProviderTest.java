@@ -10,6 +10,7 @@ import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageAsyncOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunImageModerationOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunTextModerationOperation;
+import io.github.wrqtec.content.safe.provider.aliyun.internal.AliyunVideoAsyncOperation;
 import io.github.wrqtec.content.safe.provider.aliyun.internal.GreenClientInvoker;
 import org.junit.jupiter.api.Test;
 
@@ -68,10 +69,27 @@ class AliyunAuditOperationProviderTest {
     }
 
     @Test
+    void videoSceneYieldsVideoAsyncOperation() {
+        // 视频场景 scenes 配置值仅作开关，Service 为官方固定值 videoDetection
+        AliyunAuditOperationProvider provider = new AliyunAuditOperationProvider(invoker,
+                properties(Map.of("short_video", "videoModeration")));
+        var operations = provider.operations(SceneDefinition.of("short_video", ContentType.VIDEO, null));
+        assertThat(operations).hasSize(1);
+        AuditOperation operation = operations.get(0);
+        assertThat(operation).isInstanceOf(AliyunVideoAsyncOperation.class);
+        assertThat(operation.plan().operation()).isEqualTo(AliyunProviderConstants.OPERATION_VIDEO_MODERATION);
+        assertThat(operation.plan().service()).isEqualTo(AliyunProviderConstants.SERVICE_VIDEO_DETECTION);
+        assertThat(operation.plan().mode()).isEqualTo(AuditMode.ASYNC_QUERY);
+        assertThat(operation.capabilities().asyncQuery()).isTrue();
+        assertThat(operation.capabilities().asyncCallback()).isFalse();
+    }
+
+    @Test
     void declaresSupportedTypes() {
         AliyunAuditOperationProvider provider = new AliyunAuditOperationProvider(invoker, properties(Map.of()));
         assertThat(provider.provider()).isEqualTo("aliyun");
-        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE);
+        assertThat(provider.supportedTypes())
+                .containsExactly(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     private static AliyunProviderProperties properties(Map<String, String> scenes) {
