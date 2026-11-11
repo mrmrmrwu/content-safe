@@ -35,4 +35,13 @@ public final class VolcengineLimits {
         return new OperationLimits(null, null, Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS),
                 0L, 0L, false);
     }
+
+    /**
+     * 异步视频提交/查询限额（查询结果保留期与轮询间隔官方未公开确定值，
+     * 以控制台为准）
+     */
+    public static OperationLimits videoAsync() {
+        return new OperationLimits(null, null, Duration.ofSeconds(DEFAULT_TIMEOUT_SECONDS),
+                0L, 0L, false);
+    }
 }

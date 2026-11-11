@@ -9,6 +9,7 @@ import java.util.Map;
 import com.google.gson.Gson;
 import com.volcengine.model.response.ImageRiskDetectionResponse;
 import com.volcengine.model.response.TextRiskResponse;
+import com.volcengine.model.response.VideoRiskResultResponse;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
@@ -37,6 +38,8 @@ class VolcengineAuditResultNormalizerContractTest {
 
     private final ProviderPlan imagePlan = VolcengineAuditOperationProvider.syncPlan(
             "ImageContentRiskV2", "svc-avatar", "2021-11-29", VolcengineLimits.imageContentRisk());
+
+    private final ProviderPlan videoPlan = VolcengineAuditOperationProvider.videoPlan("svc-short-video");
 
     @Test
     void textPass() {
@@ -117,6 +120,41 @@ class VolcengineAuditResultNormalizerContractTest {
         assertThat(String.valueOf(raw.get("details"))).contains("porn_region_1", "porn_region_2");
         String serialized = raw.toString() + hit.evidence();
         assertThat(serialized).doesNotContain("违规文字图片");
+    }
+
+    @Test
+    void videoRejectMapsFrameAndAudioHitsWithoutSensitivePayload() {
+        VideoRiskResultResponse response = load("video-finish.json", VideoRiskResultResponse.class);
+        AuditResult result = normalizer.normalize(response,
+                VolcengineAuditResultNormalizer.context(videoPlan, "d-video-001", Duration.ofMillis(30)));
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.ok()).isTrue();
+        assertThat(result.finalResult()).isTrue();
+        assertThat(result.requestId()).isEqualTo("req-video-finish-001");
+
+        // 帧命中：合规帧（pass）跳过；offset/sliceId/明细进 hit.raw
+        assertThat(result.hits()).hasSize(2);
+        RiskHit frameHit = result.hits().get(0);
+        assertThat(frameHit.labelPath()).isEqualTo("porn/sexy");
+        Map<?, ?> frameRaw = frameHit.raw();
+        assertThat(frameRaw.get("offset")).isEqualTo(12.5f);
+        assertThat(frameRaw.get("sliceId")).isEqualTo("slice-001");
+        assertThat(frameRaw.get("frameDecision")).isEqualTo("reject");
+        assertThat(String.valueOf(frameRaw.get("detail"))).contains("porn_region_1");
+
+        // 语音命中：matchedWords 只进 hit.raw
+        RiskHit audioHit = result.hits().get(1);
+        assertThat(audioHit.labelPath()).isEqualTo("ad/contact");
+        Map<?, ?> audioRaw = audioHit.raw();
+        assertThat(audioRaw.get("startTime")).isEqualTo(5000);
+        assertThat(audioRaw.get("endTime")).isEqualTo(9000);
+        assertThat(String.valueOf(audioRaw.get("matchedWords"))).contains("qq12345");
+
+        // 帧签名 URL、帧内文字、语音转写原文（用户内容/签名 URL）绝不进入归一化结果
+        String serialized = String.valueOf(result);
+        assertThat(serialized).doesNotContain("signed.example.com");
+        assertThat(serialized).doesNotContain("zz00112233");
+        assertThat(serialized).doesNotContain("不应透传");
     }
 
     private <T> T load(String fileName, Class<T> modelClass) {

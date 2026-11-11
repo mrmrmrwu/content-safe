@@ -147,6 +147,7 @@
 - **shumei（T-030）**：`video/v4` 文件审核（自定义截帧；提交+回调或主动查询 queryInterface）。来源：help.ishumei.com/docs/tj/video/versionV4/{developDoc, queryInterface/developDoc}，查阅 2026-11-11。流式 `video/stream/v4` 不做（D-2）。
   **实现勘误记录**（官方文档核实后修正原稿）：提交 `POST https://api-video-{region}.fengkongcloud.com/video/v4`（envelope 同步/图片：accessKey/appId/eventId/imgType/audioType/data）；查询 `POST /video/query/v4`（body `{accessKey, btId}`）。**提交仅回执**（`{code, requestId, btId}`，无任务句柄），**任务关联键 = data.btId（取业务 dataId，缺省随机生成）**；查询返回码 1100=有结论、**1101=处理中（中间态，不断言失败）**；截帧方式 `data.screenshotType` 官方必传（extra `screenshot-type` 配置，默认 0 固定间隔 5s），可选截帧参数经场景 ext 透传；回调报文与查询响应同构（auxInfo.frameDetail/audioDetail），由 ShumeiCallbackVerifier 结构校验、按报文 btId 关联；hit.raw 记 kind:frame/audio 与 riskSource，imgUrl/audioUrl（签名 URL）与 audioText（转写原文）不透传；查询建议 30s 间隔、结果保留近三天。
 - **volcengine（T-031）**：BusinessSecurity VideoRisk。SDK 有异步建模；实现前按铁律重新核实官方文档（本次调研未直接命中文档页），不得凭记忆写契约。
+  **实现勘误记录**（SDK jar + 官方 Python SDK 核实后修正原稿，查阅 2026-11-11）：`AsyncVideoRisk`（提交）/`VideoResult`（查询）均 Version=2021-11-29（与图片同版本，来源官方 Python SDK ContentSecurityService.py），envelope 与文本/图片同构 `{AppId, Service, Parameters(JSON 字符串)}`；**提交仅回执**（`AsyncRiskDetectionResponse.Result.Data` 只含 passThrough，无任务句柄），**任务关联键 = 业务 dataId（随 Parameters 内层 JSON 提交，键名经 extra `parameters-video-data-id-key` 配置缺省 dataId，缺省时随机生成）**；视频 URL 键经 extra `parameters-video-key` 必配（同图片 fail-fast）；**中间态语义官方未公开——按"查询 Result.Data 缺失即处理中"保守实现**，超时由 core poll-timeout 兜底；回调通道未公开（asyncCallback 恒 false）；帧 URL（签名）、帧内文字（frame.text）、语音转写原文（audioText）、语音帧 URL（frameUrl）不透传，命中词 matchedWords 只进 hit.raw；注意 volc-sdk-java 该响应模型部分字段为 PascalCase 私有字段名（Frame.SliceId/Decision/Text 等），Gson 契约样本按字段名书写。
 - **T-032**：samples 增 video-async 样例工程（fake provider + 真实 provider 可切换）。
 - **T-033**：文档收口——provider-feature-matrix.md 各家视频节、接入指南视频章节（§含 arbitration=OFF 建议、各家结果保留期（阿里 24h）、30s 轮询）、错误码表核对（预计零新增，复用 PROVIDER_CALL_ERROR 等）。
 
@@ -186,6 +187,6 @@
 | T-028 | P1 | ✅ provider-tencent 视频：VideoAsyncOperation（ASYNC_QUERY + 可选回调 handleCallback）+ normalizer + contracts + 测试 + VmClient endpoint 修复 | T-026 |
 | T-029 | P2 | ✅ provider-baidu 长视频异步：VideoAsyncOperation（提交 extId 幂等 + 轮询拉取 subEvents=1,2,3,4 + 可选回调 handleCallback + BaiduCallbackVerifier）+ normalizer + contracts + 测试 | T-026 |
 | T-030 | P2 | ✅ provider-shumei video/v4 文件审核（提交/查询 1101 中间态分流/回调 + ShumeiVideoQueryResponse + contracts + 测试） | T-026 |
-| T-031 | P3 | provider-volcengine 视频（先核实官方文档） | T-026 |
+| T-031 | P3 | ✅ provider-volcengine 视频：AsyncVideoRisk 提交（dataId 关联键随 Parameters 提交）+ VideoResult 查询（Data 缺失=in-progress 保守推断）+ normalizer 帧/语音命中（matchedWords 进 hit.raw，帧 URL/转写原文不透传）+ contracts + 测试 | T-026 |
 | T-032 | P2 | video-async 样例工程 | T-027/T-028 |
 | T-033 | P2 | 文档收口（feature matrix/接入指南/错误码核对）+ D-1 修复收尾 | 各家 |

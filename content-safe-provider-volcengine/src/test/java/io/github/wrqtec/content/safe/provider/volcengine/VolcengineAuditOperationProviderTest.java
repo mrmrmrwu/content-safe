@@ -8,10 +8,12 @@ import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.model.OperationLimits;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineAuditResultNormalizer;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineClientInvoker;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineImageRiskOperation;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineTextRiskOperation;
+import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineVideoAsyncOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -115,5 +117,50 @@ class VolcengineAuditOperationProviderTest {
         List<AuditOperation> operations = provider.operations(
                 SceneDefinition.of("nickname", ContentType.TEXT, null));
         assertThat(operations.get(0)).isInstanceOf(VolcengineTextRiskOperation.class);
+    }
+
+    @Test
+    void videoSceneMapsToVideoAsyncOperation() {
+        VolcengineProviderProperties properties = properties("text", "image");
+        properties.getScenes().put("short_video", "svc-video");
+        properties.getExtra().put(VolcengineProviderConstants.EXTRA_VIDEO_PARAMETER_KEY, "videoUrl");
+        VolcengineAuditOperationProvider provider =
+                new VolcengineAuditOperationProvider(properties, invoker,
+                        new VolcengineAuditResultNormalizer());
+
+        List<AuditOperation> operations = provider.operations(
+                SceneDefinition.of("short_video", ContentType.VIDEO, null));
+
+        assertThat(operations).hasSize(1);
+        assertThat(operations.get(0)).isInstanceOf(VolcengineVideoAsyncOperation.class);
+        ProviderPlan plan = operations.get(0).plan();
+        assertThat(plan.operation()).isEqualTo("AsyncVideoRisk");
+        assertThat(plan.apiVersion()).isEqualTo("2021-11-29");
+        assertThat(plan.mode()).isEqualTo(AuditMode.ASYNC_QUERY);
+        assertThat(plan.service()).isEqualTo("svc-video");
+        assertThat(operations.get(0).capabilities().asyncQuery()).isTrue();
+        assertThat(operations.get(0).capabilities().asyncCallback()).isFalse();
+    }
+
+    @Test
+    void missingVideoKeyFailsFastForVideoSceneOnly() {
+        VolcengineProviderProperties properties = properties("text", "image");
+        properties.getScenes().put("short_video", "svc-video");
+        VolcengineAuditOperationProvider provider =
+                new VolcengineAuditOperationProvider(properties, invoker,
+                        new VolcengineAuditResultNormalizer());
+        assertThatThrownBy(() -> provider.operations(
+                SceneDefinition.of("short_video", ContentType.VIDEO, null)))
+                .isInstanceOf(ConfigInvalidException.class)
+                .hasMessageContaining("parameters-video-key");
+    }
+
+    @Test
+    void videoPlanCarriesAsyncQueryMode() {
+        ProviderPlan plan = VolcengineAuditOperationProvider.videoPlan("svc-video");
+        assertThat(plan.planKey()).isEqualTo("volcengine:AsyncVideoRisk");
+        assertThat(plan.mode()).isEqualTo(AuditMode.ASYNC_QUERY);
+        assertThat(plan.apiVersion()).isEqualTo("2021-11-29");
+        assertThat(plan.lifecycle().name()).isEqualTo("ACTIVE");
     }
 }

@@ -1,8 +1,11 @@
 package io.github.wrqtec.content.safe.provider.volcengine.internal;
 
+import com.volcengine.model.request.ImageRiskResultRequest;
 import com.volcengine.model.request.RiskDetectionRequest;
+import com.volcengine.model.response.AsyncRiskDetectionResponse;
 import com.volcengine.model.response.ImageRiskDetectionResponse;
 import com.volcengine.model.response.TextRiskResponse;
+import com.volcengine.model.response.VideoRiskResultResponse;
 import com.volcengine.service.contentSecurity.ContentSecurityService;
 import com.volcengine.service.contentSecurity.impl.ContentSecurityServiceImpl;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider.Credentials;
@@ -41,5 +44,15 @@ public final class VolcengineSdkClientInvoker implements VolcengineClientInvoker
     @Override
     public ImageRiskDetectionResponse imageContentRiskV2(RiskDetectionRequest request) throws Exception {
         return service.ImageRiskDetectionV2(request);
+    }
+
+    @Override
+    public AsyncRiskDetectionResponse asyncVideoRisk(RiskDetectionRequest request) throws Exception {
+        return service.AsyncVideoRisk(request);
+    }
+
+    @Override
+    public VideoRiskResultResponse videoResult(ImageRiskResultRequest request) throws Exception {
+        return service.VideoResult(request);
     }
 }

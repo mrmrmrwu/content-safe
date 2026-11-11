@@ -1,0 +1,77 @@
+{
+  "responseMetadata": {
+    "requestId": "req-video-finish-001",
+    "action": "VideoResult",
+    "version": "2021-11-29",
+    "service": "BusinessSecurity",
+    "region": "cn-north-1"
+  },
+  "result": {
+    "requestId": "req-video-finish-001",
+    "code": 200,
+    "message": "success",
+    "data": {
+      "dataId": "d-video-finish",
+      "decision": "reject",
+      "finalLabel": "porn",
+      "decisionLabel": "porn",
+      "videoResults": {
+        "decision": "reject",
+        "ImageSliceCount": 3,
+        "frames": [
+          {
+            "url": "https://signed.example.com/frame-001.jpg?sign=zz9900112233",
+            "offset": 12.5,
+            "SliceId": "slice-001",
+            "Decision": "reject",
+            "Text": "帧内文字zz00112233不应透传",
+            "results": [
+              {
+                "label": "porn",
+                "subLabel": "sexy",
+                "decision": "reject",
+                "detail": {"region": "porn_region_1"}
+              }
+            ]
+          },
+          {
+            "url": "https://signed.example.com/frame-002.jpg?sign=aa0011223344",
+            "offset": 17.0,
+            "SliceId": "slice-002",
+            "Decision": "pass"
+          }
+        ]
+      },
+      "audioResults": {
+        "decision": "review",
+        "audioText": "加个好友吧qq12345语音转写原文不应透传",
+        "details": [
+          {
+            "startTime": 5000,
+            "endTime": 9000,
+            "SliceId": "aslice-001",
+            "frameId": 101,
+            "frameUrl": "https://signed.example.com/audio-frame-101.jpg?sign=ww0011223344",
+            "audioText": "加个好友吧qq12345",
+            "frameResults": [
+              {
+                "label": "ad",
+                "subLabel": "contact",
+                "decision": "reject",
+                "contexts": [
+                  {
+                    "matchedWords": ["qq12345"],
+                    "libName": "default",
+                    "positions": [
+                      {"startPos": 6, "endPos": 8}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

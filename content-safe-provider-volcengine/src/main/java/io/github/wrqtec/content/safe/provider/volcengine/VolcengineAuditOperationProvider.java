@@ -3,6 +3,7 @@ package io.github.wrqtec.content.safe.provider.volcengine;
 import java.util.List;
 import java.util.Map;
 
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
@@ -16,6 +17,7 @@ import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineImag
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineLimits;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineParameters;
 import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineTextRiskOperation;
+import io.github.wrqtec.content.safe.provider.volcengine.internal.VolcengineVideoAsyncOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -23,8 +25,8 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 火山引擎内容安全操作提供者：把场景（SceneDefinition）按配置映射为
- * TextRisk / ImageContentRiskV2 操作。未映射的场景返回空列表由路由跳过
- * （铁律 §5.3 场景解耦，禁止硬编码场景 ID/Service 标识）
+ * TextRisk / ImageContentRiskV2 / AsyncVideoRisk 操作。未映射的场景返回空
+ * 列表由路由跳过（铁律 §5.3 场景解耦，禁止硬编码场景 ID/Service 标识）
  *
  * @author L.David
  */
@@ -52,7 +54,7 @@ public class VolcengineAuditOperationProvider implements AuditOperationProvider 
 
     @Override
     public List<ContentType> supportedTypes() {
-        return List.of(ContentType.TEXT, ContentType.IMAGE);
+        return List.of(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     @Override
@@ -78,6 +80,12 @@ public class VolcengineAuditOperationProvider implements AuditOperationProvider 
                             VolcengineLimits.imageContentRisk()),
                     appId, scene,
                     requireContentKey(VolcengineProviderConstants.EXTRA_IMAGE_PARAMETER_KEY, scene),
+                    invoker, normalizer));
+            case VIDEO -> List.of(new VolcengineVideoAsyncOperation(
+                    videoPlan(service),
+                    appId, scene,
+                    requireContentKey(VolcengineProviderConstants.EXTRA_VIDEO_PARAMETER_KEY, scene),
+                    videoDataIdKey(properties.getExtra()),
                     invoker, normalizer));
             default -> {
                 log.debug("volcengine provider skip scene={} unsupported type={}", scene.code(), scene.type());
@@ -124,6 +132,33 @@ public class VolcengineAuditOperationProvider implements AuditOperationProvider 
                 operation,
                 service,
                 null, limits, ProviderLifecycle.ACTIVE);
+    }
+
+    /**
+     * 构造视频异步操作计划（也供测试复用）。
+     * AsyncVideoRisk / VideoResult 的 Version 与图片同为 2021-11-29
+     */
+    public static ProviderPlan videoPlan(String service) {
+        return new ProviderPlan(
+                VolcengineProviderConstants.PROVIDER,
+                VolcengineProviderConstants.PRODUCT,
+                VolcengineProviderConstants.API_VERSION_VIDEO_RISK,
+                VolcengineProviderConstants.OPERATION_ASYNC_VIDEO_RISK,
+                service,
+                AuditMode.ASYNC_QUERY, VolcengineLimits.videoAsync(), ProviderLifecycle.ACTIVE);
+    }
+
+    /**
+     * 视频任务关联键名（随 parameters 提交，查询按该键回传）。缺省 dataId；
+     * 各家 Content Security 服务的 Parameters 内层 schema 未公开文档化，
+     * 该键名可能因服务而异，故开放配置
+     */
+    private static String videoDataIdKey(Map<String, String> extra) {
+        String value = extra == null ? null : extra.get(VolcengineProviderConstants.EXTRA_VIDEO_DATA_ID_KEY);
+        if (value == null || value.isBlank()) {
+            return VolcengineProviderConstants.DEFAULT_VIDEO_DATA_ID_KEY;
+        }
+        return value.trim();
     }
 
     /**
