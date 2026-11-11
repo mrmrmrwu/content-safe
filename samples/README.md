@@ -7,6 +7,7 @@
 | [content-safe-samples-basic](content-safe-samples-basic/README.md) | 最小接入：内置/自定义场景审核、供应商 SPI 接入、AIGC 开关、人审闭环（REVIEW → `resolveReview`） |
 | [content-safe-samples-routing-failover](content-safe-samples-routing-failover/README.md) | 主备路由与故障转移：order 选主、异常 failover、`ProviderDegradedEvent` 可观测 |
 | [content-safe-samples-async-callback](content-safe-samples-async-callback/README.md) | 异步图片审核：submitAsync/query、回调验签、幂等受理、死信事件 |
+| [content-safe-samples-video-async](content-safe-samples-video-async/README.md) | 视频异步审核：video() 提交、query 轮询/submitAndWait、终态事件 |
 
 ## 运行
 

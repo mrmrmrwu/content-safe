@@ -23,6 +23,7 @@
         <module>content-safe-samples-basic</module>
         <module>content-safe-samples-routing-failover</module>
         <module>content-safe-samples-async-callback</module>
+        <module>content-safe-samples-video-async</module>
     </modules>
 
     <build>

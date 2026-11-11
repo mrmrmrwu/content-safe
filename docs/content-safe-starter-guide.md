@@ -443,8 +443,10 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 要点：
 
 - 内置场景 `short_video`（VIDEO 类型）；回调接入与 §9.2 完全一致；
+- 可运行样例：[content-safe-samples-video-async](../samples/content-safe-samples-video-async/README.md)（fake provider 演示轮询与 submitAndWait 两种姿势、终态事件）；
 - 各供应商视频支持面（轮询/回调模式、结果保留期、建议轮询间隔）见
-  [provider-feature-matrix.md](provider-feature-matrix.md)，典型为结果保留 3 天、30 秒轮询间隔；
+  [provider-feature-matrix.md](provider-feature-matrix.md)——结果保留期各家不同（阿里视频 24 小时），
+  轮询间隔典型 30 秒；
 - **建议视频场景仲裁保持默认 OFF**：仲裁是多候选顺序全量采集，视频单价高会成倍放大审核成本；
 - 脱敏红线对视频同样生效：截帧图 URL、语音转写原文等用户内容不会进入结果与日志，
   `hit.raw` 只携带时间偏移、标签、置信度等元数据。

@@ -1,0 +1,26 @@
+# 视频审核轮询节奏：样例 fake provider 第 2 次查询即终态；
+# 生产接入真实供应商建议 30s 轮询（阿里视频结果保留 24 小时，腾讯/数美/百度见各 provider 文档）。
+content:
+  safe:
+    async:
+      poll-interval: 300ms
+      poll-timeout: 1m
+
+logging:
+  level:
+    io.github.wrqtec.content.safe.samples: INFO
+
+# 切换真实供应商示例（以阿里云为例）：引入 content-safe-provider-aliyun 依赖后，
+# 注释掉本样例的 @Component FakeVideoAsyncProvider（或用 @Profile("fake") 隔离），再按下文配置：
+# content:
+#   safe:
+#     providers:
+#       aliyun:
+#         enabled: true
+#         region-id: cn-chengdu
+#         scenes:
+#           short_video: videoDetection   # 视频场景的 scenes 值仅作开关占位，Service 固定 videoDetection
+#     async:
+#       poll-interval: 30s
+#       poll-timeout: 30m
+# 凭证走环境变量 CONTENT_SAFE_ALIYUN_AK / CONTENT_SAFE_ALIYUN_SK，不要写进配置文件。

@@ -188,5 +188,5 @@
 | T-029 | P2 | ✅ provider-baidu 长视频异步：VideoAsyncOperation（提交 extId 幂等 + 轮询拉取 subEvents=1,2,3,4 + 可选回调 handleCallback + BaiduCallbackVerifier）+ normalizer + contracts + 测试 | T-026 |
 | T-030 | P2 | ✅ provider-shumei video/v4 文件审核（提交/查询 1101 中间态分流/回调 + ShumeiVideoQueryResponse + contracts + 测试） | T-026 |
 | T-031 | P3 | ✅ provider-volcengine 视频：AsyncVideoRisk 提交（dataId 关联键随 Parameters 提交）+ VideoResult 查询（Data 缺失=in-progress 保守推断）+ normalizer 帧/语音命中（matchedWords 进 hit.raw，帧 URL/转写原文不透传）+ contracts + 测试 | T-026 |
-| T-032 | P2 | video-async 样例工程 | T-027/T-028 |
-| T-033 | P2 | 文档收口（feature matrix/接入指南/错误码核对）+ D-1 修复收尾 | 各家 |
+| T-032 | P2 | ✅ video-async 样例工程（FakeVideoAsyncProvider 轮询状态机：video()+query 手动轮询与 submitAndWait 两姿势 + 终态事件收集 + 真实 provider 切换说明） | T-027/T-028 |
+| T-033 | P2 | ✅ 文档收口（feature matrix 五家视频行与限额列、平台级异步支持面更新、错误码零新增核对） | 各家 |
