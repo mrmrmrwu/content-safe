@@ -63,6 +63,7 @@ result.hits();        // 命中的风险明细（证据已脱敏）
 | `im_message` | TEXT | 私信/IM |
 | `avatar` | IMAGE | 头像 |
 | `product_image` | IMAGE | 商品图 |
+| `short_video` | VIDEO | 短视频（异步审核） |
 
 **自定义场景**：`src/main/resources/content-safe/scenes.json`（JSON 数组，元素含 `code`/`type`/`defaultSeverity`），与内置场景合并，重复 code 以自定义为准；也可直接声明 `SceneRegistry` Bean 全量接管。
 
@@ -421,6 +422,32 @@ public ResponseEntity<String> onCallback(@PathVariable String provider,
 > 不防重放（阿里 Checksum 与腾讯/数美结构校验都不含时间戳），部署方应在网络层补偿：
 > 回调地址仅内网可达、来源 IP 白名单、网关限流，并保持 `rate-limit` 开启作为进程内兜底。
 > 重复投递本身无害（终态迁移幂等，不产生重复事件），重放的代价是解析成本，由限流兜住。
+
+### 9.4 视频审核（1.2.0+，全部异步）
+
+视频审核没有同步语义——供应商本质都是"提交任务 + 轮询/回调"，因此 `audit()` 对视频请求
+直接抛 `ProviderNotAvailableException`（无同步候选），必须走异步链路：
+
+```java
+// 提交：便捷方法返回统一任务 ID（dataId 自动生成；对账场景用 builder 显式传入）
+String taskId = contentSafeTemplate.video("short_video", videoUrl);
+
+// 轮询：中间态 finalResult=false（suggestion 为空），终态 true 并迁移存储、发布事件
+AuditResult result = contentSafeTemplate.query(taskId);
+
+// 或一步到位阻塞等待（复用 §9.1 的 submitAndWait 语义与配置）
+AuditResult waited = contentSafeTemplate.submitAndWait(
+        AuditRequest.video("short_video", ContentRef.url(videoUrl)));
+```
+
+要点：
+
+- 内置场景 `short_video`（VIDEO 类型）；回调接入与 §9.2 完全一致；
+- 各供应商视频支持面（轮询/回调模式、结果保留期、建议轮询间隔）见
+  [provider-feature-matrix.md](provider-feature-matrix.md)，典型为结果保留 3 天、30 秒轮询间隔；
+- **建议视频场景仲裁保持默认 OFF**：仲裁是多候选顺序全量采集，视频单价高会成倍放大审核成本；
+- 脱敏红线对视频同样生效：截帧图 URL、语音转写原文等用户内容不会进入结果与日志，
+  `hit.raw` 只携带时间偏移、标签、置信度等元数据。
 
 ## 10. 业务侧异常处理
 

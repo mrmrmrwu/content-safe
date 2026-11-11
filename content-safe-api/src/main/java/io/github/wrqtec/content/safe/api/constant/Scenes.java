@@ -25,6 +25,9 @@ public final class Scenes {
     /** IM 消息 */
     public static final String IM_MESSAGE = "im_message";
 
+    /** 短视频（异步审核） */
+    public static final String SHORT_VIDEO = "short_video";
+
     private Scenes() {
     }
 }

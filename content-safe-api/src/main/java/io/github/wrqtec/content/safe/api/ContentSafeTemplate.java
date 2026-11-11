@@ -147,4 +147,18 @@ public interface ContentSafeTemplate {
     default AuditResult image(String scene, String url) {
         return audit(AuditRequest.image(scene, ContentRef.url(url)));
     }
+
+    /**
+     * 视频审核便捷方法（公网 URL）：提交异步审核任务并返回本库统一任务 ID。
+     * 与文本/图片便捷方法不同，视频没有同步语义——用返回的 taskId 轮询
+     * {@link #query(String)} 至 {@code finalResult=true}（或配置回调接收），
+     * 也可用 {@link #submitAndWait(AuditRequest)} 阻塞等待终态
+     *
+     * @param scene 业务场景 code
+     * @param url   公网可访问的视频 URL
+     * @return 本库统一任务 ID
+     */
+    default String video(String scene, String url) {
+        return submitAsync(AuditRequest.video(scene, ContentRef.url(url)));
+    }
 }

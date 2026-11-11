@@ -47,6 +47,19 @@ public record AuditRequest(
                 .content(content).dataId(newDataId()).build();
     }
 
+    /**
+     * 视频审核快捷构造。视频审核均为异步：提交用 {@code submitAsync}，结果通过
+     * {@code query(taskId)} 轮询或回调获取，同步 {@code audit()} 对视频请求会抛
+     * {@code ProviderNotAvailableException}（无同步候选）；内容应为公网可访问 URL
+     * （{@link ContentRef#url(String)}），供应商按能力声明决定是否接受其他形态。
+     * dataId 自动生成（UUID，用于异步任务与回调对账、人审闭环回链）；
+     * 需要以业务 ID 对账时用 {@link #builder()} 显式传入
+     */
+    public static AuditRequest video(String scene, ContentRef content) {
+        return builder().scene(scene).type(ContentType.VIDEO)
+                .content(content).dataId(newDataId()).build();
+    }
+
     /** 生成请求级 dataId（32 位无杠 UUID，满足各供应商 dataId 长度约束） */
     private static String newDataId() {
         return UUID.randomUUID().toString().replace("-", "");

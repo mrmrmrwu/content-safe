@@ -36,7 +36,7 @@
 全部为新增，无签名变更：
 
 1. `AuditRequest.video(String scene, ContentRef content)` — 对齐 `image()` 快捷构造；dataId 自动 32 位无杠 UUID（`AuditRequest.newDataId()` 已私有复用）。
-2. `ContentSafeTemplate.videoAudit(String scene, String url)` — default 便捷方法，对齐 `imageAudit(scene, url)`；接口加 default 方法 japicmp 兼容。
+2. `ContentSafeTemplate.video(String scene, String url)` — default 便捷方法，对齐既有 `text(scene, text)`/`image(scene, url)` 命名；视频无同步语义，返回统一任务 ID（`submitAsync` 委托）而非 `AuditResult`；接口加 default 方法 japicmp 兼容。
 3. `Scenes.SHORT_VIDEO = "short_video"` — 内置视频场景常量；`SceneRegistry` 注册 `SceneDefinition.of(SHORT_VIDEO, ContentType.VIDEO, null)`（SceneRegistry.java:31-36 处追加）。
 4. `validateContent` 不加 VIDEO 特殊分支——"视频仅 URL"由 provider 的 `capabilities().supports(request)` 表达（铁律 §5.2 能力先行），core 只做通用 URL 形状校验（已有：scheme http/https + host 非空）。理由：未来 OBJECT_KEY（OSS/COS 引用）对视频是合法形态。
 
@@ -163,6 +163,7 @@
 - 同一 provider 的多个操作 planKey（`provider+":"+operation`）不得重名，否则 query 精确路由歧义；
 - `AuditTask.pending` 必须用 5 参重载（带 operation/planKey），4 参会让 query 回退 provider 匹配；
 - `AsyncTaskRef.providerTaskId` 非空硬约束；回调报文必须携带可命中 `findByRef` 的关联键，缺失时 rejected 死信（不是 accepted）；
+- **in-progress 结果必须显式 `.suggestion(null)`**：`AuditResult.builder()` 默认 `suggestion=PASS`/`finalResult=true`，漏置会把"审核中"当成"通过"返回给业务；
 - 脱敏顺序：`EvidenceRedactors.redactResult` 在落库/事件/返回值之前统一调用，provider normalizer 自身不输出敏感字段是第一道防线；
 - 未知决策 → REVIEW（保守）；错误消息不回显内容值/凭证；
 - SDK 类型不出 internal 包、云 SDK 依赖 optional（ArchUnit + 铁律）；

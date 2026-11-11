@@ -55,7 +55,8 @@ class ContentSafeAutoConfigurationTest {
         runner.run(context -> {
             SceneRegistry registry = context.getBean(SceneRegistry.class);
             assertThat(registry.all().keySet())
-                    .contains("nickname", "avatar", "comment", "post", "product_image", "im_message");
+                    .contains("nickname", "avatar", "comment", "post", "product_image",
+                            "im_message", "short_video");
         });
     }
 

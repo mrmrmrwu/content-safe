@@ -8,6 +8,7 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
+import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.RiskHit;
 import io.github.wrqtec.content.safe.api.constant.Scenes;
@@ -44,11 +45,13 @@ import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
 import io.github.wrqtec.content.safe.spi.AuditListener;
 import io.github.wrqtec.content.safe.spi.AuditOperation;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.EvidenceRedactor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -826,5 +829,146 @@ class DefaultContentSafeTemplateTest {
 
         assertThrows(UnsupportedFeatureException.class,
                 () -> template.handleCallback(new CallbackRequest("fake", Map.of(), "{}")));
+    }
+
+    // ---------- 视频异步链路（T-026 契约打通） ----------
+
+    /** VIDEO 异步查询桩：提交回显 dataId，查询首轮 in-progress、次轮终态 REJECT */
+    private StubOperation videoQueryStub() {
+        return new StubOperation("fake", 0) {
+            private int queries;
+
+            @Override
+            public ProviderPlan plan() {
+                return new ProviderPlan("fake", "p", "1", "videoAsync", null,
+                        AuditMode.ASYNC_QUERY, null, null);
+            }
+
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.VIDEO)
+                        .url(true).asyncQuery(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("provider-task-1", request.dataId());
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                queries++;
+                if (queries == 1) {
+                    // in-progress 契约：ok=true、suggestion=null（builder 默认 PASS 须显式置空）、finalResult=false
+                    return AuditResult.builder().ok(true).suggestion(null).finalResult(false).build();
+                }
+                return AuditResult.builder().ok(true).suggestion(RiskSuggestion.REJECT)
+                        .finalResult(true).provider("fake").build();
+            }
+        };
+    }
+
+    @Test
+    void videoConvenienceSubmitsAndQueryReachesTerminal() {
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(videoQueryStub())))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(store)
+                .build();
+
+        String taskId = template.video(Scenes.SHORT_VIDEO, "https://cdn.example.com/v.mp4");
+        AuditResult inProgress = template.query(taskId);
+        AuditResult terminal = template.query(taskId);
+
+        // 便捷方法返回统一任务 ID；轮询先 in-progress（suggestion 为空）后终态并迁移存储
+        assertNull(inProgress.suggestion());
+        assertTrue(!inProgress.finalResult());
+        assertEquals(RiskSuggestion.REJECT, terminal.suggestion());
+        assertTrue(terminal.finalResult());
+        assertEquals(TaskStatus.SUCCEEDED, store.find(taskId).orElseThrow().status());
+    }
+
+    @Test
+    void videoAuditHasNoSyncCandidateThrows() {
+        DefaultContentSafeTemplate template = templateOf(providerOf(videoQueryStub()));
+
+        // 视频没有同步语义：audit() 在异步操作过滤后无候选，按不可用语义拒绝（D-1 决策）
+        ProviderNotAvailableException e = assertThrows(ProviderNotAvailableException.class,
+                () -> template.audit(AuditRequest.video(Scenes.SHORT_VIDEO,
+                        ContentRef.url("https://cdn.example.com/v.mp4"))));
+        assertTrue(e.getMessage().contains("short_video"));
+    }
+
+    @Test
+    void videoCallbackMarksTerminalAndPublishesEvent() {
+        InMemoryAuditTaskStore store = new InMemoryAuditTaskStore();
+        StubOperation videoOp = new StubOperation("fake", 0) {
+            @Override
+            public ProviderPlan plan() {
+                return new ProviderPlan("fake", "p", "1", "videoAsync", null,
+                        AuditMode.ASYNC_QUERY, null, null);
+            }
+
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.VIDEO)
+                        .url(true).asyncCallback(true).build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("provider-task-1", request.dataId());
+            }
+
+            @Override
+            public CallbackResult handleCallback(CallbackRequest request) {
+                // 报文中的关联键与提交时落库的 ref(providerTaskId, dataId) 一致才能命中任务
+                return CallbackResult.accepted("provider-task-1",
+                        AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS)
+                                .dataId("d1").finalResult(true).build());
+            }
+        };
+        AuditOperationProvider provider = providerOf(videoOp);
+        CallbackVerifier verifier = new CallbackVerifier() {
+            @Override
+            public String provider() {
+                return "fake";
+            }
+
+            @Override
+            public boolean verify(CallbackRequest request, String secret, Map<String, String> ext) {
+                return true;
+            }
+        };
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(verifier),
+                List.of(provider), store, recording, List.of(new DefaultEvidenceRedactor()), "secret");
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(provider))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(store)
+                .callbackDispatcher(dispatcher)
+                .build();
+
+        AuditRequest request = AuditRequest.builder().scene(Scenes.SHORT_VIDEO)
+                .type(ContentType.VIDEO).content(ContentRef.url("https://cdn.example.com/v.mp4"))
+                .dataId("d1").build();
+        String taskId = template.submitAsync(request);
+        CallbackResult result = template.handleCallback(
+                new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertTrue(result.accepted());
+        assertEquals(TaskStatus.SUCCEEDED, store.find(taskId).orElseThrow().status());
+        assertTrue(events.stream().anyMatch(e -> "AUDIT".equals(e.eventType())));
     }
 }

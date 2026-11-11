@@ -34,6 +34,7 @@ public class SceneRegistry {
         register(all, SceneDefinition.of(Scenes.POST, ContentType.TEXT, null));
         register(all, SceneDefinition.of(Scenes.PRODUCT_IMAGE, ContentType.IMAGE, null));
         register(all, SceneDefinition.of(Scenes.IM_MESSAGE, ContentType.TEXT, null));
+        register(all, SceneDefinition.of(Scenes.SHORT_VIDEO, ContentType.VIDEO, null));
         // 业务自定义场景（允许覆盖内置）
         if (providers != null) {
             for (SceneDefinitionProvider provider : providers) {
