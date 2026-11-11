@@ -57,11 +57,19 @@ class JsonSceneDefinitionProviderTest {
     }
 
     @Test
-    void nonV1TypeFailsFast() {
+    void videoSceneParses() {
+        JsonSceneDefinitionProvider provider = new JsonSceneDefinitionProvider(json(
+                "{\"schemaVersion\":1,\"scenes\":[{\"code\":\"short_video\",\"type\":\"VIDEO\"}]}"));
+        assertEquals(1, provider.scenes().size());
+        assertEquals(ContentType.VIDEO, provider.scenes().get(0).type());
+    }
+
+    @Test
+    void unknownTypeFailsFast() {
         ConfigInvalidException e = assertThrows(ConfigInvalidException.class,
                 () -> new JsonSceneDefinitionProvider(json(
-                        "{\"schemaVersion\":1,\"scenes\":[{\"code\":\"v\",\"type\":\"VIDEO\"}]}")));
-        assertTrue(e.getMessage().contains("VIDEO"));
+                        "{\"schemaVersion\":1,\"scenes\":[{\"code\":\"v\",\"type\":\"PICTURE\"}]}")));
+        assertTrue(e.getMessage().contains("PICTURE"));
     }
 
     @Test

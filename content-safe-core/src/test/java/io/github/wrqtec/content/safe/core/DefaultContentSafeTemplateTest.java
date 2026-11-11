@@ -869,6 +869,52 @@ class DefaultContentSafeTemplateTest {
     }
 
     @Test
+    void builderRejectsNonPositivePollInterval() {
+        DefaultContentSafeTemplate.Builder builder = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(new StubOperation("fake", 0))))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .taskStore(new InMemoryAuditTaskStore());
+
+        InvalidRequestException e = assertThrows(InvalidRequestException.class,
+                () -> builder.pollInterval(Duration.ZERO).build());
+        assertTrue(e.getMessage().contains("pollInterval"));
+
+        InvalidRequestException e2 = assertThrows(InvalidRequestException.class,
+                () -> DefaultContentSafeTemplate.builder()
+                        .sceneRegistry(scenes)
+                        .providers(List.of(providerOf(new StubOperation("fake", 0))))
+                        .router(new PriorityAuditRouter())
+                        .breakers(new CircuitBreakerRegistry())
+                        .limiters(new RateLimiterRegistry())
+                        .listener(new CompositeAuditListener(List.of(recording)))
+                        .taskStore(new InMemoryAuditTaskStore())
+                        .pollTimeout(Duration.ofSeconds(-1))
+                        .build());
+        assertTrue(e2.getMessage().contains("pollTimeout"));
+    }
+
+    @Test
+    void builderAcceptsNullPollParametersFallsBackToDefaults() {
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(new StubOperation("fake", 0))))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .taskStore(new InMemoryAuditTaskStore())
+                .pollInterval(null)
+                .pollTimeout(null)
+                .build();
+
+        assertTrue(template.text(Scenes.NICKNAME, "你好").pass());
+    }
+
+    @Test
     void queryRoutesByStoredPlanKeyNotProvider() {
         boolean[] queried = {false, false};
         StubOperation imageAsync = asyncQueryStub("fake", 0, "imageAsync", () -> queried[0] = true);

@@ -67,6 +67,42 @@ class ActuatorComponentsTest {
     }
 
     @Test
+    void healthExposesProviderErrorsInsteadOfSwallowing() {
+        io.github.wrqtec.content.safe.spi.AuditOperationProvider broken =
+                new io.github.wrqtec.content.safe.spi.AuditOperationProvider() {
+                    @Override
+                    public String provider() {
+                        return "broken";
+                    }
+
+                    @Override
+                    public java.util.List<io.github.wrqtec.content.safe.api.enums.ContentType> supportedTypes() {
+                        return java.util.List.of();
+                    }
+
+                    @Override
+                    public java.util.List<io.github.wrqtec.content.safe.spi.AuditOperation> operations(
+                            io.github.wrqtec.content.safe.model.SceneDefinition scene) {
+                        throw new IllegalStateException("accessKey AKTP1234567890123456 rejected");
+                    }
+                };
+
+        Health health = new ContentSafeHealthIndicator(
+                new SceneRegistry(List.of()), List.of(broken), new CircuitBreakerRegistry(),
+                new RateLimiterRegistry()).health();
+        assertEquals(Status.UP, health.getStatus());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, java.util.List<String>> mappings =
+                (java.util.Map<String, java.util.List<String>>) health.getDetails().get("sceneMappings");
+        assertTrue(mappings.values().stream().allMatch(java.util.List::isEmpty));
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, String> errors =
+                (java.util.Map<String, String>) health.getDetails().get("providerErrors");
+        assertTrue(errors.get("broken").contains("***"));
+        assertTrue(!errors.get("broken").contains("AKTP1234567890123456"));
+    }
+
+    @Test
     void metricsCountAuditAndDegradedEvents() {
         SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
         ContentSafeMetrics metrics = new ContentSafeMetrics(meterRegistry);

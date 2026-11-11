@@ -136,8 +136,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
 
     /**
      * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
-     * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
-     * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
+     * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，null 回退 2 秒，非正数抛 InvalidRequestException
+     * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，null 回退 5 分钟，非正数抛 InvalidRequestException
      * @deprecated 改用 {@link #builder()} 或 {@link #DefaultContentSafeTemplate} 14 参构造器；
      * 失败转移开关已由 Builder/全参构造器显式暴露，本构造器默认开启转移
      */
@@ -165,8 +165,8 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
      * 新增参数继续通过 Builder 暴露（命名参数、可演进），代码装配建议优先用 builder()
      *
      * @param arbitrationSelector 仲裁策略选择器，可为 null（全部场景走主备 failover）
-     * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，非正数时回退 2 秒
-     * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，非正数时回退 5 分钟
+     * @param pollInterval        {@link #submitAndWait(AuditRequest)} 默认轮询间隔，null 回退 2 秒，非正数抛 InvalidRequestException
+     * @param pollTimeout         {@link #submitAndWait(AuditRequest)} 默认等待超时，null 回退 5 分钟，非正数抛 InvalidRequestException
      * @param failover            同步审核主备转移开关，true 转移到下一候选、false 主候选首败即抛
      */
     public DefaultContentSafeTemplate(SceneRegistry sceneRegistry,
@@ -195,11 +195,21 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
         this.reviewSink = reviewSink;
         this.callbackDispatcher = callbackDispatcher;
         this.arbitrationSelector = arbitrationSelector;
-        this.pollInterval = pollInterval != null && !pollInterval.isNegative() && !pollInterval.isZero()
-                ? pollInterval : DEFAULT_POLL_INTERVAL;
-        this.pollTimeout = pollTimeout != null && !pollTimeout.isNegative() && !pollTimeout.isZero()
-                ? pollTimeout : DEFAULT_POLL_TIMEOUT;
+        // null 是合法缺省（starter 配置未填时透传 null），回退内置默认；非正数是编程/配置错误，
+        // 与 queryUntilFinal 的参数契约一致抛 InvalidRequestException，不静默吞掉
+        this.pollInterval = normalizePollDuration(pollInterval, "pollInterval", DEFAULT_POLL_INTERVAL);
+        this.pollTimeout = normalizePollDuration(pollTimeout, "pollTimeout", DEFAULT_POLL_TIMEOUT);
         this.failover = failover;
+    }
+
+    private static Duration normalizePollDuration(Duration value, String name, Duration fallback) {
+        if (value == null) {
+            return fallback;
+        }
+        if (value.isNegative() || value.isZero()) {
+            throw new InvalidRequestException(name + " must be positive: " + value);
+        }
+        return value;
     }
 
     @Override
@@ -700,13 +710,13 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             return this;
         }
 
-        /** {@link #submitAndWait(AuditRequest)} 默认轮询间隔，null 时回退 2 秒 */
+        /** {@link #submitAndWait(AuditRequest)} 默认轮询间隔，null 回退 2 秒，非正数在 build() 时抛 InvalidRequestException */
         public Builder pollInterval(Duration pollInterval) {
             this.pollInterval = pollInterval;
             return this;
         }
 
-        /** {@link #submitAndWait(AuditRequest)} 默认等待超时，null 时回退 5 分钟 */
+        /** {@link #submitAndWait(AuditRequest)} 默认等待超时，null 回退 5 分钟，非正数在 build() 时抛 InvalidRequestException */
         public Builder pollTimeout(Duration pollTimeout) {
             this.pollTimeout = pollTimeout;
             return this;

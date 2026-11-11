@@ -80,11 +80,8 @@ public class JsonSceneDefinitionProvider implements SceneDefinitionProvider {
         try {
             contentType = ContentType.valueOf(type);
         } catch (IllegalArgumentException e) {
-            throw new ConfigInvalidException(SCENES_FILE + " scene '" + code + "' has unsupported type: " + type);
-        }
-        if (contentType != ContentType.TEXT && contentType != ContentType.IMAGE) {
-            throw new ConfigInvalidException(
-                    SCENES_FILE + " scene '" + code + "' type " + type + " is not supported in v1 (TEXT/IMAGE only)");
+            // 仅拦拼写错误；AUDIO 等预留类型允许配置，无供应商支持时路由期报 no provider configured
+            throw new ConfigInvalidException(SCENES_FILE + " scene '" + code + "' has unknown content type: " + type);
         }
         String severity = textOrNull(node, "defaultSeverity");
         Severity defaultSeverity = null;

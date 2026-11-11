@@ -229,8 +229,8 @@ content:
   safe:
     defaults:
       async:
-        poll-interval: 2s     # submitAndWait() 模板默认轮询间隔（操作声明了建议轮询值时被覆盖，如视频 30s）
-        poll-timeout: 5m      # submitAndWait() 模板默认等待超时（同上，视频操作声明 30m 覆盖）
+        poll-interval: 2s     # submitAndWait() 模板默认轮询间隔（操作声明了建议轮询值时被覆盖，如视频 30s；非正数启动即抛 InvalidRequestException）
+        poll-timeout: 5m      # submitAndWait() 模板默认等待超时（同上，视频操作声明 30m 覆盖；非正数启动即抛）
         max-tasks: 10000      # 仅默认 InMemoryAuditTaskStore 生效：容量上限
         expire-after: 1h      # 任务过期时间（超限逐出最旧，读取时惰性过期）；长视频建议 2h~4h
 ```
@@ -248,7 +248,7 @@ content:
 | `content.safe.provider.throttled` | provider, operation | 本地限流拒绝 |
 | `content.safe.callback.deadletter` | provider | 回调死信 |
 
-**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）、场景到供应商映射表（`sceneMappings` detail，排查"场景无供应商映射"首查此处）；`health()` 不做远程探测。
+**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）、场景到供应商映射表（`sceneMappings` detail，排查"场景无供应商映射"首查此处）、供应商构建操作失败表（`providerErrors` detail，provider → 净化后的异常消息；构建失败按未映射处理不拖垮健康端点）；`health()` 不做远程探测。
 
 **事件**：实现 `AuditListener` Bean 即可订阅全部事件（`AuditEvent`、`RiskHitEvent`、`ReviewEvent`、`ProviderDegradedEvent`、`ProviderThrottledEvent`、`CallbackDeadLetterEvent`），订阅异常不影响主流程。多个 listener 聚合派发，Spring 容器中的 Bean 会被自动收集。
 
