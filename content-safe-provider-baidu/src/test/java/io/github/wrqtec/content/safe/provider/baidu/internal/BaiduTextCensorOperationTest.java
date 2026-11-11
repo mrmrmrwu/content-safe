@@ -136,6 +136,17 @@ class BaiduTextCensorOperationTest {
             return doRespond();
         }
 
+        @Override
+        public BaiduVideoSubmitResponse videoSubmit(String url, String extId, String strategyId,
+                                                     String noticeUrl, String subEvents) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public BaiduVideoPullResponse videoPull(String taskId) {
+            throw new UnsupportedOperationException();
+        }
+
         private BaiduCensorResponse doRespond() {
             if (failure != null) {
                 throw failure;

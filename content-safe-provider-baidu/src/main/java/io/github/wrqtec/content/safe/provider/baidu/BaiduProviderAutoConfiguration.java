@@ -7,8 +7,10 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduAccessTokenManager;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCallbackVerifier;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCensorClient;
 import io.github.wrqtec.content.safe.provider.baidu.internal.HttpBaiduCensorClient;
+import io.github.wrqtec.content.safe.spi.CallbackVerifier;
 import io.github.wrqtec.content.safe.spi.CredentialsProvider;
 import io.github.wrqtec.content.safe.spi.CredentialsSupport;
 import org.springframework.beans.factory.ObjectProvider;
@@ -48,6 +50,15 @@ public class BaiduProviderAutoConfiguration {
                 credentials.accessKeyId(), credentials.accessKeySecret(),
                 baseUrl, connectTimeoutMs, readTimeoutMs);
         return new HttpBaiduCensorClient(tokenManager, baseUrl, connectTimeoutMs, readTimeoutMs);
+    }
+
+    /**
+     * 长视频回调验签器：官方推送协议无签名，仅做结构校验（详见 {@link BaiduCallbackVerifier}）
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public CallbackVerifier baiduCallbackVerifier() {
+        return new BaiduCallbackVerifier();
     }
 
     @Bean

@@ -4,6 +4,7 @@ import java.util.Set;
 
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.ErrorMessages;
+import io.github.wrqtec.content.safe.provider.baidu.BaiduProviderConstants;
 
 /**
  * 百度错误映射：error_code 与异常 → {@link ProviderCallException}
@@ -47,6 +48,35 @@ public final class BaiduErrorMapper {
         throw new ProviderCallException(
                 "baidu censor rejected: error_code=" + response.getErrorCode()
                         + " error_msg=" + sanitize(response.getErrorMsg()));
+    }
+
+    /**
+     * 长视频提交断言：ret 非 "0" → 抛 {@link ProviderCallException}
+     * （如 282005 appId+extId 重复提交、282006 任务不存在、282003/282004 参数问题）
+     *
+     * @param response 已解析提交响应
+     * @return 原响应（链式调用）
+     */
+    public static BaiduVideoSubmitResponse assertVideoSuccess(BaiduVideoSubmitResponse response) {
+        if (response.isSuccess()) {
+            return response;
+        }
+        throw new ProviderCallException(
+                "baidu video rejected: ret=" + response.getRet() + " msg=" + sanitize(response.getMsg()));
+    }
+
+    /**
+     * 长视频拉取断言：ret 非 "0" → 抛 {@link ProviderCallException}
+     *
+     * @param response 已解析拉取响应
+     * @return 原响应（链式调用）
+     */
+    public static BaiduVideoPullResponse assertVideoSuccess(BaiduVideoPullResponse response) {
+        if (response.isSuccess()) {
+            return response;
+        }
+        throw new ProviderCallException(
+                "baidu video rejected: ret=" + response.getRet() + " msg=" + sanitize(response.getMsg()));
     }
 
     /**

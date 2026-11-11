@@ -3,6 +3,8 @@ package io.github.wrqtec.content.safe.provider.baidu;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCensorClient;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCensorResponse;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduVideoPullResponse;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduVideoSubmitResponse;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -119,6 +121,17 @@ class BaiduProviderAutoConfigurationTest {
             @Override
             public BaiduCensorResponse imageCensorByUrl(String imgUrl, String strategyId) {
                 return new BaiduCensorResponse();
+            }
+
+            @Override
+            public BaiduVideoSubmitResponse videoSubmit(String url, String extId, String strategyId,
+                                                         String noticeUrl, String subEvents) {
+                return new BaiduVideoSubmitResponse();
+            }
+
+            @Override
+            public BaiduVideoPullResponse videoPull(String taskId) {
+                return new BaiduVideoPullResponse();
             }
         };
 

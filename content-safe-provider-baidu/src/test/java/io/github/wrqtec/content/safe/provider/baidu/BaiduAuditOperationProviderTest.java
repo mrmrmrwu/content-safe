@@ -6,8 +6,12 @@ import java.util.Map;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.enums.Severity;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
+import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCensorClient;
 import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduCensorResponse;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduVideoAsyncOperation;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduVideoPullResponse;
+import io.github.wrqtec.content.safe.provider.baidu.internal.BaiduVideoSubmitResponse;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,6 +36,17 @@ class BaiduAuditOperationProviderTest {
 
         @Override
         public BaiduCensorResponse imageCensorByUrl(String imgUrl, String strategyId) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public BaiduVideoSubmitResponse videoSubmit(String url, String extId, String strategyId,
+                                                    String noticeUrl, String subEvents) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public BaiduVideoPullResponse videoPull(String taskId) {
             throw new UnsupportedOperationException();
         }
     };
@@ -81,11 +96,19 @@ class BaiduAuditOperationProviderTest {
     }
 
     @Test
-    void typeMismatchReturnsNoOperations() {
+    void videoSceneYieldsVideoAsyncOperation() {
         BaiduAuditOperationProvider provider = new BaiduAuditOperationProvider(
-                properties(Map.of("media", "303")), NOOP_CLIENT);
+                properties(Map.of("short_video", "303")), NOOP_CLIENT);
 
-        assertThat(provider.operations(SceneDefinition.of("media", ContentType.VIDEO, Severity.LOW))).isEmpty();
+        assertThat(provider.operations(SceneDefinition.of("short_video", ContentType.VIDEO, Severity.LOW)))
+                .hasSize(1)
+                .first()
+                .isInstanceOf(BaiduVideoAsyncOperation.class)
+                .satisfies(operation -> {
+                    assertThat(operation.plan().operation()).isEqualTo("VideoCensor");
+                    assertThat(operation.plan().apiVersion()).isEqualTo("v1");
+                    assertThat(operation.plan().mode()).isEqualTo(AuditMode.ASYNC_QUERY);
+                });
     }
 
     @Test
@@ -93,7 +116,7 @@ class BaiduAuditOperationProviderTest {
         BaiduAuditOperationProvider provider = new BaiduAuditOperationProvider(properties(Map.of()), NOOP_CLIENT);
 
         assertThat(provider.provider()).isEqualTo("baidu");
-        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE);
+        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     private static BaiduProviderProperties properties(Map<String, String> scenes) {

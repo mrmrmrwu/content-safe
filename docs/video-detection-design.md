@@ -143,6 +143,7 @@
 ## 8. P2/P3 概要
 
 - **baidu（T-029）**：长视频异步（提交任务+回调推送）。来源：cloud.baidu.com/doc/ANTIPORN/s/{yksy6xs5y, mkxlraoz5, Pkxlsnvlc}，查阅 2026-11-11。自研 JDK HttpClient（对齐 baidu 模块既有形态），access_token 复用 BaiduAccessTokenManager；截帧 URL 不透传。≤5 分钟短视频同步接口不做（D-1）。
+  **实现勘误记录**（官方文档核实后修正原稿）：接口路径 `POST /rest/2.0/solution/v1/video_censor/v1/video/{submit,pull}`（access_token 为 query 参数，来源 jksy7j3jv 请求说明/Pksy7jxr2 响应说明，查阅 2026-11-11）；提交表单 `url` 必填 + `extId` 必填（appId+extId 组合幂等键，重复提交 ret=282005）+ strategyId/noticeUrl/subEvents 可选；`ret` 是字符串 `"0"` 成功；**处理中语义：ret="0" 且 data.conclusionType 缺省**（官方未明示处理中报文形态，按此实现）；**拉取固定携带 subEvents=1,2,3,4**（官方默认 2,3 仅推送违规与疑似，会漏合规结论导致已完成任务永远查不到终态）；回调协议（8ksy7dc4b）POST 自定义 noticeUrl，JSON `{taskId, extId, result{conclusionType, frames, audios}}`，官方无签名机制（BaiduCallbackVerifier 仅结构校验并如实声明不防伪不防重放）；视频 ≤3h/≤2G 云侧校验；conclusionType：1 合规/2 不合规/3 疑似/4 审核失败（4 按调用失败处理）。
 - **shumei（T-030）**：`video/v4` 文件审核（自定义截帧；提交+回调或主动查询 queryInterface）。来源：help.ishumei.com/docs/tj/video/versionV4/{developDoc, queryInterface/developDoc}，查阅 2026-11-11。流式 `video/stream/v4` 不做（D-2）。
 - **volcengine（T-031）**：BusinessSecurity VideoRisk。SDK 有异步建模；实现前按铁律重新核实官方文档（本次调研未直接命中文档页），不得凭记忆写契约。
 - **T-032**：samples 增 video-async 样例工程（fake provider + 真实 provider 可切换）。
@@ -182,7 +183,7 @@
 | T-026 | P0 | ✅ 契约打通：`AuditRequest.video()` + `video()` + `Scenes.SHORT_VIDEO` + SceneRegistry 注册 + core 端到端测试（fake VIDEO op 全流程）+ 接入指南视频节（c64b559） | — |
 | T-027 | P1 | ✅ provider-aliyun 视频：VideoAsyncOperation（ASYNC_QUERY）+ normalizer + contracts + 测试 + D-1 图片回调解析（677d0d5） | T-026 |
 | T-028 | P1 | ✅ provider-tencent 视频：VideoAsyncOperation（ASYNC_QUERY + 可选回调 handleCallback）+ normalizer + contracts + 测试 + VmClient endpoint 修复 | T-026 |
-| T-029 | P2 | provider-baidu 长视频异步 + 回调 verifier/解析 | T-026 |
+| T-029 | P2 | ✅ provider-baidu 长视频异步：VideoAsyncOperation（提交 extId 幂等 + 轮询拉取 subEvents=1,2,3,4 + 可选回调 handleCallback + BaiduCallbackVerifier）+ normalizer + contracts + 测试 | T-026 |
 | T-030 | P2 | provider-shumei video/v4 文件审核 | T-026 |
 | T-031 | P3 | provider-volcengine 视频（先核实官方文档） | T-026 |
 | T-032 | P2 | video-async 样例工程 | T-027/T-028 |

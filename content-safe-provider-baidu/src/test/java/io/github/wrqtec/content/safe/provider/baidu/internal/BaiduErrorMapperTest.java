@@ -40,6 +40,18 @@ class BaiduErrorMapperTest {
     }
 
     @Test
+    void videoBadRetThrowsSanitizedProviderCallException() {
+        BaiduVideoSubmitResponse response = GSON.fromJson(
+                "{\"ret\":\"282005\",\"msg\":\"duplicate request secret-token-abcdefgh12345678\"}",
+                BaiduVideoSubmitResponse.class);
+
+        assertThatThrownBy(() -> BaiduErrorMapper.assertVideoSuccess(response))
+                .isInstanceOf(ProviderCallException.class)
+                .hasMessageContaining("ret=282005")
+                .hasMessageNotContaining("secret-token-abcdefgh12345678");
+    }
+
+    @Test
     void tokenErrorCodesDetected() {
         assertThat(BaiduErrorMapper.isTokenError(110)).isTrue();
         assertThat(BaiduErrorMapper.isTokenError(111)).isTrue();

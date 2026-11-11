@@ -1,0 +1,28 @@
+{
+  "currentTime": "2026-11-11 12:00:00",
+  "appId": "app-demo",
+  "taskId": 900001,
+  "taskDuration": 65,
+  "extId": "data-cb-001",
+  "result": {
+    "conclusion": "不合规",
+    "conclusionType": 2,
+    "frames": [
+      {
+        "frameTimeStamp": 12,
+        "conclusion": "不合规",
+        "conclusionType": 2,
+        "frameUrl": "https://bos-sign.example.com/cb-frame-001.jpg?authorization=bce-auth-cbtoken-abcdef1234567890",
+        "data": [
+          {
+            "type": 43,
+            "subType": 430101,
+            "msg": "命中涉黄新版标签",
+            "probability": 0.97
+          }
+        ]
+      }
+    ],
+    "audios": []
+  }
+}

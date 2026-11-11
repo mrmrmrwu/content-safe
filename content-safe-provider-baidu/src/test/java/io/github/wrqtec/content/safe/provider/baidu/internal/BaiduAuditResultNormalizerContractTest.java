@@ -12,6 +12,7 @@ import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
+import io.github.wrqtec.content.safe.provider.baidu.BaiduAuditOperationProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -94,6 +95,60 @@ class BaiduAuditResultNormalizerContractTest {
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getErrorCode()).isEqualTo(111);
         assertThat(BaiduErrorMapper.isTokenError(response.getErrorCode())).isTrue();
+    }
+
+    @Test
+    void videoPullRejectMapsFramesAndAudios() {
+        BaiduVideoPullResponse response = loadVideo("video-pull-reject.json", BaiduVideoPullResponse.class);
+        AuditResult result = normalizer.normalizeVideoPull(response.getData(), response.getLogId(),
+                videoContext());
+
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.finalResult()).isTrue();
+        assertThat(result.source()).isEqualTo(io.github.wrqtec.content.safe.api.enums.AuditSource.ASYNC_QUERY);
+        assertThat(result.requestId()).isEqualTo("123003");
+        assertThat(result.hits()).hasSize(2);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("43.430101");
+        assertThat(result.hits().get(0).evidence()).isEqualTo("涉黄命中词zz9900112233");
+        assertThat(result.hits().get(0).raw()).containsEntry("frameTimeStamp", 12L)
+                .containsEntry("datasetName", "默认涉黄库");
+        assertThat(result.hits().get(1).labelPath()).isEqualTo("24");
+        assertThat(result.hits().get(1).raw()).containsEntry("startTime", 5000)
+                .containsEntry("endTime", 9000);
+
+        String flattened = String.valueOf(result);
+        assertThat(flattened)
+                .doesNotContain("bos-sign.example.com")
+                .doesNotContain("这段语音转写原文不应透传到统一结果");
+    }
+
+    @Test
+    void videoCallbackMapsDataIdFromExtId() {
+        BaiduVideoCallbackPayload payload = loadVideo("video-callback.json", BaiduVideoCallbackPayload.class);
+        AuditResult result = normalizer.normalizeVideoCallback(payload.getResult(),
+                videoContext());
+
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.source()).isEqualTo(io.github.wrqtec.content.safe.api.enums.AuditSource.ASYNC_CALLBACK);
+        assertThat(result.hits()).hasSize(1);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("43.430101");
+        assertThat(String.valueOf(result)).doesNotContain("bos-sign.example.com");
+    }
+
+    private static Map<String, Object> videoContext() {
+        return BaiduAuditResultNormalizer.context(BaiduAuditOperationProvider.videoPlan("303"),
+                "data-cb-001", Duration.ofMillis(12));
+    }
+
+    private static <T> T loadVideo(String name, Class<T> type) {
+        try (Reader reader = new InputStreamReader(
+                BaiduAuditResultNormalizerContractTest.class
+                        .getResourceAsStream("/contracts/baidu/" + name),
+                StandardCharsets.UTF_8)) {
+            return GSON.fromJson(reader, type);
+        } catch (IOException e) {
+            throw new IllegalStateException("load contract sample failed: " + name, e);
+        }
     }
 
     private static Map<String, Object> context(String strategyId, String dataId) {

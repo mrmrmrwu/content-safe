@@ -155,4 +155,186 @@ public class BaiduAuditResultNormalizer implements AuditResultNormalizer {
         }
         return Map.of("log_id", response.getLogId());
     }
+
+    /**
+     * 归一化长视频拉取结果（data 须已产出结论且非审核失败，由操作前置判断）
+     *
+     * @param data 拉取数据体
+     * @param logId 本次拉取日志 ID（可空）
+     * @param context 归一化上下文
+     */
+    public AuditResult normalizeVideoPull(BaiduVideoPullResponse.Data data, Long logId,
+                                          Map<String, Object> context) {
+        return videoResultOf(data.getConclusionType(), data.getFrames(), data.getAudios(),
+                logId == null ? null : String.valueOf(logId), AuditSource.ASYNC_QUERY, context);
+    }
+
+    /**
+     * 归一化长视频回调结果（result 须终态且非审核失败，由操作前置判断）
+     *
+     * @param result 回调结果
+     * @param context 归一化上下文（dataId 取提交时 extId）
+     */
+    public AuditResult normalizeVideoCallback(BaiduVideoCallbackPayload.Result result,
+                                              Map<String, Object> context) {
+        return videoResultOf(result.getConclusionType(), result.getFrames(), result.getAudios(),
+                null, AuditSource.ASYNC_CALLBACK, context);
+    }
+
+    /**
+     * 长视频结果归一：截帧与语音逐明细展开为 hit，原始报文不入 raw
+     * （签名 URL 与转写原文不透传；命中词进 evidence，由 core EvidenceRedactor 统一脱敏）
+     */
+    private AuditResult videoResultOf(Integer conclusionType, List<BaiduVideoPullResponse.Frame> frames,
+                                      List<BaiduVideoPullResponse.Audio> audios, String requestId,
+                                      AuditSource source, Map<String, Object> context) {
+        return AuditResult.builder()
+                .ok(true)
+                .suggestion(suggestionOf(conclusionType))
+                .finalResult(true)
+                .source(source)
+                .provider(provider())
+                .product(BaiduProviderConstants.PRODUCT)
+                .service((String) context.get(CONTEXT_SERVICE))
+                .dataId((String) context.get(CONTEXT_DATA_ID))
+                .cost((Duration) context.get(CONTEXT_COST))
+                .requestId(requestId)
+                .hits(videoHitsOf(frames, audios))
+                .build();
+    }
+
+    private static List<RiskHit> videoHitsOf(List<BaiduVideoPullResponse.Frame> frames,
+                                             List<BaiduVideoPullResponse.Audio> audios) {
+        List<RiskHit> hits = new ArrayList<>();
+        if (frames != null) {
+            for (BaiduVideoPullResponse.Frame frame : frames) {
+                appendFrameHits(frame, hits);
+            }
+        }
+        if (audios != null) {
+            for (BaiduVideoPullResponse.Audio audio : audios) {
+                appendAudioHits(audio, hits);
+            }
+        }
+        return hits;
+    }
+
+    /**
+     * 逐截帧命中：合规帧（conclusionType=1）跳过；frameUrl/frameThumbnailUrl 不透传
+     */
+    private static void appendFrameHits(BaiduVideoPullResponse.Frame frame, List<RiskHit> hits) {
+        if (frame == null || frame.getData() == null
+                || frame.getConclusionType() == null || frame.getConclusionType() == CONCLUSION_PASS) {
+            return;
+        }
+        for (BaiduVideoPullResponse.Detail detail : frame.getData()) {
+            if (detail == null) {
+                continue;
+            }
+            Map<String, Object> raw = new LinkedHashMap<>();
+            if (frame.getFrameTimeStamp() != null) {
+                raw.put("frameTimeStamp", frame.getFrameTimeStamp());
+            }
+            if (detail.getDatasetName() != null) {
+                raw.put("datasetName", detail.getDatasetName());
+            }
+            hits.add(new RiskHit(
+                    labelPathOf(detail.getType(), detail.getSubType()),
+                    detail.getMsg() == null || detail.getMsg().isBlank()
+                            ? List.of() : List.of(detail.getMsg()),
+                    detail.getProbability(),
+                    detail.getProbability() == null ? null : ConfidenceScale.ZERO_TO_ONE,
+                    HitSource.MACHINE,
+                    wordsOfFrameHits(detail.getHits()),
+                    null,
+                    raw));
+        }
+    }
+
+    /**
+     * 逐语音分段命中：text（转写原文）与 audioUrl（签名地址）不透传
+     */
+    private static void appendAudioHits(BaiduVideoPullResponse.Audio audio, List<RiskHit> hits) {
+        if (audio == null || audio.getAudioAuditResult() == null
+                || audio.getAudioAuditResult().getData() == null) {
+            return;
+        }
+        for (BaiduVideoPullResponse.AudioData segment : audio.getAudioAuditResult().getData()) {
+            if (segment == null || segment.getAuditData() == null) {
+                continue;
+            }
+            for (BaiduVideoPullResponse.AudioDetail detail : segment.getAuditData()) {
+                if (detail == null) {
+                    continue;
+                }
+                Map<String, Object> raw = new LinkedHashMap<>();
+                if (audio.getStartTime() != null) {
+                    raw.put("startTime", audio.getStartTime());
+                }
+                if (audio.getEndTime() != null) {
+                    raw.put("endTime", audio.getEndTime());
+                }
+                Double confidence = confidenceOf(detail.getHits());
+                hits.add(new RiskHit(
+                        labelPathOf(detail.getType(), detail.getSubType()),
+                        detail.getMsg() == null || detail.getMsg().isBlank()
+                                ? List.of() : List.of(detail.getMsg()),
+                        confidence,
+                        confidence == null ? null : ConfidenceScale.ZERO_TO_ONE,
+                        HitSource.MACHINE,
+                        wordsOfAudioHits(detail.getHits()),
+                        null,
+                        raw));
+            }
+        }
+    }
+
+    private static String labelPathOf(Integer type, Integer subType) {
+        String base = type == null ? "unknown" : String.valueOf(type);
+        return subType == null ? base : base + "." + subType;
+    }
+
+    private static Double confidenceOf(List<BaiduVideoPullResponse.AudioHit> hits) {
+        if (hits == null) {
+            return null;
+        }
+        for (BaiduVideoPullResponse.AudioHit hit : hits) {
+            if (hit != null && hit.getProbability() != null) {
+                return hit.getProbability();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 截帧命中词汇总（逗号拼接；由 core EvidenceRedactor 统一脱敏）
+     */
+    private static String wordsOfFrameHits(List<BaiduVideoPullResponse.Hit> hits) {
+        if (hits == null || hits.isEmpty()) {
+            return null;
+        }
+        List<String> words = new ArrayList<>();
+        for (BaiduVideoPullResponse.Hit hit : hits) {
+            if (hit != null && hit.getWords() != null) {
+                words.addAll(hit.getWords());
+            }
+        }
+        return words.isEmpty() ? null : String.join(",", words);
+    }
+
+    /**
+     * 语音命中词汇总（逗号拼接；由 core EvidenceRedactor 统一脱敏）
+     */
+    private static String wordsOfAudioHits(List<BaiduVideoPullResponse.AudioHit> hits) {
+        if (hits == null || hits.isEmpty()) {
+            return null;
+        }
+        List<String> words = new ArrayList<>();
+        for (BaiduVideoPullResponse.AudioHit hit : hits) {
+            if (hit != null && hit.getWords() != null) {
+                words.addAll(hit.getWords());
+            }
+        }
+        return words.isEmpty() ? null : String.join(",", words);
+    }
 }

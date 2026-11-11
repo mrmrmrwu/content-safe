@@ -1,0 +1,74 @@
+{
+  "logId": 123003,
+  "ret": "0",
+  "msg": "success",
+  "data": {
+    "taskId": 900001,
+    "taskDuration": 65,
+    "conclusion": "不合规",
+    "conclusionType": 2,
+    "frames": [
+      {
+        "frameTimeStamp": 12,
+        "conclusion": "不合规",
+        "conclusionType": 2,
+        "frameUrl": "https://bos-sign.example.com/frame-001.jpg?authorization=bce-auth-token-abcdef1234567890",
+        "frameThumbnailUrl": "https://bos-sign.example.com/thumb-001.jpg?authorization=bce-auth-thumb-token-abcdef123456",
+        "data": [
+          {
+            "type": 43,
+            "subType": 430101,
+            "msg": "命中涉黄新版标签",
+            "probability": 0.98,
+            "datasetName": "默认涉黄库",
+            "hits": [
+              {
+                "words": ["涉黄命中词zz9900112233"],
+                "probability": 0.9,
+                "datasetName": "默认涉黄库"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "frameTimeStamp": 30,
+        "conclusion": "合规",
+        "conclusionType": 1,
+        "frameUrl": "https://bos-sign.example.com/frame-002.jpg?authorization=bce-auth-token-passframe123456"
+      }
+    ],
+    "audios": [
+      {
+        "startTime": 5000,
+        "endTime": 9000,
+        "audioUrl": "https://bos-sign.example.com/audio-001.mp3?authorization=bce-auth-audio-token-abcdef123456",
+        "audioAuditResult": {
+          "conclusion": "不合规",
+          "conclusionType": 2,
+          "data": [
+            {
+              "conclusion": "不合规",
+              "conclusionType": 2,
+              "startTime": 5000,
+              "endTime": 9000,
+              "text": "这段语音转写原文不应透传到统一结果",
+              "auditData": [
+                {
+                  "type": 24,
+                  "msg": "命中辱骂标签",
+                  "hits": [
+                    {
+                      "words": ["辱骂命中词yy8877665544"],
+                      "probability": 0.88
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

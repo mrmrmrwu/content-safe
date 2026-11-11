@@ -29,6 +29,13 @@ public final class BaiduLimits {
     /** 图像限流 QPS（本地保护性缺省，以控制台配额为准） */
     public static final double IMAGE_QPS = 50D;
 
+    /**
+     * 长视频限流 QPS（本地保护性缺省）。提交/拉取是轻量 REST 调用，
+     * 视频时长与体积限制在云侧校验（≤3h/≤2G 建议值，jksy7j3jv 查阅 2026-11-11），
+     * 拉取建议间隔 30s（不小于 20s）
+     */
+    public static final double VIDEO_QPS = 10D;
+
     /** 默认超时（HTTP 同步接口，10s 足够） */
     public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(10);
 
@@ -41,6 +48,10 @@ public final class BaiduLimits {
 
     public static OperationLimits imageSync() {
         return new OperationLimits(null, IMAGE_QPS, DEFAULT_TIMEOUT, MAX_IMAGE_BYTES, 0L, false);
+    }
+
+    public static OperationLimits videoAsync() {
+        return new OperationLimits(null, VIDEO_QPS, DEFAULT_TIMEOUT, 0L, 0L, false);
     }
 
     public static long maxTextBytes() {
