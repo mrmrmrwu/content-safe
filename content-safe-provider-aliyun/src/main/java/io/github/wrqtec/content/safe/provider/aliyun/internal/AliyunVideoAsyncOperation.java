@@ -61,6 +61,10 @@ public class AliyunVideoAsyncOperation implements AuditOperation {
                 .contentTypes(ContentType.VIDEO)
                 .url(true)
                 .asyncQuery(true)
+                // 阿里官方建议 30 秒轮询（来源见 provider-feature-matrix 视频行）；
+                // 超时取 30 分钟模块值，与结果保留期（24h）和典型完成时长匹配
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
                 .build();
     }
 

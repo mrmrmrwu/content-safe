@@ -47,10 +47,10 @@ public interface ContentSafeTemplate {
      * 此类任务请以回调为准。超时抛 {@link ProviderCallException}，任务仍在，
      * 可后续继续 {@link #query(String)}
      *
-     * <p><b>视频任务请勿依赖本方法默认参数</b>：视频审核耗时分钟级且供应商普遍建议
-     * 低频轮询（如阿里云建议 30 秒），通用默认值（2s 间隔 / 5 分钟超时）会造成查询风暴
-     * 与误超时——请改用三参重载 {@link #submitAndWait(AuditRequest, Duration, Duration)}
-     * 显式指定（建议 30s / 30min，各供应商建议值见 provider-feature-matrix）</p>
+     * <p>异步操作可通过能力声明的建议轮询参数（{@code AuditCapabilities.suggestedPollInterval}
+     * / {@code suggestedPollTimeout}，如视频操作普遍声明 30s / 30min）覆盖模板默认值；
+     * 操作未声明时使用模板配置。需要更精细控制请用三参重载
+     * {@link #submitAndWait(AuditRequest, Duration, Duration)}</p>
      *
      * @param request 统一审核请求
      * @return 终态审核结果
@@ -80,6 +80,31 @@ public interface ContentSafeTemplate {
             throw new InvalidRequestException("timeout must be positive: " + timeout);
         }
         String taskId = submitAsync(request);
+        return queryUntilFinal(taskId, pollInterval, timeout);
+    }
+
+    /**
+     * 阻塞轮询既有任务直至终态：按 pollInterval 周期 {@link #query(String)}，
+     * 直到 finalResult=true 或超时。手动 {@link #submitAsync(AuditRequest)} 后
+     * 不想自己写轮询循环时可直接使用
+     *
+     * @param taskId       本库统一任务 ID
+     * @param pollInterval 轮询间隔，须为正数
+     * @param timeout      总等待超时，须为正数
+     * @return 终态审核结果
+     * @throws io.github.wrqtec.content.safe.api.exception.InvalidRequestException 参数非法
+     * @throws ProviderCallException 等待超时或线程中断；任务仍在，可后续 query
+     */
+    default AuditResult queryUntilFinal(String taskId, Duration pollInterval, Duration timeout) {
+        Asserts.notBlank(taskId, "taskId");
+        Asserts.notNull(pollInterval, "pollInterval");
+        Asserts.notNull(timeout, "timeout");
+        if (pollInterval.isNegative() || pollInterval.isZero()) {
+            throw new InvalidRequestException("pollInterval must be positive: " + pollInterval);
+        }
+        if (timeout.isNegative() || timeout.isZero()) {
+            throw new InvalidRequestException("timeout must be positive: " + timeout);
+        }
         Instant deadline = Instant.now().plus(timeout);
         while (true) {
             AuditResult result = query(taskId);

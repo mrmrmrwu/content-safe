@@ -1,5 +1,8 @@
 package io.github.wrqtec.content.safe.model;
 
+import java.time.Duration;
+import java.util.Set;
+
 import io.github.wrqtec.content.safe.api.AuditOptions;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.ContentRef;
@@ -7,7 +10,9 @@ import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -71,5 +76,33 @@ class AuditCapabilitiesTest {
         assertTrue(caps.sync());
         assertTrue(caps.contentTypes().contains(ContentType.TEXT));
         assertThrows(UnsupportedOperationException.class, () -> caps.contentTypes().add(ContentType.IMAGE));
+    }
+
+    @Test
+    void suggestionsDeclaredViaBuilderAreRetained() {
+        AuditCapabilities caps = AuditCapabilities.builder()
+                .contentTypes(ContentType.VIDEO)
+                .asyncQuery(true)
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
+                .build();
+        assertEquals(Duration.ofSeconds(30), caps.suggestedPollInterval());
+        assertEquals(Duration.ofMinutes(30), caps.suggestedPollTimeout());
+
+        AuditCapabilities without = AuditCapabilities.builder()
+                .contentTypes(ContentType.VIDEO)
+                .asyncQuery(true)
+                .build();
+        assertNull(without.suggestedPollInterval());
+        assertNull(without.suggestedPollTimeout());
+    }
+
+    @Test
+    void legacyConstructorDefaultsSuggestionsToNull() {
+        AuditCapabilities caps = new AuditCapabilities(Set.of(ContentType.TEXT), true,
+                false, false, false, false, false, false, false,
+                false, false, false, false, false, false, 1, 0L, 0L);
+        assertNull(caps.suggestedPollInterval());
+        assertNull(caps.suggestedPollTimeout());
     }
 }

@@ -535,6 +535,140 @@ class DefaultContentSafeTemplateTest {
     }
 
     @Test
+    void submitAndWaitUsesOperationSuggestedPollParameters() {
+        StubOperation async = new StubOperation("fake", 0) {
+            private int queries;
+
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true)
+                        .suggestedPollInterval(Duration.ofMillis(10))
+                        .suggestedPollTimeout(Duration.ofMillis(200))
+                        .build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("task-1", "d1");
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                queries++;
+                if (queries < 2) {
+                    return AuditResult.builder().ok(true).finalResult(false).build();
+                }
+                return AuditResult.builder().ok(true).suggestion(RiskSuggestion.REJECT).build();
+            }
+        };
+        // 模板默认 1s 间隔：若建议值未生效，两次查询间至少睡 1s；生效则 10ms 量级完成
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(async)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .pollInterval(Duration.ofSeconds(1))
+                .pollTimeout(Duration.ofMinutes(5))
+                .build();
+
+        long start = System.currentTimeMillis();
+        AuditResult result = template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"));
+
+        assertEquals(RiskSuggestion.REJECT, result.suggestion());
+        assertTrue(result.finalResult());
+        assertTrue(System.currentTimeMillis() - start < 800,
+                "suggested poll interval should override the 1s template default");
+    }
+
+    @Test
+    void submitAndWaitTimesOutBySuggestedPollTimeout() {
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true)
+                        .suggestedPollInterval(Duration.ofMillis(10))
+                        .suggestedPollTimeout(Duration.ofMillis(100))
+                        .build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("task-1", "d1");
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                return AuditResult.builder().ok(true).finalResult(false).build();
+            }
+        };
+        // 若建议超时未生效，将按模板默认 5 分钟等待（测试必然拖死）；100ms 即抛即为生效
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(async)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .pollInterval(Duration.ofSeconds(1))
+                .pollTimeout(Duration.ofMinutes(5))
+                .build();
+
+        ProviderCallException e = assertThrows(ProviderCallException.class,
+                () -> template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t")));
+        assertTrue(e.getMessage().contains("timed out"));
+    }
+
+    @Test
+    void submitAndWaitFallsBackToTemplateDefaultsWithoutSuggestions() {
+        StubOperation async = new StubOperation("fake", 0) {
+            @Override
+            public AuditCapabilities capabilities() {
+                // 非正数声明按无效值忽略：不覆盖模板默认
+                return AuditCapabilities.builder().contentTypes(ContentType.TEXT)
+                        .sync(true).asyncQuery(true)
+                        .suggestedPollInterval(Duration.ZERO)
+                        .suggestedPollTimeout(Duration.ZERO)
+                        .build();
+            }
+
+            @Override
+            public AsyncTaskRef submitAsync(AuditRequest request) {
+                return new AsyncTaskRef("task-1", "d1");
+            }
+
+            @Override
+            public AuditResult query(AsyncTaskRef ref) {
+                return AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS).build();
+            }
+        };
+        DefaultContentSafeTemplate template = DefaultContentSafeTemplate.builder()
+                .sceneRegistry(scenes)
+                .providers(List.of(providerOf(async)))
+                .router(new PriorityAuditRouter())
+                .breakers(new CircuitBreakerRegistry())
+                .limiters(new RateLimiterRegistry())
+                .listener(new CompositeAuditListener(List.of(recording)))
+                .redactors(List.of(new DefaultEvidenceRedactor()))
+                .taskStore(new InMemoryAuditTaskStore())
+                .pollInterval(Duration.ofMillis(10))
+                .pollTimeout(Duration.ofSeconds(2))
+                .build();
+
+        AuditResult result = template.submitAndWait(AuditRequest.text(Scenes.NICKNAME, "t"));
+
+        assertEquals(RiskSuggestion.PASS, result.suggestion());
+        assertTrue(result.finalResult());
+    }
+
+    @Test
     void queryStoresAndReturnsRedactedResult() {
         EvidenceRedactor mask = new EvidenceRedactor() {
             @Override

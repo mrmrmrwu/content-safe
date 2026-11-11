@@ -57,6 +57,7 @@ content:
   HitSnippetInfo 均不透传）。可选 `extra.callback-url`（+ `callback-seed`）配置后回调推送与
   查询响应同构，同样按 `TaskId`（缺失回退 `DataId`）关联。
 终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
+- 操作已声明建议轮询参数 30s 间隔 / 30 分钟超时：单参 submitAndWait 自动生效，无需显式三参。
 
 ## 能力声明
 

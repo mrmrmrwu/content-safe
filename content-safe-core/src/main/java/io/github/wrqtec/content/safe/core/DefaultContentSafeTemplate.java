@@ -244,17 +244,18 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             if (attempt.result() != null) {
                 return attempt.result();
             }
-            failures.add(attempt.failure());
-            if (attempt.cause() != null) {
-                lastFailure = attempt.cause();
-            }
             if (!failover) {
                 // failover 关闭：主候选首败即抛（底层异常原样上抛保留根因类型与堆栈；
                 // 限流/熔断等本地拒绝无底层异常，按不可用语义抛出）。仅在至少一个候选失败后
-                // 到达此处，必为真实失败而非"无候选"
+                // 到达此处，必为真实失败而非"无候选"。判在 failures/lastFailure 累计之前，
+                // 首败即抛时这两个值没有消费者，不产生无效赋值
                 throw attempt.cause() != null
                         ? attempt.cause()
                         : new ProviderNotAvailableException(attempt.failure());
+            }
+            failures.add(attempt.failure());
+            if (attempt.cause() != null) {
+                lastFailure = attempt.cause();
             }
         }
         // 最后一次底层异常挂为 cause，保留根因链
@@ -453,7 +454,25 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
 
     @Override
     public AuditResult submitAndWait(AuditRequest request) {
-        return ContentSafeTemplate.super.submitAndWait(request, pollInterval, pollTimeout);
+        Asserts.notNull(request, "request");
+        String taskId = submitAsync(request);
+        // 操作最懂自己云侧的排队与检测节奏：声明了建议轮询参数（如视频 30s/30min）
+        // 时覆盖模板默认，避免通用短间隔造成查询风暴、短超时造成误抛。声明值须为正数
+        // 才生效；未声明时维持模板配置（starter 接线 content.safe.defaults.async.*）
+        AuditTask task = taskStore.find(taskId)
+                .orElseThrow(() -> new InvalidRequestException("unknown taskId: " + taskId));
+        Duration interval = pollInterval;
+        Duration timeout = pollTimeout;
+        AuditOperation operation = findAsyncQueryOperation(task);
+        Duration suggestedInterval = operation.capabilities().suggestedPollInterval();
+        Duration suggestedTimeout = operation.capabilities().suggestedPollTimeout();
+        if (suggestedInterval != null && !suggestedInterval.isNegative() && !suggestedInterval.isZero()) {
+            interval = suggestedInterval;
+        }
+        if (suggestedTimeout != null && !suggestedTimeout.isNegative() && !suggestedTimeout.isZero()) {
+            timeout = suggestedTimeout;
+        }
+        return queryUntilFinal(taskId, interval, timeout);
     }
 
     @Override

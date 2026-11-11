@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.model;
 
+import java.time.Duration;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -34,10 +35,39 @@ public record AuditCapabilities(
         boolean maskResult,
         int maxBatchSize,
         long maxUrlSize,
-        long maxBase64Size) {
+        long maxBase64Size,
+        Duration suggestedPollInterval,
+        Duration suggestedPollTimeout) {
 
     public AuditCapabilities {
         contentTypes = contentTypes == null ? Set.of() : Set.copyOf(contentTypes);
+    }
+
+    /**
+     * 1.1.x 形状的兼容构造器：不声明轮询建议（等价于两个建议字段为 null）。
+     * 历史调用方（含 1.0.0/1.1.0 直接使用规范构造器的代码）无需改动
+     */
+    public AuditCapabilities(Set<ContentType> contentTypes,
+                             boolean sync,
+                             boolean asyncQuery,
+                             boolean asyncCallback,
+                             boolean batch,
+                             boolean url,
+                             boolean base64,
+                             boolean bytes,
+                             boolean objectKey,
+                             boolean ocr,
+                             boolean aigcDetect,
+                             boolean faceDetect,
+                             boolean customList,
+                             boolean manualReview,
+                             boolean maskResult,
+                             int maxBatchSize,
+                             long maxUrlSize,
+                             long maxBase64Size) {
+        this(contentTypes, sync, asyncQuery, asyncCallback, batch, url, base64, bytes,
+                objectKey, ocr, aigcDetect, faceDetect, customList, manualReview, maskResult,
+                maxBatchSize, maxUrlSize, maxBase64Size, null, null);
     }
 
     /**
@@ -100,6 +130,8 @@ public record AuditCapabilities(
         private int maxBatchSize = 1;
         private long maxUrlSize;
         private long maxBase64Size;
+        private Duration suggestedPollInterval;
+        private Duration suggestedPollTimeout;
 
         private Builder() {
         }
@@ -200,6 +232,32 @@ public record AuditCapabilities(
         }
 
         /**
+         * 声明异步操作的建议轮询间隔：操作最懂自己云侧的排队与检测节奏（如视频普遍
+         * 分钟级、官方建议低频轮询）。非 null 且为正数时，模板单参
+         * {@code submitAndWait(request)} 会优先采用，仅异步操作有意义，同步操作声明无效
+         *
+         * @param suggestedPollInterval 建议轮询间隔，null 表示不声明（用模板默认值）
+         * @return 构建器
+         */
+        public Builder suggestedPollInterval(Duration suggestedPollInterval) {
+            this.suggestedPollInterval = suggestedPollInterval;
+            return this;
+        }
+
+        /**
+         * 声明异步操作的建议等待超时：应与操作的结果保留期和典型完成时长匹配
+         * （超时后任务仍在，可继续 {@code query}）。非 null 且为正数时，
+         * 模板单参 {@code submitAndWait(request)} 会优先采用，仅异步操作有意义
+         *
+         * @param suggestedPollTimeout 建议等待超时，null 表示不声明（用模板默认值）
+         * @return 构建器
+         */
+        public Builder suggestedPollTimeout(Duration suggestedPollTimeout) {
+            this.suggestedPollTimeout = suggestedPollTimeout;
+            return this;
+        }
+
+        /**
          * 构建不可变的 {@link AuditCapabilities}
          *
          * @return 能力声明实例
@@ -207,7 +265,8 @@ public record AuditCapabilities(
         public AuditCapabilities build() {
             return new AuditCapabilities(contentTypes, sync, asyncQuery, asyncCallback, batch,
                     url, base64, bytes, objectKey, ocr, aigcDetect, faceDetect, customList,
-                    manualReview, maskResult, maxBatchSize, maxUrlSize, maxBase64Size);
+                    manualReview, maskResult, maxBatchSize, maxUrlSize, maxBase64Size,
+                    suggestedPollInterval, suggestedPollTimeout);
         }
     }
 }

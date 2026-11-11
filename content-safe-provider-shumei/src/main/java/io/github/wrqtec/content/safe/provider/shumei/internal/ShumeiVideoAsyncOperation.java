@@ -67,6 +67,10 @@ public class ShumeiVideoAsyncOperation implements AuditOperation {
                 .url(true)
                 .asyncQuery(true)
                 .asyncCallback(true)
+                // 数美官方建议 30 秒查询间隔（来源见 provider-feature-matrix 视频行）；
+                // 超时取 30 分钟模块值，与典型视频完成时长匹配
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
                 .build();
     }
 

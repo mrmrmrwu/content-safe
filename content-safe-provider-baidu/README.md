@@ -31,6 +31,7 @@ suggestion 归一：`conclusionType` 1→PASS、2→REJECT、3→REVIEW、4→ER
 - 回调校验 `BaiduCallbackVerifier` 仅做结构校验（官方无签名机制）；
   `conclusionType` 缺省视为处理中。
 - 终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
+- 操作已声明建议轮询参数 30s 间隔 / 30 分钟超时：单参 submitAndWait 自动生效，无需显式三参。
 
 ## 配置
 

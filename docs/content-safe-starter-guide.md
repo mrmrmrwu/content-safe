@@ -229,8 +229,8 @@ content:
   safe:
     defaults:
       async:
-        poll-interval: 2s     # submitAndWait() 默认轮询间隔（仅适用图片/文本；视频请用三参重载 30s，见 §9.4）
-        poll-timeout: 5m      # submitAndWait() 默认等待超时（视频任务动辄超过 5 分钟，请用三参重载 30m）
+        poll-interval: 2s     # submitAndWait() 模板默认轮询间隔（操作声明了建议轮询值时被覆盖，如视频 30s）
+        poll-timeout: 5m      # submitAndWait() 模板默认等待超时（同上，视频操作声明 30m 覆盖）
         max-tasks: 10000      # 仅默认 InMemoryAuditTaskStore 生效：容量上限
         expire-after: 1h      # 任务过期时间（超限逐出最旧，读取时惰性过期）；长视频建议 2h~4h
 ```
@@ -435,9 +435,12 @@ String taskId = contentSafeTemplate.video("short_video", videoUrl);
 // 轮询：中间态 finalResult=false（suggestion 为空），终态 true 并迁移存储、发布事件
 AuditResult result = contentSafeTemplate.query(taskId);
 
-// 或一步到位阻塞等待——视频务必显式传 30s 间隔 / 30 分钟超时：
-// 默认 2s 间隔对视频是查询风暴（阿里建议 30s），默认 5 分钟必然误超时（排队+检测常超 5 分钟，
-// 且超时后云侧任务仍在运行，本地可凭返回的 taskId 继续 query）
+// 或一步到位阻塞等待——视频操作已声明建议轮询参数（30s 间隔 / 30 分钟超时，
+// 五家统一），单参 submitAndWait 自动按建议值覆盖模板默认：
+AuditResult waited = contentSafeTemplate.submitAndWait(
+        AuditRequest.video("short_video", ContentRef.url(videoUrl)));
+
+// 需要按业务改参数时仍可显式三参（显式值优先级最高）：
 AuditResult waited = contentSafeTemplate.submitAndWait(
         AuditRequest.video("short_video", ContentRef.url(videoUrl)),
         Duration.ofSeconds(30), Duration.ofMinutes(30));
@@ -445,6 +448,10 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 
 要点：
 
+- **视频轮询参数开箱即用（1.2.0+）**：五家视频操作的 `AuditCapabilities` 均声明了
+  `suggestedPollInterval(30s)` / `suggestedPollTimeout(30m)`，单参 `submitAndWait(request)`
+  自动采用（通用默认 2s 间隔对视频是查询风暴、5 分钟超时对排队+检测必误抛）；操作未声明
+  建议值（如图片异步）时维持模板配置 `poll-interval`/`poll-timeout`；
 - 内置场景 `short_video`（VIDEO 类型）；回调接入与 §9.2 完全一致；
 - **中间态判空**：轮询中间态 `finalResult=false` 且 `suggestion=null`——直接
   `switch (result.suggestion())` 会 NPE，消费方必须以 `finalResult` 门控或先判空；

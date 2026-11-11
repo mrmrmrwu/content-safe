@@ -88,6 +88,9 @@ public class TencentVideoAsyncOperation implements AuditOperation {
                 .url(true)
                 .asyncQuery(true)
                 .asyncCallback(callbackUrl != null && !callbackUrl.isBlank())
+                // 腾讯官方未公开建议轮询值，取平台统一保守值（30s 间隔/30 分钟超时）
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
                 .build();
     }
 

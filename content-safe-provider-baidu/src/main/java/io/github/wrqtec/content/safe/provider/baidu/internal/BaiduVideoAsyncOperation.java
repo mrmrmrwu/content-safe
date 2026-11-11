@@ -63,6 +63,10 @@ public class BaiduVideoAsyncOperation implements AuditOperation {
                 .url(true)
                 .asyncQuery(true)
                 .asyncCallback(noticeUrl != null && !noticeUrl.isBlank())
+                // 百度官方建议 30 秒拉取间隔（来源见 provider-feature-matrix 视频行）；
+                // 超时取 30 分钟模块值（长视频上限 3 小时，超时后任务仍在可继续 pull）
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
                 .build();
     }
 

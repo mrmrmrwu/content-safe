@@ -50,6 +50,7 @@ content:
 保守推断为处理中；官方未公开中间态语义。命中（帧/音频切片）`hit.raw` 仅含
 `{offset, sliceId}` 与命中词；`asyncCallback` 恒 false（官方无推送回调）。
 终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
+- 操作已声明建议轮询参数 30s 间隔 / 30 分钟超时：单参 submitAndWait 自动生效，无需显式三参。
 
 ## 注意
 

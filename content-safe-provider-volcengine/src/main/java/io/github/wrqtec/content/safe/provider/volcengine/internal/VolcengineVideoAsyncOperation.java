@@ -65,6 +65,9 @@ public class VolcengineVideoAsyncOperation implements AuditOperation {
                 .contentTypes(ContentType.VIDEO)
                 .url(true)
                 .asyncQuery(true)
+                // 火山官方未公开建议轮询值，取平台统一保守值（30s 间隔/30 分钟超时）
+                .suggestedPollInterval(Duration.ofSeconds(30))
+                .suggestedPollTimeout(Duration.ofMinutes(30))
                 .build();
     }
 

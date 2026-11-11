@@ -196,9 +196,12 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 - **视频命中截断（1.2.0+，全供应商统一）**：视频终态 hits 按 confidence 降序最多保留 50 条
   （`RiskHitCaps.DEFAULT_VIDEO_LIMIT`），截断时 `raw.truncated=true`、`raw.totalHits`=原始命中数；
   建议（PASS/REVIEW/REJECT）在截断前推导不受影响；文本/图片同步路径不截断。
-- **轮询参数（视频）**：`submitAndWait` 默认 2s/5m 仅适用图片——视频请用三参重载
-  `submitAndWait(request, Duration.ofSeconds(30), Duration.ofMinutes(30))`（阿里官方建议 30s 间隔；
-  任务保留期见各家表，`expire-after` 建议同步加长到 2h~4h）。
+- **轮询参数（1.2.0+，视频开箱即用）**：五家视频操作在 `AuditCapabilities` 声明建议轮询参数
+  `suggestedPollInterval(30s)` / `suggestedPollTimeout(30m)`，单参 `submitAndWait(request)`
+  自动按建议值覆盖模板默认（2s/5m 仅是图片量级的模板回退值）；操作未声明建议值时维持模板配置。
+  建议值来源——阿里/百度/数美为官方建议的 30 秒轮询间隔，腾讯/火山官方未公开建议值、
+  取平台统一保守值（javadoc 已注明）；超时统一 30 分钟模块值（长视频业务可显式三参覆盖，
+  `expire-after` 建议同步加长到 2h~4h）。
 - 回调：HTTP 回调打向业务侧地址，业务侧转交 `template.handleCallback(provider, headers, rawBody)`；
   core 按 provider 索引 `CallbackVerifier` 验签，失败抛 `CallbackVerifyException` 并发死信事件；
   通过后归一 `AuditResult` 并按 ref（providerTaskId，空白时按 dataId 反查）迁移任务终态。

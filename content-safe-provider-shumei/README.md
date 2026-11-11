@@ -75,6 +75,7 @@ content:
 - 截帧能力须显式开启：`extra.screenshot-type`（默认 0）；场景 ext 的 `imgType`/`audioType`
   等键并入请求 data。命中含截帧与语音段两类 hit（`hit.raw` 带 `kind=frame/audio` 与
   `riskSource`；帧图 URL、音频 URL、语音转写原文不透传）。终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
+- 操作已声明建议轮询参数 30s 间隔 / 30 分钟超时：单参 submitAndWait 自动生效，无需显式三参。
 - 回调与查询响应同构（`auxInfo.frameDetail/audioDetail`），地址在数美控制台配置，
   校验同上（结构校验、无签名）。
 
