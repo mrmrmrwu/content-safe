@@ -101,7 +101,7 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
         Asserts.notBlank(taskId, "taskId");
         FormBody form = new FormBody()
                 .put("taskId", taskId)
-                .putIfNotBlank("subEvents", BaiduProviderConstants.PULL_SUB_EVENTS_ALL);
+                .putIfNotBlank("subEvents", BaiduProviderConstants.SUB_EVENTS_ALL);
         BaiduVideoPullResponse response = send(
                 videoPullUri, form, tokenManager.getToken(), BaiduVideoPullResponse.class, "video");
         return BaiduErrorMapper.assertVideoSuccess(response);

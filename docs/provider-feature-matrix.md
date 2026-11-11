@@ -80,7 +80,7 @@ BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code 
 | access_token 管理 | ✅ | client_credentials 本地缓存（30 天，提前 5 分钟刷新）；110/111 错误自动失效重取并重试一次 |
 | 批量审核 | ❌ | 单次单条 |
 | 异步查询 / 回调 | ❌ | v2 文本/图片接口为同步模型（长视频审核走独立 solution 接口，见下行） |
-| 长视频审核（video_censor submit/pull，1.2.0） | ✅ | 仅公网 URL（≤3h/≤2G）；extId=业务 dataId 作幂等键（appId+extId 组合唯一，重复提交报 282005）；拉取固定 subEvents=1,2,3,4（官方默认 2,3 会漏合规结论）；conclusionType 缺省=处理中、4=审核失败；帧/语音命中归一 RiskHit（帧截图 URL、语音转写原文丢弃）；可选回调：extra `notice-url` 配置时 asyncCallback=true，回调 POST 业务地址且官方无签名机制（BaiduCallbackVerifier 仅结构校验）（来源：cloud.baidu.com 文档 jksy7j3jv/Pksy7jxr2/8ksy7dc4b，查阅日期 2026-11-11） |
+| 长视频审核（video_censor submit/pull，1.2.0） | ✅ | 仅公网 URL（≤3h/≤2G）；extId=业务 dataId 作幂等键（appId+extId 组合唯一，重复提交报 282005，dataId 空白在提交前 fail-fast）；拉取固定 subEvents=1,2,3,4（官方默认 2,3 会漏合规结论）；conclusionType 缺省=处理中、4=审核失败；帧/语音命中归一 RiskHit（帧截图 URL、语音转写原文丢弃）；可选回调：extra `notice-url` 配置时 asyncCallback=true，官方默认只推 2,3（违规/疑似）——PASS 任务永远等不到回调，模块自动兜底 sub-events=1,2,3,4（与拉取口径一致），显式 extra `sub-events` 原样透传；回调 POST 业务地址且官方无签名机制（BaiduCallbackVerifier 仅结构校验）（来源：cloud.baidu.com 文档 jksy7j3jv/Pksy7jxr2/8ksy7dc4b，查阅日期 2026-11-11） |
 | GIF 动图 | ⏳ | `imgType=1` 参数未透传（按静态图处理） |
 | suggestion 映射 | ✅ | conclusionType 1→PASS、2→REJECT、3→REVIEW、4→ERROR（审核失败是业务结论，ok 保持 true） |
 | 用户内容安全 | ✅ | 命中词 hits[].words 进 `hit.evidence`（由 core EvidenceRedactor 脱敏）；`raw` 只放 `{log_id}` |

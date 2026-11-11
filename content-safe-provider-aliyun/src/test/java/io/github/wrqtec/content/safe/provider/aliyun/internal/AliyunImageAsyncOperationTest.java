@@ -11,6 +11,7 @@ import io.github.wrqtec.content.safe.api.CallbackRequest;
 import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
@@ -176,6 +177,8 @@ class AliyunImageAsyncOperationTest {
         assertThat(result.ok()).isTrue();
         assertThat(result.finalResult()).isFalse();
         assertThat(result.suggestion()).isNull();
+        // 处理中结果由轮询查询产生，来源必须是 ASYNC_QUERY
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_QUERY);
         assertThat(result.requestId()).isEqualTo("r-9");
     }
 

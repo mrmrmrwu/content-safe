@@ -109,14 +109,16 @@ public class ShumeiImageAsyncOperation implements AuditOperation {
     public AuditResult query(AsyncTaskRef ref) {
         Asserts.notNull(ref, "ref");
         Asserts.notBlank(ref.providerTaskId(), "ref.providerTaskId");
+        long startNanos = System.nanoTime();
         try {
             ShumeiAsyncQueryResponse response = client.imageAsyncQuery(List.of(ref.providerTaskId()));
             List<ShumeiSyncResponse> contents = response.getContents();
             if (contents == null || contents.isEmpty() || contents.get(0) == null) {
                 return inProgress(ref);
             }
+            Duration cost = Duration.ofNanos(System.nanoTime() - startNanos);
             return normalizer.normalizeQuery(contents.get(0),
-                    ShumeiAuditResultNormalizer.context(plan, ref.dataId(), Duration.ZERO));
+                    ShumeiAuditResultNormalizer.context(plan, ref.dataId(), cost));
         } catch (ContentSafeException e) {
             throw e;
         } catch (Exception e) {

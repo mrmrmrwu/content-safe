@@ -14,10 +14,11 @@
 | --- | --- |
 | 文本同步检测（TextRisk） | ✅ 经场景 ext 透传参数 |
 | 图片同步检测（ImageContentRiskV2） | ✅ URL / base64 / bytes 三通道 |
+| 视频异步检测（AsyncVideoRisk / VideoResult，Version 2021-11-29） | ✅ 仅 URL，轮询，无推送回调 |
 | 决策归一 | ✅ `pass→PASS` / `suspect→REVIEW` / `reject→REJECT`，缺失/未知保守回退 REVIEW |
 | 命中证据 | ✅ 命中词进 `hit.raw.matchedWords`（文本）/ 命中详情进 `hit.raw`（图片） |
 | OCR / 截帧 URL | ❌ 判用户内容原文，整体丢弃不透传 |
-| 批量 / 异步 / 回调 | ❌ 同步模型 |
+| 批量 / 回调 | ❌ 不支持 |
 
 ## 配置
 
@@ -37,7 +38,17 @@ content:
           app-id: "123456"               # 必填：火山控制台 AppId，缺失启动即失败
           # parameters-text-key: content     # 可选：文本内容在 Parameters 中的键名，默认 content
           # parameters-image-key: image      # 可选：图片内容键名，默认 image
+          # parameters-video-key: videoUrl   # 视频场景必填：视频 URL 键名，缺失装配期即失败
+          # parameters-video-data-id-key: dataId   # 可选：视频任务关联键名，默认 dataId
 ```
+
+## 视频异步
+
+`AsyncVideoRisk` 提交 / `VideoResult` 轮询（均 Version 2021-11-29）。提交仅回执无任务句柄，
+关联键=业务 `dataId`（随 Parameters 提交，键名经 `parameters-video-data-id-key` 可配）；
+视频 URL 键（`parameters-video-key`）必配，缺失装配期 fail-fast。查询响应缺 data 时
+保守推断为处理中；官方未公开中间态语义。命中（帧/音频切片）`hit.raw` 仅含
+`{offset, sliceId}` 与命中词；`asyncCallback` 恒 false（官方无推送回调）。
 
 ## 注意
 

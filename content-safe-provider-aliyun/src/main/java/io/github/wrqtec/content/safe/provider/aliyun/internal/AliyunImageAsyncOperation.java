@@ -205,7 +205,7 @@ public class AliyunImageAsyncOperation implements AuditOperation {
                 .ok(true)
                 .suggestion(null)
                 .finalResult(false)
-                .source(AuditSource.SYNC)
+                .source(AuditSource.ASYNC_QUERY)
                 .provider(AliyunProviderConstants.PROVIDER)
                 .product(AliyunProviderConstants.PRODUCT)
                 .service(plan.service())

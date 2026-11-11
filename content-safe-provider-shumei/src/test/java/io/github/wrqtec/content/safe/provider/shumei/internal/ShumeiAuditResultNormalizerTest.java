@@ -176,6 +176,28 @@ class ShumeiAuditResultNormalizerTest {
     }
 
     @Test
+    void videoHitsSkipNullListElements() {
+        // Gson 可反序列化出含 null 元素的数组（[null, {...}]），归一化必须跳过而不是 NPE
+        ShumeiVideoQueryResponse response = GSON.fromJson(
+                "{\"code\":1100,\"requestId\":\"req-null-guard\",\"riskLevel\":null,\"auxInfo\":{"
+                        + "\"frameDetail\":[null,"
+                        + "{\"riskLevel\":\"REJECT\",\"riskLabel1\":\"polity\",\"allLabels\":[null,"
+                        + "{\"probability\":0.97,\"riskLevel\":\"REJECT\",\"riskLabel1\":\"polity\","
+                        + "\"riskLabel2\":\"politician\"}]},"
+                        + "{\"riskLevel\":\"PASS\"}],"
+                        + "\"audioDetail\":[null,{\"riskLevel\":\"REVIEW\",\"riskLabel1\":\"ad\"}]}}",
+                ShumeiVideoQueryResponse.class);
+        AuditResult result = normalizer.normalizeVideoQuery(response, context("video", "data-x"));
+
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REVIEW);
+        assertThat(result.hits()).hasSize(2);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("polity/politician");
+        assertThat(result.hits().get(0).raw()).containsEntry("kind", "frame");
+        assertThat(result.hits().get(1).labelPath()).isEqualTo("ad");
+        assertThat(result.hits().get(1).raw()).containsEntry("kind", "audio");
+    }
+
+    @Test
     void unexpectedRawTypeThrows() {
         assertThatThrownBy(() -> normalizer.normalize(new Object(), context("text", null)))
                 .isInstanceOf(ProviderCallException.class);

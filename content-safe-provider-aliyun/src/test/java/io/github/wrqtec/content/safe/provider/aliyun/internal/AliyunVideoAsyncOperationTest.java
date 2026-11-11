@@ -8,6 +8,7 @@ import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
@@ -122,6 +123,8 @@ class AliyunVideoAsyncOperationTest {
         assertThat(result.ok()).isTrue();
         assertThat(result.suggestion()).isNull();
         assertThat(result.finalResult()).isFalse();
+        // 处理中结果由轮询查询产生，来源必须是 ASYNC_QUERY
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_QUERY);
         assertThat(result.raw()).containsEntry("code", 280).containsEntry("requestId", "req-d-1");
     }
 

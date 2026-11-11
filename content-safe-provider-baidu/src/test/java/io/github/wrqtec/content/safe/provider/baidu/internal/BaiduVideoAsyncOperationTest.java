@@ -93,6 +93,18 @@ class BaiduVideoAsyncOperationTest {
     }
 
     @Test
+    void submitAsyncRequiresDataIdAsExtId() {
+        AuditRequest request = AuditRequest.builder()
+                .scene("short_video").type(ContentType.VIDEO)
+                .content(ContentRef.url("https://media.example.com/demo.mp4"))
+                .build();
+
+        assertThatThrownBy(() -> operation.submitAsync(request))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("dataId");
+    }
+
+    @Test
     void submitAsyncAssemblesParamsAndReturnsRef() {
         BaiduVideoSubmitResponse response = new BaiduVideoSubmitResponse();
         response.setRet("0");

@@ -225,7 +225,7 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
         }
     }
 
-    /** 截帧分段命中（HitFlag=1）；截图地址 Url 不透传 */
+    /** 截帧分段命中（HitFlag=1），Label/SubLabel 全路径；截图地址 Url 不透传 */
     private void appendImageSegmentHits(List<RiskHit> hits, ImageSegments[] segments) {
         if (segments == null) {
             return;
@@ -236,7 +236,7 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
                     || PASS_LABEL.equals(result.getLabel())) {
                 continue;
             }
-            List<String> labelPath = labelPathOf(result.getLabel(), null);
+            List<String> labelPath = labelPathOf(result.getLabel(), result.getSubLabel());
             if (labelPath.isEmpty()) {
                 continue;
             }

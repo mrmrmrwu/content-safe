@@ -1,6 +1,7 @@
 # content-safe-provider-tencent
 
-腾讯云内容安全适配模块：文本 TMS `TextModeration` + 图片 IMS `ImageModeration` 同步审核（API 版本均 2020-12-29）。
+腾讯云内容安全适配模块：文本 TMS `TextModeration` + 图片 IMS `ImageModeration` 同步审核（API 版本均 2020-12-29）
++ 视频 VM `CreateVideoModerationTask`/`DescribeTaskDetail` 异步审核（API 版本 2021-09-22）。
 
 ## 引入
 
@@ -48,6 +49,13 @@ content:
   配置 `extra.callback-url` 后自动注册异步操作；提交时请求**必须携带业务侧 `dataId`**
   （回调报文无任务 ID，按 dataId 关联任务）；官方回调**无签名机制**，
   `TencentCallbackVerifier` 仅做结构校验，防伪须依赖回调接收侧 IP 白名单等业务手段；限频 20QPS。
+- **视频异步**（VM，仅 URL）：`scenes` 中把 VIDEO 场景映射到 BizType 即注册视频操作，
+  `submitAsync` 返回 `taskId`（`DescribeTaskDetail` 轮询，建议 30 秒间隔）。
+  `Status=PENDING/RUNNING` 为处理中、`FINISH` 终态、`ERROR/CANCELLED` 抛 `ProviderCallException`
+  （消息仅含 errorType + 脱敏后的 errorDescription）。终态命中含任务级标签、音频段与截帧段三类 hit
+  （`labelPath=Label/SubLabel`，`hit.raw.offsetTime` 标记偏移；音频转写原文、片段/截帧地址、
+  HitSnippetInfo 均不透传）。可选 `extra.callback-url`（+ `callback-seed`）配置后回调推送与
+  查询响应同构，同样按 `TaskId`（缺失回退 `DataId`）关联。
 
 ## 能力声明
 

@@ -52,6 +52,7 @@
       "Result": {
         "HitFlag": 1,
         "Label": "Teenager",
+        "SubLabel": "TeenGraffiti",
         "Score": 95,
         "Suggestion": "Review",
         "Url": "https://cos.example.com/frame-001.jpg"

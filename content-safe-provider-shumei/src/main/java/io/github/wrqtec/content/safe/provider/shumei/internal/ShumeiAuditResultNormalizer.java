@@ -150,6 +150,9 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
         List<RiskHit> hits = new ArrayList<>();
         if (auxInfo.getFrameDetail() != null) {
             for (ShumeiVideoQueryResponse.FrameDetail detail : auxInfo.getFrameDetail()) {
+                if (detail == null) {
+                    continue;
+                }
                 appendVideoDetailHits(hits, detail.getRiskLevel(), detail.getRiskLabel1(),
                         detail.getRiskLabel2(), detail.getRiskLabel3(), detail.getAllLabels(),
                         detail.getRiskDetail(), "frame");
@@ -157,6 +160,9 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
         }
         if (auxInfo.getAudioDetail() != null) {
             for (ShumeiVideoQueryResponse.AudioDetail detail : auxInfo.getAudioDetail()) {
+                if (detail == null) {
+                    continue;
+                }
                 appendVideoDetailHits(hits, detail.getRiskLevel(), detail.getRiskLabel1(),
                         detail.getRiskLabel2(), detail.getRiskLabel3(), detail.getAllLabels(),
                         detail.getRiskDetail(), "audio");
@@ -174,7 +180,7 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
         }
         if (allLabels != null && !allLabels.isEmpty()) {
             for (ShumeiSyncResponse.LabelEntry entry : allLabels) {
-                if ("PASS".equalsIgnoreCase(entry.getRiskLevel())) {
+                if (entry == null || "PASS".equalsIgnoreCase(entry.getRiskLevel())) {
                     continue;
                 }
                 hits.add(videoHitOf(entry.getRiskLevel(),

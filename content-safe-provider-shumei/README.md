@@ -1,6 +1,6 @@
 # content-safe-provider-shumei
 
-数美天净（Shumei）内容安全接入：文本 / 图片同步检测（text/v4、image/v4）。
+数美天净（Shumei）内容安全接入：文本 / 图片同步检测（text/v4、image/v4）与视频异步检测（video/v4）。
 
 **无官方现代 Java SDK**，本模块内置自研 HTTP 客户端（JDK `HttpClient` + Gson，均为
 optional 依赖，不进入使用方编译期传递依赖）。
@@ -15,6 +15,7 @@ optional 依赖，不进入使用方编译期传递依赖）。
 | region | ✅ 默认 `sh`；文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp；extra 可整体覆盖地址 |
 | 动图截帧（interval/maxFrame） | ✅ 经场景 ext 传入（maxFrame 官方上限 20） |
 | 图片异步（轮询 + 回调） | ✅ 提交 `/v4/saas/async/img`（≤30MB），查询 `/v4/image/query` 按 requestId 轮询；回调地址在数美控制台配置（不经过本库） |
+| 视频异步（video/v4，仅 URL） | ✅ 提交回执 + `/video/query/v4` 按 btId 轮询，可选回调；截帧+语音段双通道 |
 | 批量 / 异步文本 | ❌ 数美文本域仅同步接口 |
 
 suggestion 归一：`riskLevel` PASS/REVIEW/REJECT（大小写不敏感）；
@@ -66,6 +67,16 @@ content:
 - **回调**：报文与同步 image/v4 响应同构，回调地址在数美控制台配置；官方**无签名机制**
   （HTTP 200 确认，否则按 [1,2,3,4,5,6,7,8] 秒重试 8 次），本模块 `ShumeiCallbackVerifier`
   仅做结构校验，防伪须依赖接收侧 IP 白名单等业务手段。
+
+### 视频异步（video/v4）
+
+- 仅接受 URL 内容；提交接口只回执（`btId` 关联，取业务 `dataId`，缺省自动生成 32 位无杠 UUID），
+  查询接口 `POST /video/query/v4`（`{accessKey, btId}`）；`code=1100` 有结论、`1101` 处理中。
+- 截帧能力须显式开启：`extra.screenshot-type`（默认 0）；场景 ext 的 `imgType`/`audioType`
+  等键并入请求 data。命中含截帧与语音段两类 hit（`hit.raw` 带 `kind=frame/audio` 与
+  `riskSource`；帧图 URL、音频 URL、语音转写原文不透传）。
+- 回调与查询响应同构（`auxInfo.frameDetail/audioDetail`），地址在数美控制台配置，
+  校验同上（结构校验、无签名）。
 
 ## 测试
 

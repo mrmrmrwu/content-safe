@@ -55,10 +55,12 @@ public final class BaiduProviderConstants {
     public static final String CODE_VIDEO_SUCCESS = "0";
 
     /**
-     * 拉取时请求的全部结论类型。官方默认 2,3（仅违规与疑似）——若不显式携带 1,4，
-     * 合规任务拉取不到结论，会表现为任务永远"处理中"
+     * 全部结论类型（1 合规 2 违规 3 疑似 4 审核失败），拉取与回调推送（提交参数
+     * subEvents）共用。官方默认 2,3（仅违规与疑似）——若不显式携带 1,4，
+     * 合规任务拉取不到结论，会表现为任务永远"处理中"；回调场景同理，PASS
+     * 任务永远等不到回调推送
      */
-    public static final String PULL_SUB_EVENTS_ALL = "1,2,3,4";
+    public static final String SUB_EVENTS_ALL = "1,2,3,4";
 
     /** extra 键：视频审核结果推送地址 noticeUrl（配置后启用回调能力位） */
     public static final String EXTRA_NOTICE_URL = "notice-url";

@@ -13,6 +13,7 @@ import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.exception.ContentSafeException;
+import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
@@ -88,6 +89,11 @@ public class BaiduVideoAsyncOperation implements AuditOperation {
             throw new UnsupportedContentException(
                     "baidu video censor supports url only, got "
                             + request.type() + "/" + request.content().type());
+        }
+        // extId（官方必填）= 业务 dataId，同时是提交幂等键，缺省无法自动生成（重复提交会复制云端任务）
+        if (request.dataId() == null || request.dataId().isBlank()) {
+            throw new InvalidRequestException(
+                    "baidu video censor requires a non-blank dataId (submitted as extId, the task idempotency key)");
         }
         try {
             BaiduVideoSubmitResponse response = client.videoSubmit(

@@ -142,7 +142,9 @@ class TencentAuditResultNormalizerContractTest {
         assertThat(result.hits().get(0).confidence()).isEqualTo(98.0);
         assertThat(result.hits().get(0).confidenceScale()).isEqualTo(ConfidenceScale.PERCENTAGE);
         assertThat(result.hits().get(1).raw()).containsEntry("offsetTime", "12");
-        assertThat(result.hits().get(2).labelPath()).isEqualTo("Teenager");
+        // 截帧分段命中：Label/SubLabel 全路径（与音频分段口径一致）
+        assertThat(result.hits().get(2).labelPath()).isEqualTo("Teenager/TeenGraffiti");
+        assertThat(result.hits().get(2).raw()).containsEntry("offsetTime", "5");
         // 脱敏红线：转写原文/片段地址/截帧地址/命中片段全部不透传
         String serialized = String.valueOf(result);
         assertThat(serialized).doesNotContain("加微信领福利");

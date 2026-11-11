@@ -69,6 +69,12 @@ public class BaiduAuditOperationProvider implements AuditOperationProvider {
         if (scene.type() == ContentType.VIDEO) {
             String noticeUrl = properties.getExtra().get(BaiduProviderConstants.EXTRA_NOTICE_URL);
             String subEvents = properties.getExtra().get(BaiduProviderConstants.EXTRA_SUB_EVENTS);
+            // 回调场景官方默认只推 2,3（违规/疑似），PASS 任务永远等不到回调而滞留处理中；
+            // 未显式配置时兜底为全量，与拉取路径口径一致
+            if (noticeUrl != null && !noticeUrl.isBlank()
+                    && (subEvents == null || subEvents.isBlank())) {
+                subEvents = BaiduProviderConstants.SUB_EVENTS_ALL;
+            }
             return List.of(new BaiduVideoAsyncOperation(
                     videoPlan(strategyId), noticeUrl, subEvents, client, normalizer));
         }

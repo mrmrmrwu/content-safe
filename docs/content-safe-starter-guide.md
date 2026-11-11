@@ -447,6 +447,11 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 - 各供应商视频支持面（轮询/回调模式、结果保留期、建议轮询间隔）见
   [provider-feature-matrix.md](provider-feature-matrix.md)——结果保留期各家不同（阿里视频 24 小时），
   轮询间隔典型 30 秒；
+- **百度回调场景注意**：官方回调默认只推送违规/疑似结论，合规（PASS）任务不会收到回调——
+  模块在配置了 `extra.notice-url` 且未显式指定时自动兜底 `sub-events=1,2,3,4`（全量结论），
+  与轮询口径一致；显式配置 `extra.sub-events` 则原样透传；
+- **百度视频 `dataId` 必填**：`appId+dataId` 是任务幂等键（重复提交报 282005），
+  模块不做自动生成兜底，未携带 dataId 的请求在提交前即失败（`InvalidRequestException`）；
 - **建议视频场景仲裁保持默认 OFF**：仲裁是多候选顺序全量采集，视频单价高会成倍放大审核成本；
 - 脱敏红线对视频同样生效：截帧图 URL、语音转写原文等用户内容不会进入结果与日志，
   `hit.raw` 只携带时间偏移、标签、置信度等元数据。

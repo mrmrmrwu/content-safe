@@ -5,9 +5,12 @@
 - SDK：`com.aliyun:green20220302:3.6.6`（`optional`，不进入使用方编译期传递依赖）。
 - 已实现：文本同步审核（TextModeration）、图片同步审核（ImageModeration，仅公网 URL）、
   图片异步审核（ImageAsyncModeration 提交 + DescribeImageModerationResult 轮询，仅 URL，
-  响应 code=280 为检测中间态）与回调验签（`AliyunCallbackVerifier`，SHA256(uid+seed+Content) 恒时比较）。
+  响应 code=280 为检测中间态）、视频异步审核（VideoModeration 提交 + VideoModerationResult 轮询，
+  仅 URL，code=280 检测中/288 排队中，结果保留 24 小时）与回调验签
+  （`AliyunCallbackVerifier`，SHA256(uid+seed+Content) 恒时比较）。
 - 异步回调配置：`extra.callback-url` / `callback-seed` / `callback-uid`（uid 须主账号 UID，
-  未配置时验签失败；seed 缺省回退全局 `content.safe.callback-secret`）。
+  未配置时验签失败；seed 缺省回退全局 `content.safe.callback-secret`）。图片异步可配回调；
+  视频暂不支持回调（`asyncCallback=false`，用轮询取结果）。
 - 未实现：OCR 等扩展 service（可经 `scenes` 映射直接试用，归一化按通用规则处理）。
 
 ## 使用
@@ -46,6 +49,13 @@ content:
 ```
 
 未映射的场景不会装配该供应商的 operation，由路由自动跳过（数据驱动，铁律 §9.2）。
+
+### 视频异步
+
+`scenes` 中把 VIDEO 场景映射到任意非空 serviceCode（阿里视频 Service 固定 `videoDetection`，
+模块内部写死），仅接受 URL 内容。提交返回 `taskId`（业务侧 `dataId` 作幂等关联键），
+建议 30 秒间隔轮询 `query()`；终态命中含截帧与语音段两类 hit（`hit.raw` 仅保留
+offset/timestamp/riskLevel 等元数据，截帧地址 `tempUrl` 与语音转写原文不透传）。
 
 ## 结构
 
