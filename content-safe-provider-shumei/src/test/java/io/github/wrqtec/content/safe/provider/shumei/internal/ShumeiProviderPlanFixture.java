@@ -29,6 +29,10 @@ final class ShumeiProviderPlanFixture {
         return ShumeiAuditOperationProvider.asyncPlan(eventId);
     }
 
+    static ProviderPlan videoPlan(String eventId) {
+        return ShumeiAuditOperationProvider.videoPlan(eventId);
+    }
+
     static AuditMode syncMode() {
         return AuditMode.SYNC;
     }

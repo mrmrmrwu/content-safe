@@ -1,0 +1,34 @@
+{
+  "code": 1100,
+  "message": "success",
+  "requestId": "req-video-cb-001",
+  "btId": "data-cb-001",
+  "riskLevel": "REJECT",
+  "auxInfo": {
+    "frameCount": 1,
+    "frameDetail": [
+      {
+        "imgUrl": "https://signed.example.com/cb-frame-001.jpg?sign=cc9988776655",
+        "requestId": "req-cb-frame-001",
+        "riskLevel": "REJECT",
+        "riskLabel1": "porn",
+        "riskDescription": "命中涉黄",
+        "allLabels": [
+          {
+            "probability": 0.95,
+            "riskLevel": "REJECT",
+            "riskLabel1": "porn",
+            "riskDescription": "命中涉黄",
+            "riskDetail": {
+              "riskSource": 1002
+            }
+          }
+        ],
+        "riskDetail": {
+          "riskSource": 1002
+        }
+      }
+    ],
+    "audioDetail": []
+  }
+}

@@ -73,6 +73,45 @@ public final class ShumeiProviderConstants {
     /** extra 键：图片接口地址整体覆盖 */
     public static final String EXTRA_IMAGE_BASE_URL = "image-base-url";
 
+    /** 视频文件检测操作名（提交接口） */
+    public static final String OPERATION_VIDEO_SUBMIT = "VideoSubmit";
+
+    /** 视频文件检测结果查询操作名 */
+    public static final String OPERATION_VIDEO_QUERY = "VideoQuery";
+
+    /** 视频文件提交路径（api-video-{region} 集群，官方文档 2026-11-11 调研） */
+    public static final String VIDEO_PATH = "/video/v4";
+
+    /** 视频文件结果主动查询路径 */
+    public static final String VIDEO_QUERY_PATH = "/video/query/v4";
+
+    /** 视频集群 host 前缀，完整地址形如 api-video-{region}.fengkongcloud.com */
+    public static final String VIDEO_HOST_PREFIX = "api-video-";
+
+    /** 视频处理中返回码（1100 成功；查询专属中间态） */
+    public static final int CODE_VIDEO_PROCESSING = 1101;
+
+    /** 默认视频画面识别类型：与图片检测缺省一致（涉政+色情+暴恐违禁+二维码+广告+图片文字违规） */
+    public static final String DEFAULT_VIDEO_IMG_TYPE = DEFAULT_IMAGE_TYPE;
+
+    /** 默认视频音频识别类型：涉政+色情+广告+违禁+暴恐+辱骂+广告法（官方 audioType 可选值组合） */
+    public static final String DEFAULT_VIDEO_AUDIO_TYPE = "POLITY_EROTIC_ADVERT_BAN_VIOLENT_DIRTY_ADLAW";
+
+    /** 默认截帧方式：0 按 detectFrequency 固定时间间隔截取（官方必传字段） */
+    public static final int DEFAULT_SCREENSHOT_TYPE = 0;
+
+    /** extra 键：视频画面识别类型覆盖 */
+    public static final String EXTRA_VIDEO_IMG_TYPE = "video-img-type";
+
+    /** extra 键：视频音频识别类型覆盖 */
+    public static final String EXTRA_VIDEO_AUDIO_TYPE = "video-audio-type";
+
+    /** extra 键：视频接口地址整体覆盖 */
+    public static final String EXTRA_VIDEO_BASE_URL = "video-base-url";
+
+    /** extra 键：截帧方式（0 固定间隔 / 1 高级 / 2 固定张数 / 3 关键帧，官方必传字段） */
+    public static final String EXTRA_SCREENSHOT_TYPE = "screenshot-type";
+
     /** extra 键：连接超时（毫秒） */
     public static final String EXTRA_CONNECT_TIMEOUT_MS = "connect-timeout-ms";
 

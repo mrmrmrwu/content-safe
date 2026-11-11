@@ -48,4 +48,29 @@ public interface ShumeiClientInvoker {
      * @return 响应 contents 与同步 image/v4 响应同构（按传入顺序对应）
      */
     ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds);
+
+    /**
+     * 视频文件检测提交（/video/v4，官方建议超时 7s）
+     *
+     * <p>提交响应仅回执 {@code code/message/requestId/btId}，无任务查询句柄——
+     * 任务关联键即请求体 {@code data.btId}（调用方装配，本接口原样回显）。
+     *
+     * @param eventId 与数美约定的事件标识
+     * @param imgType 画面识别监管类型（下划线组合，可空）
+     * @param audioType 音频识别监管类型（下划线组合，可空）
+     * @param data data 对象内容（btId/tokenId/url/screenshotType 等，由调用方装配）
+     * @return 提交回执（btId 为回显值）
+     */
+    ShumeiVideoQueryResponse videoSubmit(String eventId, String imgType, String audioType,
+                                         Map<String, Object> data);
+
+    /**
+     * 视频文件检测结果主动查询（/video/query/v4，官方建议 30s 间隔、近三天结果）
+     *
+     * <p>查询响应 1101=处理中为合法中间态，本方法不按成功码断言，由操作层分流。
+     *
+     * @param btId 提交时的客户侧请求唯一标识（任务关联键）
+     * @return 查询响应（含 riskLevel/auxInfo 或处理中标记）
+     */
+    ShumeiVideoQueryResponse videoQuery(String btId);
 }

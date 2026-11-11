@@ -43,6 +43,18 @@ class ShumeiAuditOperationProviderTest {
                 java.util.List<String> requestIds) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse videoSubmit(
+                String eventId, String imgType, String audioType, Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse videoQuery(
+                String btId) {
+            throw new UnsupportedOperationException();
+        }
     };
 
     @Test
@@ -92,12 +104,23 @@ class ShumeiAuditOperationProviderTest {
     }
 
     @Test
-    void typeMismatchReturnsNoOperations() {
+    void mappedVideoSceneReturnsVideoAsyncOperation() {
         ShumeiAuditOperationProvider provider = new ShumeiAuditOperationProvider(
-                properties(Map.of("media", "video")), NOOP_CLIENT);
+                properties(Map.of("short_video", "video")), NOOP_CLIENT);
 
-        assertThat(provider.operations(SceneDefinition.of("media", ContentType.VIDEO, Severity.LOW)))
-                .isEmpty();
+        assertThat(provider.operations(SceneDefinition.of("short_video", ContentType.VIDEO, Severity.LOW)))
+                .hasSize(1)
+                .first()
+                .satisfies(operation -> {
+                    assertThat(operation).isInstanceOf(
+                            io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoAsyncOperation.class);
+                    assertThat(operation.plan().operation()).isEqualTo("VideoSubmit");
+                    assertThat(operation.plan().service()).isEqualTo("video");
+                    assertThat(operation.plan().mode())
+                            .isEqualTo(io.github.wrqtec.content.safe.model.enums.AuditMode.ASYNC_QUERY);
+                    assertThat(operation.capabilities().asyncQuery()).isTrue();
+                    assertThat(operation.capabilities().asyncCallback()).isTrue();
+                });
     }
 
     @Test
@@ -105,7 +128,8 @@ class ShumeiAuditOperationProviderTest {
         ShumeiAuditOperationProvider provider = new ShumeiAuditOperationProvider(properties(Map.of()), NOOP_CLIENT);
 
         assertThat(provider.provider()).isEqualTo("shumei");
-        assertThat(provider.supportedTypes()).containsExactly(ContentType.TEXT, ContentType.IMAGE);
+        assertThat(provider.supportedTypes())
+                .containsExactly(ContentType.TEXT, ContentType.IMAGE, ContentType.VIDEO);
     }
 
     @Test

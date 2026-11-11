@@ -98,6 +98,42 @@ class ShumeiAuditResultNormalizerContractTest {
     }
 
     @Test
+    void videoQueryRejectMapsFrameAndAudioHits() {
+        ShumeiVideoQueryResponse response = loadVideo("video-query-reject.json");
+        AuditResult result = normalizer.normalizeVideoQuery(response,
+                ShumeiAuditResultNormalizer.context(ShumeiProviderPlanFixture.videoPlan("video"),
+                        "data-req-1", Duration.ofMillis(12)));
+
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.finalResult()).isTrue();
+        assertThat(result.source().name()).isEqualTo("ASYNC_QUERY");
+        assertThat(result.dataId()).isEqualTo("data-req-1");
+        assertThat(result.service()).isEqualTo("video");
+        assertThat(result.hits()).hasSize(2);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("polity/politician");
+        assertThat(result.hits().get(0).confidence()).isEqualTo(0.97D);
+        assertThat(result.hits().get(0).raw()).containsEntry("kind", "frame").containsEntry("riskSource", 1002);
+        assertThat(result.hits().get(1).labelPath()).isEqualTo("ad");
+        assertThat(result.hits().get(1).raw()).containsEntry("kind", "audio").containsEntry("riskSource", 1001);
+        // 签名帧 URL / 音频 URL / 语音转写原文不透传
+        assertThat(result.toString()).doesNotContain("signed.example.com").doesNotContain("语音转写原文");
+    }
+
+    @Test
+    void videoCallbackMapsAsCallbackSource() {
+        ShumeiVideoQueryResponse response = loadVideo("video-callback.json");
+        AuditResult result = normalizer.normalizeVideoCallback(response,
+                ShumeiAuditResultNormalizer.context(ShumeiProviderPlanFixture.videoPlan("video"),
+                        "data-cb-001", Duration.ZERO));
+
+        assertThat(result.source().name()).isEqualTo("ASYNC_CALLBACK");
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.hits()).hasSize(1);
+        assertThat(result.hits().get(0).labelPath()).isEqualTo("porn");
+        assertThat(result.requestId()).isEqualTo("req-video-cb-001");
+    }
+
+    @Test
     void errorQpsNotSuccess() {
         ShumeiSyncResponse response = load("error-qps.json");
 
@@ -116,6 +152,17 @@ class ShumeiAuditResultNormalizerContractTest {
                         .getResourceAsStream("/contracts/shumei/" + name),
                 StandardCharsets.UTF_8)) {
             return GSON.fromJson(reader, ShumeiSyncResponse.class);
+        } catch (IOException e) {
+            throw new IllegalStateException("load contract sample failed: " + name, e);
+        }
+    }
+
+    private static ShumeiVideoQueryResponse loadVideo(String name) {
+        try (Reader reader = new InputStreamReader(
+                ShumeiAuditResultNormalizerContractTest.class
+                        .getResourceAsStream("/contracts/shumei/" + name),
+                StandardCharsets.UTF_8)) {
+            return GSON.fromJson(reader, ShumeiVideoQueryResponse.class);
         } catch (IOException e) {
             throw new IllegalStateException("load contract sample failed: " + name, e);
         }

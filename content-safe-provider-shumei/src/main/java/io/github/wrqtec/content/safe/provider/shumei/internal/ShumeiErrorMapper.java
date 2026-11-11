@@ -61,6 +61,20 @@ public final class ShumeiErrorMapper {
     }
 
     /**
+     * 视频提交回执断言：返回码非 1100 → 抛 {@link ProviderCallException}
+     *
+     * <p>查询响应不走本断言：1101 处理中是合法中间态，由操作层分流。
+     */
+    public static ShumeiVideoQueryResponse assertVideoSuccess(ShumeiVideoQueryResponse response, String op) {
+        if (response.isSuccess()) {
+            return response;
+        }
+        throw new ProviderCallException(
+                "shumei " + op + " rejected: code=" + response.getCode()
+                        + " message=" + sanitize(response.getMessage()));
+    }
+
+    /**
      * 底层异常 → {@link ProviderCallException}（脱敏）
      */
     public static ProviderCallException fromException(Exception e) {

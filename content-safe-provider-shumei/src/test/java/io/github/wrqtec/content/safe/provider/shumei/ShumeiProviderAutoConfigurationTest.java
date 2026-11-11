@@ -156,6 +156,18 @@ class ShumeiProviderAutoConfigurationTest {
                     java.util.List<String> requestIds) {
                 return new io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiAsyncQueryResponse();
             }
+
+            @Override
+            public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse videoSubmit(
+                    String eventId, String imgType, String audioType, java.util.Map<String, Object> data) {
+                return new io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse();
+            }
+
+            @Override
+            public io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse videoQuery(
+                    String btId) {
+                return new io.github.wrqtec.content.safe.provider.shumei.internal.ShumeiVideoQueryResponse();
+            }
         };
 
         @Bean

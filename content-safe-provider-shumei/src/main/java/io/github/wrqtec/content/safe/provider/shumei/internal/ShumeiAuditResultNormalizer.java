@@ -32,6 +32,9 @@ import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
  *   <li>{@code riskDetail.riskSource}：1000 无风险/1001 文字风险/1002 视觉图片风险 → {@code hit.raw.riskSource}</li>
  *   <li>{@code riskDetail.matchedLists[].words[]}：命中关键词进 {@code hit.raw.matchedWords}；
  *       {@code riskSegments}（用户内容原文片段）与 {@code auxInfo}（filteredText/contactResult）整体丢弃</li>
+ *   <li>视频查询/回调：{@code auxInfo.frameDetail}（截帧）/ {@code audioDetail}（语音段）逐条 → hits
+ *       （{@code hit.raw.kind}=frame/audio）；{@code imgUrl}/{@code audioUrl}（签名 URL）与
+ *       {@code audioText}（语音转写原文）不透传</li>
  * </ul>
  *
  * @author L.David
@@ -92,6 +95,114 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
      */
     public AuditResult normalizeCallback(Object rawResponse, Map<String, Object> context) {
         return build(rawResponse, AuditSource.ASYNC_CALLBACK, context);
+    }
+
+    /**
+     * 视频查询结果归一（/video/query/v4 终态响应，code=1100；1101 中间态由操作层分流）
+     */
+    public AuditResult normalizeVideoQuery(ShumeiVideoQueryResponse response, Map<String, Object> context) {
+        return videoBuild(response, AuditSource.ASYNC_QUERY, context);
+    }
+
+    /**
+     * 视频回调报文归一（与查询响应同构）
+     */
+    public AuditResult normalizeVideoCallback(ShumeiVideoQueryResponse response, Map<String, Object> context) {
+        return videoBuild(response, AuditSource.ASYNC_CALLBACK, context);
+    }
+
+    private AuditResult videoBuild(ShumeiVideoQueryResponse response, AuditSource source,
+                                   Map<String, Object> context) {
+        List<RiskHit> hits = videoHitsOf(response.getAuxInfo());
+        // riskLevel 缺失时按命中兜底：无命中视为 PASS，有命中保守 REVIEW
+        RiskSuggestion suggestion = response.getRiskLevel() == null || response.getRiskLevel().isBlank()
+                ? (hits.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REVIEW)
+                : suggestionOf(response.getRiskLevel());
+        Map<String, Object> raw = new LinkedHashMap<>();
+        if (response.getCode() != null) {
+            raw.put("code", response.getCode());
+        }
+        return AuditResult.builder()
+                .ok(true)
+                .suggestion(suggestion)
+                .finalResult(true)
+                .source(source)
+                .provider(provider())
+                .product(ShumeiProviderConstants.PRODUCT)
+                .service((String) context.get(CONTEXT_EVENT_ID))
+                .dataId((String) context.get(CONTEXT_DATA_ID))
+                .cost((Duration) context.get(CONTEXT_COST))
+                .requestId(response.getRequestId())
+                .hits(hits)
+                .raw(raw)
+                .build();
+    }
+
+    /**
+     * 视频命中：auxInfo.frameDetail（截帧）/audioDetail（语音段）逐条映射；
+     * 帧粒度标签取 allLabels（含 probability），缺失时回退帧级 riskLabel1/2/3；
+     * imgUrl/audioUrl（签名 URL）与 audioText（语音转写原文）不透传
+     */
+    private static List<RiskHit> videoHitsOf(ShumeiVideoQueryResponse.AuxInfo auxInfo) {
+        if (auxInfo == null) {
+            return List.of();
+        }
+        List<RiskHit> hits = new ArrayList<>();
+        if (auxInfo.getFrameDetail() != null) {
+            for (ShumeiVideoQueryResponse.FrameDetail detail : auxInfo.getFrameDetail()) {
+                appendVideoDetailHits(hits, detail.getRiskLevel(), detail.getRiskLabel1(),
+                        detail.getRiskLabel2(), detail.getRiskLabel3(), detail.getAllLabels(),
+                        detail.getRiskDetail(), "frame");
+            }
+        }
+        if (auxInfo.getAudioDetail() != null) {
+            for (ShumeiVideoQueryResponse.AudioDetail detail : auxInfo.getAudioDetail()) {
+                appendVideoDetailHits(hits, detail.getRiskLevel(), detail.getRiskLabel1(),
+                        detail.getRiskLabel2(), detail.getRiskLabel3(), detail.getAllLabels(),
+                        detail.getRiskDetail(), "audio");
+            }
+        }
+        return hits;
+    }
+
+    private static void appendVideoDetailHits(List<RiskHit> hits, String riskLevel, String label1,
+                                              String label2, String label3,
+                                              List<ShumeiSyncResponse.LabelEntry> allLabels,
+                                              JsonObject riskDetail, String kind) {
+        if (riskLevel == null || "PASS".equalsIgnoreCase(riskLevel.trim())) {
+            return;
+        }
+        if (allLabels != null && !allLabels.isEmpty()) {
+            for (ShumeiSyncResponse.LabelEntry entry : allLabels) {
+                if ("PASS".equalsIgnoreCase(entry.getRiskLevel())) {
+                    continue;
+                }
+                hits.add(videoHitOf(entry.getRiskLevel(),
+                        entry.getRiskLabel1(), entry.getRiskLabel2(), entry.getRiskLabel3(),
+                        entry.getProbability(),
+                        entry.getRiskDetail() != null ? entry.getRiskDetail() : riskDetail, kind));
+            }
+            return;
+        }
+        if (label1 == null || label1.isBlank()) {
+            return;
+        }
+        hits.add(videoHitOf(riskLevel, label1, label2, label3, null, riskDetail, kind));
+    }
+
+    private static RiskHit videoHitOf(String riskLevel, String label1, String label2, String label3,
+                                      Double probability, JsonObject riskDetail, String kind) {
+        Map<String, Object> raw = hitRawOf(riskLevel, riskDetail);
+        raw.put("kind", kind);
+        return new RiskHit(
+                labelPathOf(label1, label2, label3),
+                labelsOf(label1, label2, label3),
+                probability,
+                probability == null ? null : ConfidenceScale.ZERO_TO_ONE,
+                HitSource.MACHINE,
+                null,
+                null,
+                raw);
     }
 
     private AuditResult build(Object rawResponse, AuditSource source, Map<String, Object> context) {

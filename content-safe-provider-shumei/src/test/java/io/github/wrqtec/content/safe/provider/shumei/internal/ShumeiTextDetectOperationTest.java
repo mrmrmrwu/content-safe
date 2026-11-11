@@ -193,6 +193,17 @@ class ShumeiTextDetectOperationTest {
             throw new UnsupportedOperationException();
         }
 
+        @Override
+        public ShumeiVideoQueryResponse videoSubmit(String eventId, String imgType, String audioType,
+                                                    Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ShumeiVideoQueryResponse videoQuery(String btId) {
+            throw new UnsupportedOperationException();
+        }
+
         private ShumeiSyncResponse doRespond() {
             if (failure != null) {
                 throw failure;

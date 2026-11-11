@@ -182,5 +182,16 @@ class ShumeiImageDetectOperationTest {
         public ShumeiAsyncQueryResponse imageAsyncQuery(List<String> requestIds) {
             throw new UnsupportedOperationException();
         }
+
+        @Override
+        public ShumeiVideoQueryResponse videoSubmit(String eventId, String imgType, String audioType,
+                                                    Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ShumeiVideoQueryResponse videoQuery(String btId) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

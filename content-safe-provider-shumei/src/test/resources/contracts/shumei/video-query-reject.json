@@ -1,0 +1,90 @@
+{
+  "code": 1100,
+  "message": "success",
+  "requestId": "req-video-query-001",
+  "btId": "data-req-1",
+  "riskLevel": "REJECT",
+  "auxInfo": {
+    "frameCount": 3,
+    "frameDetail": [
+      {
+        "imgUrl": "https://signed.example.com/frame-001.jpg?sign=zz9900112233",
+        "requestId": "req-frame-001",
+        "riskLevel": "REJECT",
+        "riskLabel1": "polity",
+        "riskLabel2": "politician",
+        "riskDescription": "命中涉政人物",
+        "allLabels": [
+          {
+            "probability": 0.97,
+            "riskLevel": "REJECT",
+            "riskLabel1": "polity",
+            "riskLabel2": "politician",
+            "riskDescription": "命中涉政人物",
+            "riskDetail": {
+              "riskSource": 1002,
+              "matchedLists": [
+                {
+                  "name": "涉政人物名单",
+                  "words": [
+                    {"word": "敏感词mm00112233", "position": [3, 4]}
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "riskDetail": {
+          "riskSource": 1002
+        }
+      },
+      {
+        "imgUrl": "https://signed.example.com/frame-002.jpg?sign=aa1122334455",
+        "requestId": "req-frame-002",
+        "riskLevel": "PASS",
+        "riskLabel1": "normal",
+        "riskDescription": "正常帧",
+        "allLabels": [
+          {
+            "probability": 0.01,
+            "riskLevel": "PASS",
+            "riskLabel1": "normal",
+            "riskDescription": "正常"
+          }
+        ]
+      }
+    ],
+    "audioDetail": [
+      {
+        "audioUrl": "https://signed.example.com/audio-001.mp3?sign=bb5566778899",
+        "requestId": "req-audio-001",
+        "audioText": "加个好友吧 qq12345 语音转写原文不应透传",
+        "riskLevel": "REVIEW",
+        "riskLabel1": "ad",
+        "riskDescription": "疑似广告",
+        "allLabels": [
+          {
+            "probability": 0.88,
+            "riskLevel": "REVIEW",
+            "riskLabel1": "ad",
+            "riskDescription": "疑似广告",
+            "riskDetail": {
+              "riskSource": 1001,
+              "matchedLists": [
+                {
+                  "name": "广告词名单",
+                  "words": [
+                    {"word": "qq12345", "position": [5, 6]}
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "riskDetail": {
+          "riskSource": 1001
+        }
+      }
+    ]
+  }
+}

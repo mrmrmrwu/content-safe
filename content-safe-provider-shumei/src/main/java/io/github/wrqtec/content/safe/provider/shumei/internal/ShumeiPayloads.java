@@ -21,9 +21,11 @@ import io.github.wrqtec.content.safe.model.SceneDefinition;
  */
 public final class ShumeiPayloads {
 
-    /** data 内保留键：场景 ext 撞名视为配置错误，fail-fast */
+    /** data 内保留键：场景 ext 撞名视为配置错误，fail-fast
+     * （url/btId/screenshotType 为视频检测必传字段，ext 撞名会破坏请求语义） */
     private static final java.util.Set<String> RESERVED_KEYS =
-            java.util.Set.of("text", "img", "tokenId", "dataId", "ip", "deviceId");
+            java.util.Set.of("text", "img", "url", "btId", "screenshotType",
+                    "tokenId", "dataId", "ip", "deviceId");
 
     private ShumeiPayloads() {
     }
@@ -77,6 +79,31 @@ public final class ShumeiPayloads {
             default -> throw new ConfigInvalidException(
                     "shumei image detect unsupported content ref type: " + image.type());
         };
+    }
+
+    /**
+     * 视频检测 data 对象：仅 URL 通道（视频入参只承诺 URL）。
+     * {@code btId}（官方必传，客户侧请求唯一标识）取业务 dataId——它同时是任务关联键，
+     * 提交/查询/回调三通道靠它对齐。截帧方式官方必传；detectFrequency/checkFrameCount/
+     * returnAllImg/returnAllAudio 等可选截帧参数经场景 ext 透传。
+     *
+     * @param url 视频 URL（公网可访问）
+     * @param tokenId 用户账号标识
+     * @param btId 客户侧请求唯一标识（任务关联键）
+     * @param ip 客户端公网 IP（可空）
+     * @param screenshotType 截帧方式（官方必传）
+     * @param scene 场景定义（ext 合并进 data，撞保留键 fail-fast）
+     */
+    public static Map<String, Object> videoData(String url, String tokenId, String btId,
+                                                String ip, int screenshotType, SceneDefinition scene) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("url", url);
+        data.put("btId", btId);
+        data.put("tokenId", tokenId);
+        data.put("screenshotType", screenshotType);
+        putIfNotBlank(data, "ip", ip);
+        mergeSceneExt(data, scene);
+        return data;
     }
 
     /**

@@ -38,6 +38,14 @@ public final class ShumeiLimits {
         return new OperationLimits(null, null, DEFAULT_TIMEOUT, 0L, 0L, false);
     }
 
+    /**
+     * 视频文件提交/查询（官方建议超时 7s，取 10s 余量；查询建议 30s 间隔、近三天结果；
+     * QPS 以与数美合同约定为准）
+     */
+    public static OperationLimits videoAsync() {
+        return new OperationLimits(null, null, Duration.ofSeconds(10), 0L, 0L, false);
+    }
+
     public static long maxTextChars() {
         return MAX_TEXT_CHARS;
     }

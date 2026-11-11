@@ -210,5 +210,16 @@ class ShumeiImageAsyncOperationTest {
             queryCalls.add(requestIds);
             return GSON.fromJson(queryJson, ShumeiAsyncQueryResponse.class);
         }
+
+        @Override
+        public ShumeiVideoQueryResponse videoSubmit(String eventId, String imgType, String audioType,
+                                                    Map<String, Object> data) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public ShumeiVideoQueryResponse videoQuery(String btId) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

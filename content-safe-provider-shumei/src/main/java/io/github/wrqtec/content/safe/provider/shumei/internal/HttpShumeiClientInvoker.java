@@ -38,6 +38,8 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     private static final String OP_DETECT = "detect";
     private static final String OP_ASYNC_SUBMIT = "async submit";
     private static final String OP_ASYNC_QUERY = "async query";
+    private static final String OP_VIDEO_SUBMIT = "video submit";
+    private static final String OP_VIDEO_QUERY = "video query";
 
     private final String accessKey;
     private final String appId;
@@ -45,13 +47,15 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     private final URI imageUri;
     private final URI imageAsyncUri;
     private final URI imageQueryUri;
+    private final URI videoUri;
+    private final URI videoQueryUri;
     private final HttpClient httpClient;
     private final Duration requestTimeout;
 
     /**
      * @param accessKey 数美接口认证密钥
      * @param appId 应用标识
-     * @param properties 供应商配置（region/text-base-url/image-base-url 已解析）
+     * @param properties 供应商配置（region/text-base-url/image-base-url/video-base-url 已解析）
      * @param connectTimeoutMs 连接超时毫秒
      * @param readTimeoutMs 读取超时毫秒
      */
@@ -64,6 +68,9 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         this.imageUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_PATH);
         this.imageAsyncUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_ASYNC_PATH);
         this.imageQueryUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_QUERY_PATH);
+        String videoAuthority = videoAuthorityOf(properties);
+        this.videoUri = URI.create(videoAuthority + ShumeiProviderConstants.VIDEO_PATH);
+        this.videoQueryUri = URI.create(videoAuthority + ShumeiProviderConstants.VIDEO_QUERY_PATH);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
                 .build();
@@ -113,6 +120,37 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         ShumeiAsyncQueryResponse parsed = post(imageQueryUri, body,
                 ShumeiAsyncQueryResponse.class, OP_ASYNC_QUERY);
         return ShumeiErrorMapper.assertSuccess(parsed, OP_ASYNC_QUERY);
+    }
+
+    @Override
+    public ShumeiVideoQueryResponse videoSubmit(String eventId, String imgType, String audioType,
+                                                Map<String, Object> data) {
+        Asserts.notBlank(eventId, "eventId");
+        Asserts.notNull(data, "data");
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("accessKey", accessKey);
+        envelope.put("appId", appId);
+        envelope.put("eventId", eventId);
+        if (imgType != null && !imgType.isBlank()) {
+            envelope.put("imgType", imgType);
+        }
+        if (audioType != null && !audioType.isBlank()) {
+            envelope.put("audioType", audioType);
+        }
+        envelope.put("data", data);
+        ShumeiVideoQueryResponse parsed = post(videoUri, envelope,
+                ShumeiVideoQueryResponse.class, OP_VIDEO_SUBMIT);
+        return ShumeiErrorMapper.assertVideoSuccess(parsed, OP_VIDEO_SUBMIT);
+    }
+
+    @Override
+    public ShumeiVideoQueryResponse videoQuery(String btId) {
+        Asserts.notBlank(btId, "btId");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("accessKey", accessKey);
+        body.put("btId", btId);
+        // 1101 处理中是合法中间态，不按成功码断言，由操作层分流
+        return post(videoQueryUri, body, ShumeiVideoQueryResponse.class, OP_VIDEO_QUERY);
     }
 
     private Map<String, Object> envelope(String eventId, String type, Map<String, Object> data) {
@@ -177,6 +215,20 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
             return uri.getScheme() + "://" + uri.getRawAuthority();
         }
         return "https://" + ShumeiProviderConstants.IMAGE_HOST_PREFIX + properties.getRegion()
+                + ShumeiProviderConstants.HOST_SUFFIX;
+    }
+
+    /**
+     * 视频域主机（含 scheme）：提交/查询共用 api-video-{region} 集群；
+     * video-base-url 整体覆盖时取其 scheme+authority 再拼查询路径
+     */
+    private static String videoAuthorityOf(ShumeiProviderProperties properties) {
+        String override = properties.extraValue(ShumeiProviderConstants.EXTRA_VIDEO_BASE_URL);
+        if (override != null) {
+            URI uri = URI.create(override);
+            return uri.getScheme() + "://" + uri.getRawAuthority();
+        }
+        return "https://" + ShumeiProviderConstants.VIDEO_HOST_PREFIX + properties.getRegion()
                 + ShumeiProviderConstants.HOST_SUFFIX;
     }
 }
