@@ -47,6 +47,11 @@ public interface ContentSafeTemplate {
      * 此类任务请以回调为准。超时抛 {@link ProviderCallException}，任务仍在，
      * 可后续继续 {@link #query(String)}
      *
+     * <p><b>视频任务请勿依赖本方法默认参数</b>：视频审核耗时分钟级且供应商普遍建议
+     * 低频轮询（如阿里云建议 30 秒），通用默认值（2s 间隔 / 5 分钟超时）会造成查询风暴
+     * 与误超时——请改用三参重载 {@link #submitAndWait(AuditRequest, Duration, Duration)}
+     * 显式指定（建议 30s / 30min，各供应商建议值见 provider-feature-matrix）</p>
+     *
      * @param request 统一审核请求
      * @return 终态审核结果
      */
@@ -96,10 +101,13 @@ public interface ContentSafeTemplate {
     }
 
     /**
-     * 查询异步任务结果；优先读任务存储，必要时回源供应商
+     * 查询异步任务结果；优先读任务存储，必要时回源供应商。
+     * 任务未完成时返回中间态结果：{@code finalResult=false} 且
+     * {@code suggestion} 为 {@code null}（消费方须以 {@code finalResult} 门控，
+     * 详见 {@link AuditResult} 的可空契约）
      *
      * @param taskId 本库统一任务 ID
-     * @return 归一化审核结果
+     * @return 归一化审核结果（中间态或终态）
      */
     AuditResult query(String taskId);
 

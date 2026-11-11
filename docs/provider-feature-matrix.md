@@ -192,14 +192,19 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
   同步 `audit()` 路由自动排除异步操作（互不干扰、不会误触发熔断）。
 - 提交与查询：`template.submitAsync(request)` → 内部 taskId（任务入 `AuditTaskStore`，PENDING）；
   `template.query(taskId)` 轮询终态——中间态返回 `finalResult=false` 的结果、任务保持 PENDING，终态迁移 SUCCEEDED 并发布事件。
+  中间态 `suggestion` 为 `null`（1.2.0 起成文），消费方必须以 `finalResult` 门控或判空。
+- **视频命中截断（1.2.0+，全供应商统一）**：视频终态 hits 按 confidence 降序最多保留 50 条
+  （`RiskHitCaps.DEFAULT_VIDEO_LIMIT`），截断时 `raw.truncated=true`、`raw.totalHits`=原始命中数；
+  建议（PASS/REVIEW/REJECT）在截断前推导不受影响；文本/图片同步路径不截断。
+- **轮询参数（视频）**：`submitAndWait` 默认 2s/5m 仅适用图片——视频请用三参重载
+  `submitAndWait(request, Duration.ofSeconds(30), Duration.ofMinutes(30))`（阿里官方建议 30s 间隔；
+  任务保留期见各家表，`expire-after` 建议同步加长到 2h~4h）。
 - 回调：HTTP 回调打向业务侧地址，业务侧转交 `template.handleCallback(provider, headers, rawBody)`；
   core 按 provider 索引 `CallbackVerifier` 验签，失败抛 `CallbackVerifyException` 并发死信事件；
   通过后归一 `AuditResult` 并按 ref（providerTaskId，空白时按 dataId 反查）迁移任务终态。
 - 供应商支持面：阿里图片（轮询+回调，SHA256 验签）、腾讯图片（仅回调推送，结构校验）、
   数美图片（轮询+回调，结构校验）；1.2.0 起视频域五家均异步（阿里轮询、腾讯轮询+可选回调、
   百度轮询+可选回调、数美轮询+控制台回调、火山仅轮询，见各家表）；文本域仍全部仅同步。
-
-### AIGC 检测开关（请求期）
 
 ### AIGC 检测开关（请求期）
 

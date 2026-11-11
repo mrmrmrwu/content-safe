@@ -56,6 +56,7 @@ content:
 模块内部写死），仅接受 URL 内容。提交返回 `taskId`（业务侧 `dataId` 作幂等关联键），
 建议 30 秒间隔轮询 `query()`；终态命中含截帧与语音段两类 hit（`hit.raw` 仅保留
 offset/timestamp/riskLevel 等元数据，截帧地址 `tempUrl` 与语音转写原文不透传）。
+终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
 
 ## 结构
 

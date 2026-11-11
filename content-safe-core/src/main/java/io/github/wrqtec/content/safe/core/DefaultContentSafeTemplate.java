@@ -226,8 +226,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
                 .filter(op -> op.supports(request))
                 .collect(Collectors.toCollection(ArrayList::new));
         if (remaining.isEmpty()) {
-            throw new ProviderNotAvailableException("no provider supports scene " + scene.code()
-                    + " for content " + request.content().type());
+            throw new ProviderNotAvailableException(describeNoProvider(scene, configured, request));
         }
 
         AuditArbitrationPolicy policy = arbitrationSelector == null
@@ -397,6 +396,21 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             return "";
         }
         return ": " + ErrorMessages.sanitize(message);
+    }
+
+    /**
+     * 同步路由空候选的原因说明：场景仅有异步操作时给出方法引导
+     * （audit() 不参与异步路由，业务应改走 submitAsync/query），其余维持原语义
+     */
+    private static String describeNoProvider(SceneDefinition scene, List<AuditOperation> configured,
+                                             AuditRequest request) {
+        boolean asyncOnly = configured.stream().allMatch(op ->
+                op.plan().mode() == AuditMode.ASYNC_QUERY || op.plan().mode() == AuditMode.ASYNC_CALLBACK);
+        if (asyncOnly) {
+            return "scene " + scene.code() + " has async-only operations; "
+                    + "use submitAsync/query instead of audit()";
+        }
+        return "no provider supports scene " + scene.code() + " for content " + request.content().type();
     }
 
     /**

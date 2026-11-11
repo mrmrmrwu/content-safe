@@ -23,6 +23,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
@@ -228,5 +229,28 @@ class VolcengineVideoAsyncOperationTest {
         } catch (IOException e) {
             throw new IllegalStateException("failed to load contract sample video-finish.json", e);
         }
+    }
+
+    @Test
+    void queryCapsVideoHitsWithTruncationFlags() throws Exception {
+        StringBuilder frames = new StringBuilder();
+        for (int i = 0; i < 60; i++) {
+            if (i > 0) {
+                frames.append(',');
+            }
+            frames.append("{\"offset\":").append(i).append(",\"SliceId\":\"slice-").append(i)
+                    .append("\",\"Decision\":\"reject\",\"results\":[{\"label\":\"porn\","
+                            + "\"subLabel\":\"s").append(i).append("\",\"decision\":\"reject\"}]}");
+        }
+        when(invoker.videoResult(any())).thenReturn(GSON.fromJson(
+                "{\"result\":{\"requestId\":\"req-cap\",\"code\":200,\"data\":{\"dataId\":\"d-cap\","
+                        + "\"decision\":\"reject\",\"videoResults\":{\"decision\":\"reject\","
+                        + "\"frames\":[" + frames + "]}}}}", VideoRiskResultResponse.class));
+
+        AuditResult result = operation().query(new AsyncTaskRef("data-req-1", "data-req-1"));
+
+        assertThat(result.hits()).hasSize(RiskHitCaps.DEFAULT_VIDEO_LIMIT);
+        assertThat(result.raw().get("truncated")).isEqualTo(Boolean.TRUE);
+        assertThat(result.raw().get("totalHits")).isEqualTo(60);
     }
 }

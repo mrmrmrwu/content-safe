@@ -217,6 +217,17 @@ class DefaultContentSafeTemplateTest {
     }
 
     @Test
+    void auditOnAsyncOnlySceneGuidesToSubmitAsync() {
+        DefaultContentSafeTemplate template = templateOf(
+                providerOf(asyncQueryStub("fake-a", 1, "textAsync", () -> { })));
+
+        ProviderNotAvailableException e = assertThrows(ProviderNotAvailableException.class,
+                () -> template.text(Scenes.NICKNAME, "t"));
+        assertTrue(e.getMessage().contains("async-only"), e.getMessage());
+        assertTrue(e.getMessage().contains("submitAsync"), e.getMessage());
+    }
+
+    @Test
     void failoverToNextProviderOnFailure() {
         StubOperation bad = new StubOperation("bad", 0);
         bad.failWith(new ProviderCallException("timeout"));

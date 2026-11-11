@@ -56,6 +56,7 @@ content:
   （`labelPath=Label/SubLabel`，`hit.raw.offsetTime` 标记偏移；音频转写原文、片段/截帧地址、
   HitSnippetInfo 均不透传）。可选 `extra.callback-url`（+ `callback-seed`）配置后回调推送与
   查询响应同构，同样按 `TaskId`（缺失回退 `DataId`）关联。
+终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
 
 ## 能力声明
 

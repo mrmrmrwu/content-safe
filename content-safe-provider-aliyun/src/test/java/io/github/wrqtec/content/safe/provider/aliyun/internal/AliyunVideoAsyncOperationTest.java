@@ -13,6 +13,7 @@ import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
@@ -177,5 +178,31 @@ class AliyunVideoAsyncOperationTest {
         assertThat(result.suggestion()).isEqualTo(RiskSuggestion.PASS);
         assertThat(result.pass()).isTrue();
         assertThat(result.requestId()).isEqualTo("req-video-pass-001");
+    }
+
+    @Test
+    void queryCapsVideoHitsWithTruncationFlags() throws Exception {
+        List<Map<String, Object>> frames = new java.util.ArrayList<>();
+        for (int i = 0; i < 60; i++) {
+            Map<String, Object> label = Map.of("Label", "porn", "Confidence", 90 + i);
+            Map<String, Object> resultItem = Map.of("Service", "videoDetection", "Result", List.of(label));
+            Map<String, Object> frame = Map.of("Offset", 12.5, "Timestamp", 12500 + i,
+                    "RiskLevel", "high", "Results", List.of(resultItem));
+            frames.add(frame);
+        }
+        Map<String, Object> frameResult = Map.of("RiskLevel", "high", "FrameNum", 60, "Frames", frames);
+        Map<String, Object> data = Map.of("TaskId", "task-cap", "DataId", "data-v-001",
+                "RiskLevel", "high", "FrameResult", frameResult);
+        Map<String, Object> sample = Map.of("code", 200, "message", "OK",
+                "requestId", "req-cap", "data", data);
+        var body = com.aliyun.tea.TeaModel.build(sample,
+                new com.aliyun.green20220302.models.VideoModerationResultResponseBody());
+        when(invoker.videoModerationResult(eq("videoDetection"), anyMap())).thenReturn(body);
+
+        AuditResult result = operation().query(ref());
+
+        assertThat(result.hits()).hasSize(RiskHitCaps.DEFAULT_VIDEO_LIMIT);
+        assertThat(result.raw().get("truncated")).isEqualTo(Boolean.TRUE);
+        assertThat(result.raw().get("totalHits")).isEqualTo(60);
     }
 }

@@ -25,6 +25,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.provider.baidu.BaiduAuditOperationProvider;
 import org.junit.jupiter.api.Test;
@@ -306,5 +307,27 @@ class BaiduVideoAsyncOperationTest {
         } catch (IOException e) {
             throw new UncheckedIOException("load contract sample failed: " + name, e);
         }
+    }
+
+    @Test
+    void queryCapsVideoHitsWithTruncationFlags() {
+        StringBuilder frames = new StringBuilder();
+        for (int i = 0; i < 60; i++) {
+            if (i > 0) {
+                frames.append(',');
+            }
+            frames.append("{\"frameTimeStamp\":").append(i)
+                    .append(",\"conclusionType\":2,\"data\":[{\"type\":43,\"subType\":430101,"
+                            + "\"probability\":0.9,\"hits\":[{\"words\":[\"w\"],\"probability\":0.8}]}]}");
+        }
+        String json = "{\"logId\":1,\"ret\":\"0\",\"msg\":\"success\",\"data\":{\"taskId\":900001,"
+                + "\"conclusionType\":2,\"frames\":[" + frames + "]}}";
+        when(client.videoPull("900001")).thenReturn(GSON.fromJson(json, BaiduVideoPullResponse.class));
+
+        AuditResult result = operation.query(new AsyncTaskRef("900001", "data-req"));
+
+        assertThat(result.hits()).hasSize(RiskHitCaps.DEFAULT_VIDEO_LIMIT);
+        assertThat(result.raw().get("truncated")).isEqualTo(Boolean.TRUE);
+        assertThat(result.raw().get("totalHits")).isEqualTo(60);
     }
 }

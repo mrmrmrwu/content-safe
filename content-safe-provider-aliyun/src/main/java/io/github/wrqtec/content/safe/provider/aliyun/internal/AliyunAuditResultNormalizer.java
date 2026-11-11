@@ -20,6 +20,7 @@ import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.aliyun.AliyunProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -81,6 +82,11 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         return context;
     }
 
+    /**
+     * 同步文本/图片与图片异步查询响应归一入口。视频响应（VideoModerationResultResponseBody）
+     * 刻意不走本入口：视频操作持强类型响应直连 {@code normalizeVideoAsyncResult}，
+     * 避免 Object 分支掩盖调用路径（视频中间态/终态由操作层分流）
+     */
     @Override
     public AuditResult normalize(Object rawResponse, Map<String, Object> context) {
         if (rawResponse instanceof TextModerationResponseBody body) {
@@ -215,6 +221,8 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
      * 帧命中取 frames[].results[]，帧级 offset(秒)/timestamp(毫秒) 与帧汇总
      * frameSummarys 的 labelSum 并入 hit.raw；语音片段命中取 audioResult.sliceDetails，
      * 逗号分隔 labels 拆分为标签列表，起止偏移并入 hit.raw。
+     * 命中超 {@link RiskHitCaps#DEFAULT_VIDEO_LIMIT} 时按置信度降序截断
+     * （标记进 raw），suggestion 由完整命中集合先推导、不受截断影响。
      * 脱敏（铁律 §5.6）：截帧图 URL（tempUrl）、语音转写原文（text）、命中词
      * （riskWords/riskTips）一律不透传
      *
@@ -234,7 +242,7 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         RiskSuggestion byRiskLevel = fromRiskLevel(data.getRiskLevel());
         RiskSuggestion suggestion = byRiskLevel != null ? byRiskLevel
                 : hits.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
-        return builder.suggestion(suggestion).hits(hits).build();
+        return RiskHitCaps.capVideoHits(builder.suggestion(suggestion).hits(hits).build());
     }
 
     /** 帧命中提取：帧级 offset/timestamp/frameRiskLevel 与帧汇总 labelSum 进 hit.raw，tempUrl 丢弃 */

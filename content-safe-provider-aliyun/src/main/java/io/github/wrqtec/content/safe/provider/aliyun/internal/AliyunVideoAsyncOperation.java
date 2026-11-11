@@ -140,8 +140,8 @@ public class AliyunVideoAsyncOperation implements AuditOperation {
 
     private AuditResult inProgress(VideoModerationResultResponseBody body, AsyncTaskRef ref) {
         Map<String, Object> raw = new LinkedHashMap<>();
+        // code 在上方分支已判定非空；raw 走 Map.copyOf 拒 null，requestId 可空、非空才记录
         raw.put("code", body.getCode());
-        // AuditResult 对 raw 做 Map.copyOf，null 值直接 NPE，故仅在非空时记录
         if (body.getRequestId() != null) {
             raw.put("requestId", body.getRequestId());
         }

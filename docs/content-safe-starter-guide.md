@@ -229,10 +229,10 @@ content:
   safe:
     defaults:
       async:
-        poll-interval: 2s     # submitAndWait() 默认轮询间隔
-        poll-timeout: 5m      # submitAndWait() 默认等待超时
+        poll-interval: 2s     # submitAndWait() 默认轮询间隔（仅适用图片/文本；视频请用三参重载 30s，见 §9.4）
+        poll-timeout: 5m      # submitAndWait() 默认等待超时（视频任务动辄超过 5 分钟，请用三参重载 30m）
         max-tasks: 10000      # 仅默认 InMemoryAuditTaskStore 生效：容量上限
-        expire-after: 1h      # 任务过期时间（超限逐出最旧，读取时惰性过期）
+        expire-after: 1h      # 任务过期时间（超限逐出最旧，读取时惰性过期）；长视频建议 2h~4h
 ```
 
 ## 5. 可观测性
@@ -435,14 +435,22 @@ String taskId = contentSafeTemplate.video("short_video", videoUrl);
 // 轮询：中间态 finalResult=false（suggestion 为空），终态 true 并迁移存储、发布事件
 AuditResult result = contentSafeTemplate.query(taskId);
 
-// 或一步到位阻塞等待（复用 §9.1 的 submitAndWait 语义与配置）
+// 或一步到位阻塞等待——视频务必显式传 30s 间隔 / 30 分钟超时：
+// 默认 2s 间隔对视频是查询风暴（阿里建议 30s），默认 5 分钟必然误超时（排队+检测常超 5 分钟，
+// 且超时后云侧任务仍在运行，本地可凭返回的 taskId 继续 query）
 AuditResult waited = contentSafeTemplate.submitAndWait(
-        AuditRequest.video("short_video", ContentRef.url(videoUrl)));
+        AuditRequest.video("short_video", ContentRef.url(videoUrl)),
+        Duration.ofSeconds(30), Duration.ofMinutes(30));
 ```
 
 要点：
 
 - 内置场景 `short_video`（VIDEO 类型）；回调接入与 §9.2 完全一致；
+- **中间态判空**：轮询中间态 `finalResult=false` 且 `suggestion=null`——直接
+  `switch (result.suggestion())` 会 NPE，消费方必须以 `finalResult` 门控或先判空；
+- **命中截断**：视频终态 hits 按 confidence 降序最多保留 50 条
+  （`RiskHitCaps.DEFAULT_VIDEO_LIMIT`），截断发生时 `raw` 携带
+  `truncated=true` 与 `totalHits`（原始总数）；建议（PASS/REVIEW/REJECT）在截断前推导，不受影响；
 - 可运行样例：[content-safe-samples-video-async](../samples/content-safe-samples-video-async/README.md)（fake provider 演示轮询与 submitAndWait 两种姿势、终态事件）；
 - 各供应商视频支持面（轮询/回调模式、结果保留期、建议轮询间隔）见
   [provider-feature-matrix.md](provider-feature-matrix.md)——结果保留期各家不同（阿里视频 24 小时），
@@ -453,6 +461,8 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 - **百度视频 `dataId` 必填**：`appId+dataId` 是任务幂等键（重复提交报 282005），
   模块不做自动生成兜底，未携带 dataId 的请求在提交前即失败（`InvalidRequestException`）；
 - **建议视频场景仲裁保持默认 OFF**：仲裁是多候选顺序全量采集，视频单价高会成倍放大审核成本；
+- **任务存储 TTL**：默认 `expire-after: 1h` 对"长视频+排队"场景偏紧（终态前的中间态任务被逐出后
+  `query` 将查不到任务），视频业务建议调至 `2h~4h`，或改用持久化 `AuditTaskStore` 实现；
 - 脱敏红线对视频同样生效：截帧图 URL、语音转写原文等用户内容不会进入结果与日志，
   `hit.raw` 只携带时间偏移、标签、置信度等元数据。
 

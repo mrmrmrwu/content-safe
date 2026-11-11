@@ -18,6 +18,7 @@ import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.volcengine.VolcengineProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -88,7 +89,9 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
     /**
      * 异步视频终态归一（仅在有结论数据时调用；中间态由操作层分流）。
      * 帧 URL（签名 URL）、帧内文字（frame.text）、语音转写原文（audioText）、
-     * 语音帧 URL（frameUrl）一律丢弃；命中词（contexts.matchedWords）只进 hit.raw
+     * 语音帧 URL（frameUrl）一律丢弃；命中词（contexts.matchedWords）只进 hit.raw。
+     * 命中超 {@link RiskHitCaps#DEFAULT_VIDEO_LIMIT} 时按置信度降序截断
+     * （标记进 raw），suggestion 取顶层 decision、不受截断影响
      */
     public AuditResult normalizeVideoResult(VideoRiskResultResponse response, Map<String, Object> context) {
         return normalizeVideo(response, context);
@@ -107,7 +110,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
         List<RiskHit> hits = new ArrayList<>();
         appendFrameHits(hits, data.getVideoResults());
         appendAudioHits(hits, data.getAudioResults());
-        return builder.hits(hits).build();
+        return RiskHitCaps.capVideoHits(builder.hits(hits).build());
     }
 
     /**

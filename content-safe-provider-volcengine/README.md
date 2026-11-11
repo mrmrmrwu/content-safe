@@ -49,6 +49,7 @@ content:
 视频 URL 键（`parameters-video-key`）必配，缺失装配期 fail-fast。查询响应缺 data 时
 保守推断为处理中；官方未公开中间态语义。命中（帧/音频切片）`hit.raw` 仅含
 `{offset, sliceId}` 与命中词；`asyncCallback` 恒 false（官方无推送回调）。
+终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
 
 ## 注意
 

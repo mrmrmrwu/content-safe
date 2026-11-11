@@ -17,6 +17,7 @@ import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.shumei.ShumeiProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -78,6 +79,11 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
         return context;
     }
 
+    /**
+     * 同步/图片查询同构报文（ShumeiSyncResponse）归一入口。视频响应刻意不走本入口：
+     * 操作层持强类型直连专用方法（normalizeVideoQuery/normalizeVideoCallback），
+     * 避免 Object 分支掩盖调用路径
+     */
     @Override
     public AuditResult normalize(Object rawResponse, Map<String, Object> context) {
         return build(rawResponse, AuditSource.SYNC, context);
@@ -98,7 +104,9 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
     }
 
     /**
-     * 视频查询结果归一（/video/query/v4 终态响应，code=1100；1101 中间态由操作层分流）
+     * 视频查询结果归一（/video/query/v4 终态响应，code=1100；1101 中间态由操作层分流）。
+     * 命中超 {@link RiskHitCaps#DEFAULT_VIDEO_LIMIT} 时按置信度降序截断
+     * （标记进 raw），suggestion 由完整命中集合先推导、不受截断影响
      */
     public AuditResult normalizeVideoQuery(ShumeiVideoQueryResponse response, Map<String, Object> context) {
         return videoBuild(response, AuditSource.ASYNC_QUERY, context);
@@ -122,7 +130,7 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
         if (response.getCode() != null) {
             raw.put("code", response.getCode());
         }
-        return AuditResult.builder()
+        return RiskHitCaps.capVideoHits(AuditResult.builder()
                 .ok(true)
                 .suggestion(suggestion)
                 .finalResult(true)
@@ -135,7 +143,7 @@ public class ShumeiAuditResultNormalizer implements AuditResultNormalizer {
                 .requestId(response.getRequestId())
                 .hits(hits)
                 .raw(raw)
-                .build();
+                .build());
     }
 
     /**

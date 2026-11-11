@@ -30,6 +30,7 @@ suggestion 归一：`conclusionType` 1→PASS、2→REJECT、3→REVIEW、4→ER
   `sub-events=1,2,3,4`（与拉取口径一致）；显式配置 `extra.sub-events` 则原样透传。
 - 回调校验 `BaiduCallbackVerifier` 仅做结构校验（官方无签名机制）；
   `conclusionType` 缺省视为处理中。
+- 终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
 
 ## 配置
 

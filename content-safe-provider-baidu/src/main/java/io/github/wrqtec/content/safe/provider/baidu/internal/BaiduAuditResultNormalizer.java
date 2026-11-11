@@ -13,6 +13,7 @@ import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.baidu.BaiduProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -67,6 +68,11 @@ public class BaiduAuditResultNormalizer implements AuditResultNormalizer {
         return context;
     }
 
+    /**
+     * 同步文本/图片响应归一入口。长视频响应刻意不走本入口：
+     * 操作层持强类型直连专用方法（normalizeVideoPull/normalizeVideoCallback），
+     * 避免 Object 分支掩盖调用路径
+     */
     @Override
     public AuditResult normalize(Object rawResponse, Map<String, Object> context) {
         if (!(rawResponse instanceof BaiduCensorResponse response)) {
@@ -183,12 +189,14 @@ public class BaiduAuditResultNormalizer implements AuditResultNormalizer {
 
     /**
      * 长视频结果归一：截帧与语音逐明细展开为 hit，原始报文不入 raw
-     * （签名 URL 与转写原文不透传；命中词进 evidence，由 core EvidenceRedactor 统一脱敏）
+     * （签名 URL 与转写原文不透传；命中词进 evidence，由 core EvidenceRedactor 统一脱敏）。
+     * 命中超 {@link RiskHitCaps#DEFAULT_VIDEO_LIMIT} 时按置信度降序截断
+     * （标记进 raw），suggestion 由完整命中集合先推导、不受截断影响
      */
     private AuditResult videoResultOf(Integer conclusionType, List<BaiduVideoPullResponse.Frame> frames,
                                       List<BaiduVideoPullResponse.Audio> audios, String requestId,
                                       AuditSource source, Map<String, Object> context) {
-        return AuditResult.builder()
+        return RiskHitCaps.capVideoHits(AuditResult.builder()
                 .ok(true)
                 .suggestion(suggestionOf(conclusionType))
                 .finalResult(true)
@@ -200,7 +208,7 @@ public class BaiduAuditResultNormalizer implements AuditResultNormalizer {
                 .cost((Duration) context.get(CONTEXT_COST))
                 .requestId(requestId)
                 .hits(videoHitsOf(frames, audios))
-                .build();
+                .build());
     }
 
     private static List<RiskHit> videoHitsOf(List<BaiduVideoPullResponse.Frame> frames,

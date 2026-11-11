@@ -79,5 +79,10 @@ class AuditResultTest {
         AuditResult redacted = result.withHits(List.of());
         assertEquals(List.of(), redacted.hits());
         assertEquals(result.suggestion(), redacted.suggestion());
+
+        AuditResult retagged = result.withRaw(java.util.Map.of("truncated", true));
+        assertEquals(java.util.Map.of("truncated", true), retagged.raw());
+        assertEquals(result.hits(), retagged.hits());
+        assertEquals(RiskSuggestion.PASS, retagged.suggestion());
     }
 }

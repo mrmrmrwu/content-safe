@@ -22,6 +22,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.provider.tencent.TencentAuditOperationProvider;
 import org.junit.jupiter.api.Test;
@@ -250,5 +251,27 @@ class TencentVideoAsyncOperationTest {
             throw new IllegalStateException("failed to load contract sample " + fileName, e);
         }
         return AbstractModel.fromJsonString(json, modelClass);
+    }
+
+    @Test
+    void queryCapsVideoHitsWithTruncationFlags() throws Exception {
+        StringBuilder labels = new StringBuilder();
+        for (int i = 0; i < 60; i++) {
+            if (i > 0) {
+                labels.append(',');
+            }
+            labels.append("{\"Label\":\"Porn\",\"SubLabel\":\"s").append(i)
+                    .append("\",\"Score\":90,\"Suggestion\":\"Block\"}");
+        }
+        String json = "{\"TaskId\":\"t-cap\",\"DataId\":\"data-req-1\",\"Status\":\"FINISH\","
+                + "\"Suggestion\":\"Block\",\"Labels\":[" + labels + "],\"RequestId\":\"req-cap\"}";
+        when(invoker.describeTaskDetail(any(DescribeTaskDetailRequest.class)))
+                .thenReturn(AbstractModel.fromJsonString(json, DescribeTaskDetailResponse.class));
+
+        AuditResult result = operation.query(new AsyncTaskRef("t-video-001", "data-req-1"));
+
+        assertThat(result.hits()).hasSize(RiskHitCaps.DEFAULT_VIDEO_LIMIT);
+        assertThat(result.raw().get("truncated")).isEqualTo(Boolean.TRUE);
+        assertThat(result.raw().get("totalHits")).isEqualTo(60);
     }
 }

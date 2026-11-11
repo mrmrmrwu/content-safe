@@ -27,6 +27,7 @@ import io.github.wrqtec.content.safe.api.enums.ConfidenceScale;
 import io.github.wrqtec.content.safe.api.enums.HitSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
@@ -78,6 +79,11 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
         return context;
     }
 
+    /**
+     * 同步文本/图片响应归一入口。图片异步与视频响应刻意不走本入口：
+     * 操作层持强类型直连专用方法（normalizeImageCallback/normalizeVideoQuery 等），
+     * 避免 Object 分支掩盖调用路径
+     */
     @Override
     public AuditResult normalize(Object rawResponse, Map<String, Object> context) {
         if (rawResponse instanceof TextModerationResponse response) {
@@ -106,7 +112,9 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
      * 视频任务轮询终态归一化（Status=FINISH 的 DescribeTaskDetail 响应）。
      * 命中来源：任务级 Labels、音频分段（AudioSegments HitFlag=1）、
      * 截帧分段（ImageSegments HitFlag=1）；视频分段（VideoSegments）无
-     * 独立标签，仅承载片段媒体地址，不参与 hits
+     * 独立标签，仅承载片段媒体地址，不参与 hits。
+     * 命中超 {@link RiskHitCaps#DEFAULT_VIDEO_LIMIT} 时按置信度降序截断
+     * （标记进 raw），suggestion 取任务级结论、不受截断影响
      *
      * @param response 查询响应
      * @param context  归一化上下文
@@ -170,7 +178,7 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
         if (!hits.isEmpty()) {
             builder.hits(hits);
         }
-        return builder.build();
+        return RiskHitCaps.capVideoHits(builder.build());
     }
 
     /** 任务级标签命中（Label/SubLabel 汇总，Score 0~100） */

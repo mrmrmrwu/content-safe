@@ -13,8 +13,13 @@ import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
  * <p>{@code ok} 仅表示"审核流程成功执行"，业务放行与否看 {@code suggestion}；
  * {@code suggestion == ERROR} 时不得当作 PASS 处理</p>
  *
+ * <p><b>{@code suggestion} 可空契约</b>：异步任务的中间态结果（{@code finalResult == false}，
+ * 见 {@code query}）{@code suggestion} 为 {@code null}；消费方必须判空，或以
+ * {@code finalResult} 门控后再取用（终态恒非 null）。直接对中间态结果
+ * {@code switch}/解引用 {@code suggestion} 会 NPE</p>
+ *
  * @param ok          审核流程是否成功执行（与内容是否合规无关）
- * @param suggestion  归一化审核建议
+ * @param suggestion  归一化审核建议（异步中间态为 null，终态恒非 null）
  * @param finalResult 是否为终态（异步任务中间态为 false）
  * @param source      结果来源
  * @param hits        命中详情，未命中为空列表
@@ -70,6 +75,12 @@ public record AuditResult(
 
     /** 派生副本：仅替换命中详情，其余字段原样保留（证据脱敏后重建） */
     public AuditResult withHits(List<RiskHit> hits) {
+        return new AuditResult(ok, suggestion, finalResult, source, hits, requestId,
+                dataId, provider, product, service, cost, raw);
+    }
+
+    /** 派生副本：仅替换供应商原始响应，其余字段原样保留（命中截断后追加标记） */
+    public AuditResult withRaw(Map<String, Object> raw) {
         return new AuditResult(ok, suggestion, finalResult, source, hits, requestId,
                 dataId, provider, product, service, cost, raw);
     }

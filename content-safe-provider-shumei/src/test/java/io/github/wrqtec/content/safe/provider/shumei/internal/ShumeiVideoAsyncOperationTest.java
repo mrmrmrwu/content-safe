@@ -24,6 +24,7 @@ import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
+import io.github.wrqtec.content.safe.api.util.RiskHitCaps;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import org.junit.jupiter.api.Test;
 
@@ -241,6 +242,28 @@ class ShumeiVideoAsyncOperationTest {
         } catch (IOException e) {
             throw new IllegalStateException("contract load failed: " + fileName, e);
         }
+    }
+
+    @Test
+    void queryCapsVideoHitsWithTruncationFlags() {
+        StringBuilder frameDetails = new StringBuilder();
+        for (int i = 0; i < 60; i++) {
+            if (i > 0) {
+                frameDetails.append(',');
+            }
+            frameDetails.append("{\"riskLevel\":\"REJECT\",\"riskLabel1\":\"polity\",\"riskLabel2\":\"l")
+                    .append(i).append("\",\"allLabels\":[{\"probability\":0.9,\"riskLevel\":\"REJECT\","
+                            + "\"riskLabel1\":\"polity\",\"riskLabel2\":\"l").append(i).append("\"}]}");
+        }
+        client.respondQuery("{\"code\":1100,\"message\":\"success\",\"requestId\":\"req-cap\","
+                + "\"btId\":\"data-req-1\",\"riskLevel\":\"REJECT\","
+                + "\"auxInfo\":{\"frameDetail\":[" + frameDetails + "]}}");
+
+        AuditResult result = operation.query(new AsyncTaskRef("data-req-1", "data-req-1"));
+
+        assertThat(result.hits()).hasSize(RiskHitCaps.DEFAULT_VIDEO_LIMIT);
+        assertThat(result.raw().get("truncated")).isEqualTo(Boolean.TRUE);
+        assertThat(result.raw().get("totalHits")).isEqualTo(60);
     }
 
     /**
