@@ -56,6 +56,10 @@ class CallbackDispatcherTest {
     }
 
     private AuditOperationProvider providerWithCallbackOp() {
+        return providerWithCallbackOp(RiskSuggestion.PASS);
+    }
+
+    private AuditOperationProvider providerWithCallbackOp(RiskSuggestion suggestion) {
         AuditOperation op = new AuditOperation() {
             @Override
             public ProviderPlan plan() {
@@ -79,7 +83,8 @@ class CallbackDispatcherTest {
                 RiskHit hit = new RiskHit("porn", List.of("porn"), 0.99, null, null,
                         "user-content-original", null, Map.of());
                 return CallbackResult.accepted("provider-task-1",
-                        AuditResult.builder().ok(true).suggestion(RiskSuggestion.PASS)
+                        AuditResult.builder().ok(!RiskSuggestion.ERROR.equals(suggestion))
+                                .suggestion(suggestion)
                                 .dataId("d1").hits(List.of(hit)).build());
             }
         };
@@ -243,6 +248,88 @@ class CallbackDispatcherTest {
         for (int i = 0; i < 5; i++) {
             assertTrue(dispatcher.dispatch(request).accepted());
         }
+    }
+
+    @Test
+    void rejectCallbackPublishesRiskHitEvent() {
+        // 回调终态与 audit()/query() 同源：非 pass 命中必须派生 RISK_HIT 事件（缺发即回调路径丢监控信号）
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("provider-task-1", "d1"), "avatar", "fake"));
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(verifierReturning(true)),
+                List.of(providerWithCallbackOp(RiskSuggestion.REJECT)), store, listener, List.of(), "secret");
+
+        dispatcher.dispatch(new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertTrue(events.stream().anyMatch(e -> e instanceof AuditEvent));
+        assertTrue(events.stream().anyMatch(e -> e instanceof io.github.wrqtec.content.safe.model.event.RiskHitEvent));
+        assertTrue(events.stream().noneMatch(e -> e instanceof io.github.wrqtec.content.safe.model.event.ReviewEvent));
+    }
+
+    @Test
+    void reviewCallbackPublishesReviewAndRiskHitEvents() {
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("provider-task-1", "d1"), "avatar", "fake"));
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(verifierReturning(true)),
+                List.of(providerWithCallbackOp(RiskSuggestion.REVIEW)), store, listener, List.of(), "secret");
+
+        dispatcher.dispatch(new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertTrue(events.stream().anyMatch(e -> e instanceof io.github.wrqtec.content.safe.model.event.ReviewEvent));
+        assertTrue(events.stream().anyMatch(e -> e instanceof io.github.wrqtec.content.safe.model.event.RiskHitEvent));
+    }
+
+    @Test
+    void nullResultCallbackGoesDeadLetterAndKeepsTaskPending() {
+        // 受理但无结果：标 SUCCEEDED 会产出 query() 返回 null 的任务，必须死信且不动状态，重推可恢复
+        store.save(AuditTask.pending("t1", new AsyncTaskRef("provider-task-1", "d1"), "avatar", "fake"));
+        AuditOperationProvider nullResultProvider = providerWithCallbackOp(RiskSuggestion.PASS);
+        CallbackDispatcher dispatcher = new CallbackDispatcher(List.of(verifierReturning(true)),
+                List.of(new AuditOperationProvider() {
+                    @Override
+                    public String provider() {
+                        return "fake";
+                    }
+
+                    @Override
+                    public List<ContentType> supportedTypes() {
+                        return List.of(ContentType.IMAGE);
+                    }
+
+                    @Override
+                    public List<AuditOperation> operations(SceneDefinition scene) {
+                        AuditOperation op = new AuditOperation() {
+                            @Override
+                            public ProviderPlan plan() {
+                                return new ProviderPlan("fake", "p", "1", "imgAsync", null, null, null, null);
+                            }
+
+                            @Override
+                            public AuditCapabilities capabilities() {
+                                return AuditCapabilities.builder()
+                                        .contentTypes(ContentType.IMAGE).asyncCallback(true).build();
+                            }
+
+                            @Override
+                            public AuditResult audit(io.github.wrqtec.content.safe.api.AuditRequest request) {
+                                throw new UnsupportedOperationException();
+                            }
+
+                            @Override
+                            public CallbackResult handleCallback(CallbackRequest request) {
+                                return CallbackResult.accepted("provider-task-1", null);
+                            }
+                        };
+                        return List.of(op);
+                    }
+                }), store, listener, List.of(), "secret");
+
+        CallbackResult result = dispatcher.dispatch(new CallbackRequest("fake", Map.of(), "{}"));
+
+        assertFalse(result.accepted());
+        assertTrue(result.message().contains("no audit result"));
+        // 任务保持 PENDING：带结果的回调重推仍可终态迁移
+        assertEquals(TaskStatus.PENDING, store.find("t1").orElseThrow().status());
+        assertTrue(events.stream().anyMatch(e -> e instanceof CallbackDeadLetterEvent dle
+                && dle.reason().contains("no audit result")));
+        assertTrue(events.stream().noneMatch(e -> e instanceof AuditEvent));
     }
 
     @Test

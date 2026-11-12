@@ -11,7 +11,9 @@ import io.github.wrqtec.content.safe.model.event.ContentSafeEvent;
 public interface AuditListener {
 
     /**
-     * 消费事件。必须同步返回，异步处理由实现方自行入队
+     * 消费事件。必须同步返回，异步处理由实现方自行入队；
+     * 实现不得抛出异常——直连监听器抛出的异常会沿调用链向上传播
+     * （组合监听器内部已隔离单个监听器的失败，但实现方不应依赖该兜底）
      *
      * @param event 内容审核事件，不为 null
      */

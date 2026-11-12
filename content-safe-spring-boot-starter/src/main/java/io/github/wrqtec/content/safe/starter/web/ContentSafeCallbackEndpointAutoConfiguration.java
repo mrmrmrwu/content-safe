@@ -1,6 +1,7 @@
 package io.github.wrqtec.content.safe.starter.web;
 
 import io.github.wrqtec.content.safe.api.ContentSafeTemplate;
+import io.github.wrqtec.content.safe.core.callback.CallbackDispatcher;
 import io.github.wrqtec.content.safe.starter.config.ContentSafeAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -24,7 +25,9 @@ import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandl
 public class ContentSafeCallbackEndpointAutoConfiguration {
 
     @Bean
-    @ConditionalOnBean(ContentSafeTemplate.class)
+    // 条件指向功能载体 CallbackDispatcher（其装配又依赖 CallbackVerifier bean），
+    // 而非模板本身：模板恒存在，挂它会让无 verifier 时控制器照常暴露、每笔回调 500
+    @ConditionalOnBean(CallbackDispatcher.class)
     @ConditionalOnMissingBean
     public ContentSafeCallbackController contentSafeCallbackController(ContentSafeTemplate template) {
         return new ContentSafeCallbackController(template);

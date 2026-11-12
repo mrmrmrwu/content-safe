@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.core.degrade;
 
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,10 +36,17 @@ public class CircuitBreakerRegistry {
      * 获取（或懒创建）指定 planKey 的熔断器
      *
      * @param planKey 供应商操作键（provider:operation）
-     * @return 熔断器，永不为 null
+     * @return 熔断器，永不为 null（工厂返回 null 时抛出 IllegalStateException）
      */
     public CircuitBreaker get(String planKey) {
-        return breakers.computeIfAbsent(planKey, k -> factory.get());
+        CircuitBreaker breaker = breakers.computeIfAbsent(planKey, k -> {
+            CircuitBreaker created = factory.get();
+            if (created == null) {
+                throw new IllegalStateException("breaker factory returned null for planKey: " + planKey);
+            }
+            return created;
+        });
+        return breaker;
     }
 
     /**

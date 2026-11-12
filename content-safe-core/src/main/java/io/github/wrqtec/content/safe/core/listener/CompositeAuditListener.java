@@ -32,10 +32,10 @@ public class CompositeAuditListener implements AuditListener {
      * 懒解析构造：首次事件到达时才从 {@code delegatesSupplier} 取列表，
      * 结果缓存后不再重复解析
      *
-     * @param delegatesSupplier 监听器列表提供者
+     * @param delegatesSupplier 监听器列表提供者，可为 null（视为空，与 List 构造器一致）
      */
     public CompositeAuditListener(Supplier<List<AuditListener>> delegatesSupplier) {
-        this.delegatesSupplier = delegatesSupplier;
+        this.delegatesSupplier = delegatesSupplier != null ? delegatesSupplier : () -> List.of();
     }
 
     @Override

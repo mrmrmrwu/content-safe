@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -47,4 +51,13 @@ class RateLimiterRegistryTest {
         assertEquals(2, registry.snapshot().size());
         assertFalse(registry.snapshot().containsKey("c:op"));
     }
+    @Test
+    void nullLimiterFactoryFailsFast() {
+        // javadoc 承诺 get() 永不为 null：工厂返回 null 必须立即抛出，而不是污染注册表后返回 null
+        RateLimiterRegistry registry = new RateLimiterRegistry((key, limits) -> null);
+        assertThrows(IllegalStateException.class,
+                () -> registry.get("p:op", OperationLimits.unlimited()));
+        assertNull(registry.snapshot().get("p:op"));
+    }
+
 }

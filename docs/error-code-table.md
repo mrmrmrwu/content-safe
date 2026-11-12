@@ -16,7 +16,6 @@
 | `PROVIDER_CALL_ERROR` | `ProviderCallException` | 是 | provider 调用失败：SDK 异常、网络错误、厂商返回非 200 错误码；`submitAndWait` 轮询超时/中断 |
 | `ALL_PROVIDER_FAILED` | `AllProvidersFailedException` | 是 | 所有候选 provider 均失败，message 携带各 planKey 的失败原因 |
 | `CALLBACK_VERIFY_FAILED` | `CallbackVerifyException` | 否 | 回调验签失败（同时发布 `CallbackDeadLetterEvent` 进死信） |
-| `CALLBACK_DISPATCH_ERROR` | `CallbackDispatchException` | 否 | 回调分发失败：拒绝受理、找不到任务、任务迁移冲突等 |
 
 ## 使用约定
 

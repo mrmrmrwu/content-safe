@@ -20,7 +20,12 @@ import org.springframework.context.annotation.Configuration;
  *
  * @author L.David
  */
-@AutoConfiguration(afterName = "io.github.wrqtec.content.safe.starter.config.ContentSafeAutoConfiguration")
+@AutoConfiguration(afterName = {
+        "io.github.wrqtec.content.safe.starter.config.ContentSafeAutoConfiguration",
+        // MeterRegistry bean 定义由官方 MetricsAutoConfiguration 注册；自动配置按 FQN 字母序排时
+        // io.* 先于 org.*，不加 after 会在 MeterRegistry 注册前求值 @ConditionalOnBean 而静默不装配
+        "org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration",
+        "org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration"})
 public class ContentSafeActuatorAutoConfiguration {
 
     /**

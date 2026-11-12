@@ -8,15 +8,15 @@
 
 | 类型 | 说明 |
 | --- | --- |
-| `ContentSafeTemplate` | 统一门面：`audit` / `submitAsync` / `query` / `handleCallback` / `resolveReview`，附 `text()` / `image()` 便捷方法 |
+| `ContentSafeTemplate` | 统一门面：`audit` / `submitAsync` / `query` / `handleCallback` / `resolveReview` / `submitAndWait`，附 `text()` / `image()` / `video()` 便捷方法 |
 | `AuditRequest` | 审核请求：scene + type + `ContentRef` + 可选 dataId/context/options/passThrough |
 | `AuditResult` | 归一化终态结果：`pass()` / suggestion / finalResult / source / hits / provider 等 |
 | `ContentRef` | 内容载体：URL / BASE64 / BYTES / TEXT 四通道 |
 | `AuditOptions` | 请求期选项：AIGC 识别开关（`withAigcDetect`）等 |
 | `ReviewResolution` / `ReviewDecision` | 人审终态回写入参（APPROVE / REJECT），配合 `resolveReview` |
 | `RiskHit` | 命中项：标签路径、置信分、来源、证据（原始证据只进 `raw`，不进日志） |
-| `Scenes` | 内置业务场景常量（COMMENT / NICKNAME / AVATAR 等 6 个） |
-| `exception.*` + `ErrorCodes` | `ContentSafeException` 体系与稳定错误码，业务侧按码处理（[错误码表](../docs/error-codes.md)） |
+| `Scenes` | 内置业务场景常量（COMMENT / NICKNAME / AVATAR / SHORT_VIDEO 等 7 个） |
+| `exception.*` + `ErrorCodes` | `ContentSafeException` 体系与稳定错误码，业务侧按码处理（[错误码表](../docs/error-code-table.md)） |
 
 ## 快速使用
 

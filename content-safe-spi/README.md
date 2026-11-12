@@ -12,6 +12,7 @@
 | `AuditOperation` | 供应商模块 | 单个可执行操作：`plan()`（`ProviderPlan`）+ `capabilities()` + `audit()` |
 | `AuditRouter` | 可替换（默认 `PriorityAuditRouter`） | 候选列表中选主（按 order 升序，能力过滤后取首） |
 | `AuditArbitrationPolicy` | 可扩展 | 多结果仲裁策略（如 `FIRST_NON_PASS`） |
+| `AuditArbitrationSelector` | 可替换 | 按场景选定仲裁策略（预构建共享实例，热路径调用） |
 | `AuditResultNormalizer` | 供应商模块（可选） | 原始响应 → `AuditResult` 归一 |
 | `AuditListener` | 业务侧 | 审计事件出口：`AuditEvent` / `RiskHitEvent` / `ReviewEvent` / 治理事件 |
 | `ReviewResultSink` | 业务侧 | 人审终态回写出口，`resolveReview` 先回写后迁移任务终态 |

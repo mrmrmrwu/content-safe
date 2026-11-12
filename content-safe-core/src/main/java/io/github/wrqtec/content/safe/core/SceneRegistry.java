@@ -1,5 +1,6 @@
 package io.github.wrqtec.content.safe.core;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,8 @@ public class SceneRegistry {
                 }
             }
         }
-        this.scenes = Map.copyOf(all);
+        // Map.copyOf 会丢弃插入序，健康端点/覆盖检查按序展示场景，这里显式保序
+        this.scenes = Collections.unmodifiableMap(all);
     }
 
     private static void register(Map<String, SceneDefinition> all, SceneDefinition scene) {

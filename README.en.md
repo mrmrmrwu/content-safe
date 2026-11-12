@@ -13,7 +13,7 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 
 ## Why ContentSafe?
 
-1. **Unified**: one API across multiple cloud moderation providers (text + image). Business code stays provider-agnostic.
+1. **Unified**: one API across multiple cloud moderation providers (text, image; video async since 1.2.0). Business code stays provider-agnostic.
 2. **Simple**: the API is designed to be minimal — pass a scene name (e.g. `nickname`, `avatar`), and the provider-specific scene IDs live in configuration, not in your code.
 
 ## Features
@@ -118,12 +118,9 @@ content.safe:
   providers:
     aliyun:
       enabled: true
-      type: aliyun
-      region: cn-hangzhou
-      credentials:
-        type: static
-        access-key-id: ${ALIYUN_AK}
-        access-key-secret: ${ALIYUN_SK}
+      region-id: cn-hangzhou
+      ak: ${CONTENT_SAFE_ALIYUN_AK}      # or omit; falls back to env CONTENT_SAFE_ALIYUN_AK / CONTENT_SAFE_ALIYUN_SK
+      sk: ${CONTENT_SAFE_ALIYUN_SK}
       scenes:
         nickname: nickname_detection
         avatar: baselineCheck_face
@@ -166,14 +163,14 @@ AuditResult result = contentSafeTemplate.query(taskId);
 
 | Provider | Text | Image | Async/Callback | Status |
 |---|---|---|---|---|
-| Alibaba Cloud Content Moderation | ✅ | ✅ | ✅ image polling + callback (SHA-256 signature) | supported |
-| Tencent Cloud TMS/IMS | ✅ | ✅ | ✅ image callback push (structural validation) | supported |
-| Baidu Cloud Content Censorship | ✅ | ✅ | ❌ no async API upstream | supported |
-| Volcengine Content Security | ✅ | ✅ | ❌ no async API upstream | supported |
-| Shumei Technology | ✅ | ✅ | ✅ image polling + callback (structural validation) | supported |
+| Alibaba Cloud Content Moderation | ✅ | ✅ | ✅ image async polling + callback; video async polling | supported |
+| Tencent Cloud TMS/IMS | ✅ | ✅ | ✅ image async callback push; video async polling + callback | supported |
+| Baidu Cloud Content Censorship | ✅ | ✅ | ✅ video async polling + callback (image sync only) | supported |
+| Volcengine Content Security | ✅ | ✅ | ✅ video async polling (image sync only) | supported |
+| Shumei Technology | ✅ | ✅ | ✅ image async polling + callback; video async polling + callback | supported |
 | Huawei Cloud Moderation | - | - | - | at lifecycle risk, not enabled by default |
 
-> v1 covers **text + image** moderation; abstractions for audio, video, file and live-streaming are reserved.
+> Sync moderation covers **text + image**; **video async moderation since 1.2.0** (polling / callback, see table); audio, file and live-streaming abstractions are reserved.
 
 ## Extending
 

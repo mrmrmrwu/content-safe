@@ -9,7 +9,7 @@ import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 
 /**
- * 从严仲裁：任一供应商结果非 PASS 即采用最严重的那个（REJECT &gt; REVIEW &gt; PASS）
+ * 从严仲裁：任一供应商结果非 PASS 即采用最严重的那个（REJECT &gt; REVIEW &gt; ERROR &gt; PASS）
  *
  * @author L.David
  */

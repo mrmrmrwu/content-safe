@@ -52,9 +52,27 @@ public class SlidingWindowCircuitBreaker implements CircuitBreaker {
      * @param minCalls             最小统计调用数，样本不足不熔断
      * @param openDuration         OPEN 冷却时长，到期进入 HALF_OPEN
      * @param halfOpenMaxCalls     HALF_OPEN 探测流量上限
+     * @throws IllegalArgumentException 任一参数非法（阈值不在 (0, 1] 区间、
+     *         数值参数非正数、openDuration 非正/null）时立即抛出，避免坏配置延迟爆炸
      */
     public SlidingWindowCircuitBreaker(int windowSize, double failureRateThreshold, int minCalls,
                                        Duration openDuration, int halfOpenMaxCalls) {
+        if (windowSize <= 0) {
+            throw new IllegalArgumentException("windowSize must be positive: " + windowSize);
+        }
+        if (failureRateThreshold <= 0D || failureRateThreshold > 1D) {
+            throw new IllegalArgumentException(
+                    "failureRateThreshold must be in (0, 1]: " + failureRateThreshold);
+        }
+        if (minCalls <= 0) {
+            throw new IllegalArgumentException("minCalls must be positive: " + minCalls);
+        }
+        if (openDuration == null || openDuration.isNegative() || openDuration.isZero()) {
+            throw new IllegalArgumentException("openDuration must be positive: " + openDuration);
+        }
+        if (halfOpenMaxCalls <= 0) {
+            throw new IllegalArgumentException("halfOpenMaxCalls must be positive: " + halfOpenMaxCalls);
+        }
         this.windowSize = windowSize;
         this.failureRateThreshold = failureRateThreshold;
         this.minCalls = minCalls;

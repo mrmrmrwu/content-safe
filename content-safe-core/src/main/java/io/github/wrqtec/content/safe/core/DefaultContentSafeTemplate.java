@@ -23,7 +23,6 @@ import io.github.wrqtec.content.safe.api.enums.ReviewDecision;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.api.exception.AllProvidersFailedException;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
-import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.ProviderNotAvailableException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
@@ -40,7 +39,7 @@ import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiter;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.core.listener.AuditEventPublisher;
-import io.github.wrqtec.content.safe.core.security.ErrorMessages;
+import io.github.wrqtec.content.safe.api.util.ErrorMessages;
 import io.github.wrqtec.content.safe.core.security.EvidenceRedactors;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationPolicy;
 import io.github.wrqtec.content.safe.spi.AuditArbitrationSelector;
@@ -334,7 +333,7 @@ public class DefaultContentSafeTemplate implements ContentSafeTemplate {
             AuditResult redacted = EvidenceRedactors.redactResult(redactors, result, operation.plan().provider());
             eventPublisher.publish(scene.code(), redacted);
             // 成功路径可观测：只含路由与结论元数据，不含用户内容原文
-            log.debug("audit success: scene={}, provider={}, suggestion={}, hits={}, cost={}",
+            log.debug("audit success: scene={}, planKey={}, suggestion={}, hits={}, cost={}",
                     scene.code(), planKey, redacted.suggestion(), redacted.hits().size(), redacted.cost());
             return Attempt.success(redacted);
         } catch (GuardRejection e) {

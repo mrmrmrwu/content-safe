@@ -3,7 +3,7 @@
 最小可运行样例：引入 `content-safe-spring-boot-starter` + 一个 mock 供应商，演示：
 
 - 注入 `ContentSafeTemplate` 并调用 `template.text(scene, text)`
-- 内置场景（`Scenes.COMMENT` 等 6 个）开箱即用
+- 内置场景（`Scenes.COMMENT` / `Scenes.SHORT_VIDEO` 等 7 个）开箱即用
 - `src/main/resources/content-safe/scenes.json` 声明自定义场景 `product_title`，启动时自动导入
 - `FakeAuditOperationProvider` 演示供应商 SPI 接入方式（真实云供应商在 `provider-*` 模块中同法接入）
 

@@ -6,6 +6,7 @@ import java.util.Map;
 
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import lombok.Data;
+import lombok.ToString;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -31,6 +32,7 @@ public class ContentSafeProperties {
     private Defaults defaults = new Defaults();
 
     /** 回调验签密钥（可选；为空时由各 CallbackVerifier 自行决定校验策略） */
+    @ToString.Exclude
     private String callbackSecret;
 
     /** 内置回调接收端点配置 */
@@ -42,7 +44,7 @@ public class ContentSafeProperties {
     @Data
     public static class SceneProperties {
 
-        /** 内容类型，v1 仅支持 TEXT / IMAGE */
+        /** 内容类型：v1 承诺 TEXT 与 IMAGE，VIDEO 已支持（视频异步），其余为预留抽象 */
         private ContentType type;
 
         /** 场景描述（仅文档用途，可为空） */
@@ -161,9 +163,11 @@ public class ContentSafeProperties {
         private boolean enabled;
 
         /** 访问密钥 ID（敏感，禁止进入日志与异常消息） */
+        @ToString.Exclude
         private String ak;
 
         /** 访问密钥 Secret（敏感，禁止进入日志与异常消息） */
+        @ToString.Exclude
         private String sk;
 
         /** 供应商服务接入地址 */

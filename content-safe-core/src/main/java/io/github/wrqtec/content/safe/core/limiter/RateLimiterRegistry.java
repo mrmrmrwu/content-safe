@@ -75,10 +75,16 @@ public class RateLimiterRegistry {
      *
      * @param planKey 供应商操作键（provider:operation）
      * @param limits plan 声明额度
-     * @return 限流器，永不为 null
+     * @return 限流器，永不为 null（工厂返回 null 时抛出 IllegalStateException）
      */
     public RateLimiter get(String planKey, OperationLimits limits) {
-        return limiters.computeIfAbsent(planKey, k -> factory.apply(k, limits));
+        return limiters.computeIfAbsent(planKey, k -> {
+            RateLimiter created = factory.apply(k, limits);
+            if (created == null) {
+                throw new IllegalStateException("limiter factory returned null for planKey: " + planKey);
+            }
+            return created;
+        });
     }
 
     /**

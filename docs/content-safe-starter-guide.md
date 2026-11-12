@@ -65,7 +65,7 @@ result.hits();        // 命中的风险明细（证据已脱敏）
 | `product_image` | IMAGE | 商品图 |
 | `short_video` | VIDEO | 短视频（异步审核） |
 
-**自定义场景**：`src/main/resources/content-safe/scenes.json`（JSON 数组，元素含 `code`/`type`/`defaultSeverity`），与内置场景合并，重复 code 以自定义为准；也可直接声明 `SceneRegistry` Bean 全量接管。
+**自定义场景**：`src/main/resources/content-safe/scenes.json`（根对象 `{"schemaVersion": 1, "scenes": [...]}`，元素含 `code`/`type`（必填）与 `description`/`defaultSeverity`/`ext`（可选）），与内置场景合并，重复 code 以自定义为准；也可直接声明 `SceneRegistry` Bean 全量接管。
 
 ## 3. 供应商接入
 
@@ -241,7 +241,7 @@ content:
 
 | 指标 | 标签 | 说明 |
 |---|---|---|
-| `content.safe.audit` | scene, suggestion | 审核结果计数 |
+| `content.safe.audit` | scene, suggestion, ok | 审核结果计数 |
 | `content.safe.risk.hit` | scene | 风险命中计数 |
 | `content.safe.review` | scene | 人审计数 |
 | `content.safe.provider.degraded` | provider | 供应商降级/熔断 |
@@ -348,7 +348,7 @@ String taskId = contentSafeTemplate.submitAsync(
 // 轮询：中间态返回 finalResult=false 的结果且任务保持 PENDING；终态自动迁移 SUCCEEDED 并发布事件
 AuditResult result = contentSafeTemplate.query(taskId);
 
-// 或一步到位：submitAndWait 按配置的 poll-interval/poll-timeout 自动轮询（超时抛 ProviderCallException，任务仍在可继续 query）
+// 或一步到位：submitAndWait 按 content.safe.defaults.async.poll-interval/poll-timeout 自动轮询（超时抛 ProviderCallException，任务仍在可继续 query）
 AuditResult waited = contentSafeTemplate.submitAndWait(
         AuditRequest.builder()
                 .scene("avatar")
@@ -451,7 +451,7 @@ AuditResult waited = contentSafeTemplate.submitAndWait(
 - **视频轮询参数开箱即用（1.2.0+）**：五家视频操作的 `AuditCapabilities` 均声明了
   `suggestedPollInterval(30s)` / `suggestedPollTimeout(30m)`，单参 `submitAndWait(request)`
   自动采用（通用默认 2s 间隔对视频是查询风暴、5 分钟超时对排队+检测必误抛）；操作未声明
-  建议值（如图片异步）时维持模板配置 `poll-interval`/`poll-timeout`；
+  建议值（如图片异步）时维持模板配置 `content.safe.defaults.async.poll-interval`/`poll-timeout`；
 - 内置场景 `short_video`（VIDEO 类型）；回调接入与 §9.2 完全一致；
 - **中间态判空**：轮询中间态 `finalResult=false` 且 `suggestion=null`——直接
   `switch (result.suggestion())` 会 NPE，消费方必须以 `finalResult` 门控或先判空；

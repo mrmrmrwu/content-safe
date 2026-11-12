@@ -102,6 +102,24 @@ class ActuatorComponentsTest {
         assertTrue(!errors.get("broken").contains("AKTP1234567890123456"));
     }
 
+    /**
+     * 装配顺序回归锁：MetricsConfiguration 的 @ConditionalOnBean(MeterRegistry) 依赖
+     * afterName 声明在官方 MetricsAutoConfiguration 之后；丢失该声明时 io.* 字母序先于
+     * org.* 求值，ContentSafeMetrics 在真实 Boot 应用中静默不装配（直 new 构造测不出来）
+     */
+    @Test
+    void metricsAutoConfigurationDeclaresOrderingAfterOfficialMetrics() {
+        String[] afterName = ContentSafeActuatorAutoConfiguration.class
+                .getAnnotation(org.springframework.boot.autoconfigure.AutoConfiguration.class)
+                .afterName();
+        assertTrue(java.util.Arrays.asList(afterName).contains(
+                "org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration"),
+                "afterName must include official MetricsAutoConfiguration");
+        assertTrue(java.util.Arrays.asList(afterName).contains(
+                "org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration"),
+                "afterName must include CompositeMeterRegistryAutoConfiguration");
+    }
+
     @Test
     void metricsCountAuditAndDegradedEvents() {
         SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();

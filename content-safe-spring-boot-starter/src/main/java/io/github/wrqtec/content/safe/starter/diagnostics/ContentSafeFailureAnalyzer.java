@@ -9,7 +9,9 @@ import org.springframework.boot.diagnostics.FailureAnalysis;
 /**
  * 启动失败诊断：把装配期抛出的 {@link ContentSafeException}（含子类，常被
  * {@link BeanCreationException} 包装）翻译为可读的 FailureAnalysis 报告
- * （覆盖：配置缺失、EOL provider、feature 未实现、scene 未映射）
+ * （覆盖：凭证缺失、仲裁策略未知、scenes.json/全局 schema 版本等启动期配置错误。
+ * 注意：SCENE_NOT_CONFIGURED 属请求期异常，本分析器仅在 bean 创建失败时被调用，
+ * 对其仅做兜底转述，通常不会在启动期触发）
  *
  * <p>安全约束：只输出错误码、原因与修复动作；message 本身已按约定不含
  * accessKey/secret/签名 URL/用户内容原文，本类只做转述，不新增敏感信息
@@ -57,7 +59,7 @@ public class ContentSafeFailureAnalyzer extends AbstractFailureAnalyzer<ContentS
     /** 修复动作：场景未注册 */
     private static final String ACTION_SCENE_NOT_CONFIGURED = "Register the scene code via "
             + "classpath:content-safe/scenes.json or a SceneDefinitionProvider bean, or use a built-in scene "
-            + "(nickname/avatar/comment/post/product_image/im_message).";
+            + "(nickname/avatar/comment/post/product_image/im_message/short_video).";
 
     /** 修复动作：特性超出 v1 范围或 provider 未实现 */
     private static final String ACTION_UNSUPPORTED_FEATURE = "The requested feature is outside v1 scope or not "

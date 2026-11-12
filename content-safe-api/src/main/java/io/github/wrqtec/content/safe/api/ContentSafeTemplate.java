@@ -138,7 +138,9 @@ public interface ContentSafeTemplate {
 
     /**
      * 处理供应商异步回调：验签 -> 幂等 -> 更新任务 -> 发事件；
-     * 验签失败/格式错误的回调进入死信，结果以 {@link CallbackResult#accepted()} = false 返回
+     * 验签失败抛 {@link io.github.wrqtec.content.safe.api.exception.CallbackVerifyException}
+     * （内部已记死信，由 web 层映射 401）；无法分发到供应商操作等拒收场景才以
+     * {@link CallbackResult#accepted()} = false 返回
      *
      * @param callback 供应商回调报文
      * @return 回调处理结果

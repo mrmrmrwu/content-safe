@@ -9,7 +9,7 @@ Spring Boot 3.x 自动装配：业务方引依赖 + 写配置即可获得 `Conte
 | --- | --- |
 | `ContentSafeAutoConfiguration` | 装配 `ContentSafeTemplate`（含人审回写出口 0..1）、场景注册、路由/熔断/限流注册表、凭证解析 |
 | `JsonSceneDefinitionProvider` | `classpath:content-safe/scenes.json` 自定义场景导入（schema-version 校验） |
-| `ContentSafeConfigValidator` | 启动期配置校验（缺凭证 / 场景缺实现 → 快速失败） |
+| `ContentSafeConfigValidator` | 启动期校验 `content.safe.schema-version`；凭证缺失在 provider 装配链快速失败 |
 | `ContentSafeFailureAnalyzer` | 启动失败人性化诊断（缺哪项配置、怎么改） |
 | `ContentSafeActuatorAutoConfiguration` | Actuator `health` 融合供应商健康 + `ContentSafeMetrics`（Micrometer 指标） |
 
@@ -26,7 +26,7 @@ content:
       circuit-breaker: { window-size: 20, failure-rate-threshold: 0.5 }
       rate-limiter: { enabled: true }
     scenes:
-      comment: { type: TEXT, sync-providers: [tencent, aliyun] }
+      comment: { type: TEXT }   # 场景路由由各 provider 的 scenes 映射决定，引入谁就多谁参与候选
     providers:
       tencent:
         enabled: true

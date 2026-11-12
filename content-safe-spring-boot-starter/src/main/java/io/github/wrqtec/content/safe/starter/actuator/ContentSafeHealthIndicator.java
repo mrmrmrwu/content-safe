@@ -11,8 +11,8 @@ import io.github.wrqtec.content.safe.core.degrade.CircuitBreakerRegistry;
 import io.github.wrqtec.content.safe.core.limiter.RateLimiterRegistry;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 import io.github.wrqtec.content.safe.spi.AuditOperationProvider;
+import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthIndicator;
 
 /**
  * ContentSafe 健康指示，仅汇总本地状态（场景数、供应商数、熔断器快照），
@@ -20,7 +20,7 @@ import org.springframework.boot.actuate.health.HealthIndicator;
  *
  * @author L.David
  */
-public class ContentSafeHealthIndicator implements HealthIndicator {
+public class ContentSafeHealthIndicator extends AbstractHealthIndicator {
 
     /** 存在 OPEN 熔断器时的自定义状态 */
     public static final String STATUS_DEGRADED = "DEGRADED";
@@ -53,23 +53,26 @@ public class ContentSafeHealthIndicator implements HealthIndicator {
         this.limiters = limiters;
     }
 
+    /**
+     * 继承 AbstractHealthIndicator（Boot 官方模式）：doHealthCheck 抛出的异常
+     * 被基类转成 Health.down(withDetail) 可见降级，而非穿出 health() 致 /actuator/health 500
+     */
     @Override
-    public Health health() {
+    protected void doHealthCheck(Health.Builder builder) {
         Map<String, CircuitBreaker.State> states = breakers.snapshot();
         List<String> open = states.entrySet().stream()
                 .filter(entry -> entry.getValue() == CircuitBreaker.State.OPEN)
                 .map(Map.Entry::getKey)
                 .toList();
-        Health.Builder builder = open.isEmpty() ? Health.up() : Health.status(STATUS_DEGRADED);
+        builder = open.isEmpty() ? builder.up() : builder.status(STATUS_DEGRADED);
         Map<String, String> providerErrors = new LinkedHashMap<>();
-        return builder
+        builder
                 .withDetail(DETAIL_SCENES, sceneRegistry.all().size())
                 .withDetail(DETAIL_PROVIDERS, providers.size())
                 .withDetail(DETAIL_OPEN_CIRCUIT_BREAKERS, open)
                 .withDetail(DETAIL_RATE_LIMITERS, limiters.snapshot())
                 .withDetail(DETAIL_SCENE_MAPPINGS, sceneMappings(providerErrors))
-                .withDetail(DETAIL_PROVIDER_ERRORS, providerErrors)
-                .build();
+                .withDetail(DETAIL_PROVIDER_ERRORS, providerErrors);
     }
 
     /** 场景 → 已映射供应商列表；供应商构建操作失败按未映射处理，异常记入 providerErrors 暴露 */

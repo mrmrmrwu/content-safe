@@ -123,12 +123,9 @@ content.safe:
   providers:
     aliyun:
       enabled: true
-      type: aliyun
-      region: cn-hangzhou
-      credentials:
-        type: static
-        access-key-id: ${ALIYUN_AK}
-        access-key-secret: ${ALIYUN_SK}
+      region-id: cn-hangzhou
+      ak: ${CONTENT_SAFE_ALIYUN_AK}      # 也可不配，走环境变量 CONTENT_SAFE_ALIYUN_AK / CONTENT_SAFE_ALIYUN_SK
+      sk: ${CONTENT_SAFE_ALIYUN_SK}
       scenes:
         nickname: nickname_detection
         avatar: baselineCheck_face
@@ -197,14 +194,14 @@ contentSafeTemplate.audit(AuditRequest.text("resume_title", title));
 
 | 供应商 | 文本审核 | 图片审核 | 异步/回调 | 状态 |
 |---|---|---|---|---|
-| 阿里云内容安全 | ✅ | ✅ | ✅ 图片轮询+回调（SHA256 验签） | 已支持 |
-| 腾讯云内容安全 TMS/IMS | ✅ | ✅ | ✅ 图片回调推送（结构校验） | 已支持 |
-| 百度智能云内容审核 | ✅ | ✅ | ❌ 官方无异步接口 | 已支持 |
-| 火山引擎内容安全 | ✅ | ✅ | ❌ 官方无异步接口 | 已支持 |
-| 数美科技 | ✅ | ✅ | ✅ 图片轮询+回调（结构校验） | 已支持 |
+| 阿里云内容安全 | ✅ | ✅ | ✅ 图片异步轮询+回调；视频异步轮询 | 已支持 |
+| 腾讯云内容安全 TMS/IMS | ✅ | ✅ | ✅ 图片异步回调推送；视频异步轮询+回调 | 已支持 |
+| 百度智能云内容审核 | ✅ | ✅ | ✅ 视频异步轮询+回调（图片仅同步） | 已支持 |
+| 火山引擎内容安全 | ✅ | ✅ | ✅ 视频异步轮询（图片仅同步） | 已支持 |
+| 数美科技 | ✅ | ✅ | ✅ 图片异步轮询+回调；视频异步轮询+回调 | 已支持 |
 | 华为云 Moderation | - | - | - | 生命周期风险，暂不默认支持 |
 
-> v1 只承诺 **文本 + 图片** 内容安全；音频、视频、文件、直播等能力预留抽象。
+> 同步审核承诺 **文本 + 图片**；**1.2.0 起支持视频异步审核**（轮询 / 回调，见上表）；音频、文件、直播等能力预留抽象。
 
 ## 扩展
 

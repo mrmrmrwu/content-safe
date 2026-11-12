@@ -36,4 +36,11 @@ class CompositeAuditListenerTest {
         CompositeAuditListener composite = new CompositeAuditListener((List<AuditListener>) null);
         composite.onEvent(new AuditEvent("s", AuditResult.builder().ok(true).build(), null));
     }
+    @Test
+    void nullSupplierTolerated() {
+        // Supplier 构造器与 List 构造器同语义：null 视为空，不能在首个事件时 NPE
+        CompositeAuditListener composite = new CompositeAuditListener((java.util.function.Supplier<List<AuditListener>>) null);
+        composite.onEvent(new AuditEvent("s", AuditResult.builder().ok(true).build(), null));
+    }
+
 }

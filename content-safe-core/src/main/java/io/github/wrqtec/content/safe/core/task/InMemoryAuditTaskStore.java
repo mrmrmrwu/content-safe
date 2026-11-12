@@ -63,6 +63,10 @@ public class InMemoryAuditTaskStore implements AuditTaskStore {
         this.expireAfter = expireAfter;
     }
 
+    /**
+     * 容量约束在并发下最终一致：多线程同时 save 可瞬时超出 maxSize，
+     * 由后续 save 的驱逐收敛；严格保证容量需外部串行化
+     */
     @Override
     public void save(AuditTask task) {
         if (store.size() >= maxSize) {
