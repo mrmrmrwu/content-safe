@@ -71,19 +71,6 @@ public final class VolcengineParameters {
     }
 
     /**
-     * 装配 parameters JSON
-     *
-     * @param contentKey 内容键名（extra 配置，缺失即抛出可读配置错误）
-     * @param content    内容值（文本原文 / URL / base64）
-     * @param scene      场景定义（ext 透传，可为 null）
-     * @return parameters JSON 字符串
-     * @throws ConfigInvalidException contentKey 未配置时抛出
-     */
-    public static String toJson(String contentKey, String content, SceneDefinition scene) {
-        return toJson(Map.of(), contentKey, content, scene);
-    }
-
-    /**
      * 装配 parameters JSON，内容之外携带额外必传字段
      *
      * @param fields     内容之外的必传字段（键值对，覆盖场景 ext 同名键）

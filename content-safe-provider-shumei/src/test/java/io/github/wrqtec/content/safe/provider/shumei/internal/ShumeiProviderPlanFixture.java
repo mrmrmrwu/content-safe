@@ -33,7 +33,4 @@ final class ShumeiProviderPlanFixture {
         return ShumeiAuditOperationProvider.videoPlan(eventId);
     }
 
-    static AuditMode syncMode() {
-        return AuditMode.SYNC;
-    }
 }

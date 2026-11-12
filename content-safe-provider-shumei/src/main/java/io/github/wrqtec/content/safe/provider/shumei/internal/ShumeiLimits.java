@@ -8,7 +8,7 @@ import io.github.wrqtec.content.safe.model.OperationLimits;
  * 数美内容安全操作限额（用于请求前置校验）
  *
  * <p>官方同步接口建议超时 1s；此处取 5s 余量，QPS 以与数美合同约定为准（不本地声明）。
- * 文本单次请求字符数上限 1 万字、请求体上限 1MB（字数在操作内校验）。
+ * 文本单次请求字符数上限 1 万字（字数在操作内校验）；请求体 ≤1MB 为官方约束，本地不做体积校验。
  *
  * @author L.David
  */

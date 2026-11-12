@@ -23,16 +23,6 @@ public final class ShumeiErrorMapper {
     }
 
     /**
-     * 业务响应断言：返回码非 1100 → 抛 {@link ProviderCallException}
-     *
-     * @param response 已解析响应
-     * @return 原响应（链式调用）
-     */
-    public static ShumeiSyncResponse assertSuccess(ShumeiSyncResponse response) {
-        return assertSuccess(response, OP_DETECT);
-    }
-
-    /**
      * 业务响应断言（带操作标签）：返回码非 1100 → 抛 {@link ProviderCallException}
      *
      * @param response 已解析响应
@@ -61,9 +51,10 @@ public final class ShumeiErrorMapper {
     }
 
     /**
-     * 视频提交回执断言：返回码非 1100 → 抛 {@link ProviderCallException}
+     * 视频提交回执/查询终态断言：返回码非 1100 → 抛 {@link ProviderCallException}
      *
-     * <p>查询响应不走本断言：1101 处理中是合法中间态，由操作层分流。
+     * <p>1101 处理中是合法中间态：查询路径须先经 {@code isProcessing()} 分流，
+     * 再将非处理中响应交由本断言校验。
      */
     public static ShumeiVideoQueryResponse assertVideoSuccess(ShumeiVideoQueryResponse response, String op) {
         if (response.isSuccess()) {

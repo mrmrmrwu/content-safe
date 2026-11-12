@@ -12,6 +12,7 @@ import com.volcengine.model.response.TextRiskResponse;
 import com.volcengine.model.response.VideoRiskResultResponse;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.RiskHit;
+import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.RiskSuggestion;
 import io.github.wrqtec.content.safe.model.ProviderPlan;
 import io.github.wrqtec.content.safe.provider.volcengine.VolcengineAuditOperationProvider;
@@ -131,6 +132,8 @@ class VolcengineAuditResultNormalizerContractTest {
         assertThat(result.ok()).isTrue();
         assertThat(result.finalResult()).isTrue();
         assertThat(result.requestId()).isEqualTo("req-video-finish-001");
+        // 视频走异步查询链路，终态来源必须标 ASYNC_QUERY 而非 SYNC
+        assertThat(result.source()).isEqualTo(AuditSource.ASYNC_QUERY);
 
         // 帧命中：合规帧（pass）跳过；offset/sliceId/明细进 hit.raw
         assertThat(result.hits()).hasSize(2);

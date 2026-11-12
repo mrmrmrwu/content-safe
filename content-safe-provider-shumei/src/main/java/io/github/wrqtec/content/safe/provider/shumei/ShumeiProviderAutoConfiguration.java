@@ -70,16 +70,14 @@ public class ShumeiProviderAutoConfiguration {
             return properties.getAccessKey();
         }
         List<CredentialsProvider> providers = credentialsProviders.getIfAvailable(List::of);
-        if (providers != null) {
-            for (CredentialsProvider provider : providers) {
-                if (ShumeiProviderConstants.PROVIDER.equals(provider.provider())) {
-                    CredentialsProvider.Credentials credentials = provider.resolve(configOf(properties));
-                    CredentialsProvider.Credentials resolved = Asserts.notNull(credentials,
-                            "CredentialsProvider " + provider.getClass().getSimpleName()
-                                    + " returned null for shumei");
-                    return Asserts.notBlank(resolved.accessKeyId(),
-                            "CredentialsProvider resolved blank accessKey for shumei");
-                }
+        for (CredentialsProvider provider : providers) {
+            if (ShumeiProviderConstants.PROVIDER.equals(provider.provider())) {
+                CredentialsProvider.Credentials credentials = provider.resolve(configOf(properties));
+                CredentialsProvider.Credentials resolved = Asserts.notNull(credentials,
+                        "CredentialsProvider " + provider.getClass().getSimpleName()
+                                + " returned null for shumei");
+                return Asserts.notBlank(resolved.accessKeyId(),
+                        "CredentialsProvider resolved blank accessKey for shumei");
             }
         }
         String fromEnv = System.getenv(CredentialsSupport.accessKeyIdEnvKey(ShumeiProviderConstants.PROVIDER));

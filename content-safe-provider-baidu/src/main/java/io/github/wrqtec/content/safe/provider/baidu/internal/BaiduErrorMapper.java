@@ -19,8 +19,6 @@ import io.github.wrqtec.content.safe.provider.baidu.BaiduProviderConstants;
  */
 public final class BaiduErrorMapper {
 
-    /** 对端限流错误码（18/19），建议调用方退避重试 */
-    private static final Set<Integer> THROTTLED_CODES = Set.of(18, 19);
 
     /** token 无效/过期错误码（触发 token 失效重取） */
     private static final Set<Integer> TOKEN_CODES = Set.of(110, 111);

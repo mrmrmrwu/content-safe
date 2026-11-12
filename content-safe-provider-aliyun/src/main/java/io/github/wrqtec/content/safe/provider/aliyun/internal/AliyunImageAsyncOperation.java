@@ -106,7 +106,6 @@ public class AliyunImageAsyncOperation implements AuditOperation {
                 serviceParameters.put(PARAM_SEED, callbackSeed);
             }
         }
-        long startNanos = System.nanoTime();
         try {
             ImageAsyncModerationResponseBody body = invoker.imageAsyncModeration(plan.service(), serviceParameters);
             AliyunErrorMapper.assertSuccess(body.getCode(), body.getMsg());

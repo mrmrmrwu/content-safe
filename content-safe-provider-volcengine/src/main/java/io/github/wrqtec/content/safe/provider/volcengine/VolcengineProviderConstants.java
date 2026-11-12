@@ -36,8 +36,6 @@ public final class VolcengineProviderConstants {
     /** 异步视频提交操作（提交仅回执，任务关联键为提交时自带的业务 dataId） */
     public static final String OPERATION_ASYNC_VIDEO_RISK = "AsyncVideoRisk";
 
-    /** 异步视频结果查询操作（按 dataId 查询） */
-    public static final String OPERATION_VIDEO_RESULT = "VideoResult";
 
     /** extra 配置键：内容安全控制台申请的应用 ID（整型） */
     public static final String EXTRA_APP_ID = "app-id";

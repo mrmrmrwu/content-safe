@@ -80,7 +80,7 @@ BizType 为腾讯云控制台创建的策略标识，业务侧只配场景 code 
 | access_token 管理 | ✅ | client_credentials 本地缓存（30 天，提前 5 分钟刷新）；110/111 错误自动失效重取并重试一次 |
 | 批量审核 | ❌ | 单次单条 |
 | 异步查询 / 回调 | ❌ | v2 文本/图片接口为同步模型（长视频审核走独立 solution 接口，见下行） |
-| 长视频审核（video_censor submit/pull，1.2.0） | ✅ | 仅公网 URL（≤3h/≤2G）；extId=业务 dataId 作幂等键（appId+extId 组合唯一，重复提交报 282005，dataId 空白在提交前 fail-fast）；拉取固定 subEvents=1,2,3,4（官方默认 2,3 会漏合规结论）；conclusionType 缺省=处理中、4=审核失败；帧/语音命中归一 RiskHit（帧截图 URL、语音转写原文丢弃）；可选回调：extra `notice-url` 配置时 asyncCallback=true，官方默认只推 2,3（违规/疑似）——PASS 任务永远等不到回调，模块自动兜底 sub-events=1,2,3,4（与拉取口径一致），显式 extra `sub-events` 原样透传；回调 POST 业务地址且官方无签名机制（BaiduCallbackVerifier 仅结构校验）（来源：cloud.baidu.com 文档 jksy7j3jv/Pksy7jxr2/8ksy7dc4b，查阅日期 2026-11-11） |
+| 长视频审核（video_censor submit/pull，1.2.0） | ✅ | 仅公网 URL（≤3h/≤2G）；extId=业务 dataId 作幂等键（appId+extId 组合唯一，重复提交报 282005，dataId 空白在提交前 fail-fast）；拉取固定 subEvents=1,2,3,4（官方默认 2,3 会漏合规结论）；conclusionType 缺省=处理中、4=审核失败（视频域抛 `ProviderCallException`，任务标记 FAILED，与同步域 `4→ERROR` 不同）；帧/语音命中归一 RiskHit（帧截图 URL、语音转写原文丢弃）；可选回调：extra `notice-url` 配置时 asyncCallback=true，官方默认只推 2,3（违规/疑似）——PASS 任务永远等不到回调，模块自动兜底 sub-events=1,2,3,4（与拉取口径一致），显式 extra `sub-events` 原样透传；回调 POST 业务地址且官方无签名机制（BaiduCallbackVerifier 仅结构校验）（来源：cloud.baidu.com 文档 jksy7j3jv/Pksy7jxr2/8ksy7dc4b，查阅日期 2026-11-11） |
 | GIF 动图 | ⏳ | `imgType=1` 参数未透传（按静态图处理） |
 | suggestion 映射 | ✅ | conclusionType 1→PASS、2→REJECT、3→REVIEW、4→ERROR（审核失败是业务结论，ok 保持 true） |
 | 用户内容安全 | ✅ | 命中词 hits[].words 进 `hit.evidence`（由 core EvidenceRedactor 脱敏）；`raw` 只放 `{log_id}` |
@@ -149,7 +149,7 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 | 图片同步检测（image/v4） | ✅ | URL / base64 / bytes（自动编码）三通道；`extra.image-type` 覆盖默认组合值 |
 | app-id | ✅ | `content.safe.providers.shumei.app-id`（数美控制台 appid），装配期 fail-fast |
 | eventId | ✅ | `scenes.<sceneCode>` 的映射值即 eventId，与数美控制台事件约定一致，仅透传不校验 |
-| region | ✅ | `region` 属性默认 `sh`（文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp）；`extra.text-base-url` / `extra.image-base-url` 可整体覆盖 |
+| region | ✅ | `region` 属性默认 `sh`（文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp）；`extra.text-base-url`（全 URL 原样使用）/ `extra.image-base-url` / `extra.video-base-url`（取 scheme+host 后重拼固定路径）可覆盖 |
 | riskLevel 映射 | ✅ | PASS/REVIEW/REJECT（大小写不敏感）；缺失/未知值保守回退 REVIEW |
 | 命中标签 | ✅ | allLabels[].riskLabel1/2/3 → `labelPath` + `labels`，probability(0~1) → ZERO_TO_ONE；条目缺 riskDetail 时回落根级 riskDetail |
 | 命中词 | ✅ | riskDetail.matchedLists[].words[]（用户内容片段）只进 `hit.raw.matchedWords`，不进 evidence/labels |

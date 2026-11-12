@@ -16,6 +16,7 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
+import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.api.exception.InvalidRequestException;
 import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
@@ -63,14 +64,14 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
                                    int connectTimeoutMs, int readTimeoutMs) {
         this.accessKey = Asserts.notBlank(accessKey, "accessKey");
         this.appId = Asserts.notBlank(appId, "appId");
-        this.textUri = URI.create(textBaseUrlOf(properties));
+        this.textUri = parseUri(textBaseUrlOf(properties), ShumeiProviderConstants.EXTRA_TEXT_BASE_URL);
         String imageAuthority = imageAuthorityOf(properties);
-        this.imageUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_PATH);
-        this.imageAsyncUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_ASYNC_PATH);
-        this.imageQueryUri = URI.create(imageAuthority + ShumeiProviderConstants.IMAGE_QUERY_PATH);
+        this.imageUri = parseUri(imageAuthority + ShumeiProviderConstants.IMAGE_PATH, null);
+        this.imageAsyncUri = parseUri(imageAuthority + ShumeiProviderConstants.IMAGE_ASYNC_PATH, null);
+        this.imageQueryUri = parseUri(imageAuthority + ShumeiProviderConstants.IMAGE_QUERY_PATH, null);
         String videoAuthority = videoAuthorityOf(properties);
-        this.videoUri = URI.create(videoAuthority + ShumeiProviderConstants.VIDEO_PATH);
-        this.videoQueryUri = URI.create(videoAuthority + ShumeiProviderConstants.VIDEO_QUERY_PATH);
+        this.videoUri = parseUri(videoAuthority + ShumeiProviderConstants.VIDEO_PATH, null);
+        this.videoQueryUri = parseUri(videoAuthority + ShumeiProviderConstants.VIDEO_QUERY_PATH, null);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
                 .build();
@@ -195,6 +196,20 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         }
     }
 
+    /**
+     * URI 解析 fail-fast：非法 base-url 配置在装配期抛可读配置错误（带配置键名定位），
+     * 而非裸 {@link IllegalArgumentException}
+     */
+    private static URI parseUri(String value, String configKey) {
+        try {
+            return URI.create(value);
+        } catch (IllegalArgumentException e) {
+            throw new ConfigInvalidException(
+                    "shumei extra '" + (configKey == null ? "base-url" : configKey)
+                            + "' is not a valid URI");
+        }
+    }
+
     private static String textBaseUrlOf(ShumeiProviderProperties properties) {
         String override = properties.extraValue(ShumeiProviderConstants.EXTRA_TEXT_BASE_URL);
         if (override != null) {
@@ -211,7 +226,7 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     private static String imageAuthorityOf(ShumeiProviderProperties properties) {
         String override = properties.extraValue(ShumeiProviderConstants.EXTRA_IMAGE_BASE_URL);
         if (override != null) {
-            URI uri = URI.create(override);
+            URI uri = parseUri(override, ShumeiProviderConstants.EXTRA_IMAGE_BASE_URL);
             return uri.getScheme() + "://" + uri.getRawAuthority();
         }
         return "https://" + ShumeiProviderConstants.IMAGE_HOST_PREFIX + properties.getRegion()
@@ -225,7 +240,7 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
     private static String videoAuthorityOf(ShumeiProviderProperties properties) {
         String override = properties.extraValue(ShumeiProviderConstants.EXTRA_VIDEO_BASE_URL);
         if (override != null) {
-            URI uri = URI.create(override);
+            URI uri = parseUri(override, ShumeiProviderConstants.EXTRA_VIDEO_BASE_URL);
             return uri.getScheme() + "://" + uri.getRawAuthority();
         }
         return "https://" + ShumeiProviderConstants.VIDEO_HOST_PREFIX + properties.getRegion()

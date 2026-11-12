@@ -38,6 +38,7 @@ content:
         extra:
           gifInterval: 2                       # GIF 截帧间隔（可选）
           gifMaxFrames: 5                      # GIF 最大截帧数（可选）
+          connect-timeout-ms: 3000             # SDK 连接超时（毫秒，可选）
           read-timeout-seconds: 10             # SDK 读超时（秒，可选）
           # callback-url: https://biz.example.com/callback/tencent   # 图片异步回调地址（可选，配置后注册图片异步操作）
 ```
@@ -54,7 +55,7 @@ content:
   `Status=PENDING/RUNNING` 为处理中、`FINISH` 终态、`ERROR/CANCELLED` 抛 `ProviderCallException`
   （消息仅含 errorType + 脱敏后的 errorDescription）。终态命中含任务级标签、音频段与截帧段三类 hit
   （`labelPath=Label/SubLabel`，`hit.raw.offsetTime` 标记偏移；音频转写原文、片段/截帧地址、
-  HitSnippetInfo 均不透传）。可选 `extra.callback-url`（+ `callback-seed`）配置后回调推送与
+  HitSnippetInfo 均不透传）。可选 `extra.callback-url` 配置后回调推送与
   查询响应同构，同样按 `TaskId`（缺失回退 `DataId`）关联。
 终态 hits 按 confidence 降序最多保留 50 条，截断时 `raw.truncated=true`、`raw.totalHits` 为原始命中数。
 - 操作已声明建议轮询参数 30s 间隔 / 30 分钟超时：单参 submitAndWait 自动生效，无需显式三参。

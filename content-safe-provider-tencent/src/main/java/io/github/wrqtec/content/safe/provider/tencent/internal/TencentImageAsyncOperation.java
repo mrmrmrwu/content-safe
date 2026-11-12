@@ -42,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 public class TencentImageAsyncOperation implements AuditOperation {
 
     private final ProviderPlan plan;
+    private final String type;
     private final Integer gifInterval;
     private final Integer gifMaxFrames;
     private final String callbackUrl;
@@ -53,12 +54,15 @@ public class TencentImageAsyncOperation implements AuditOperation {
      * @param plan         操作计划（service 为 BizType）
      * @param gifInterval  GIF 截帧间隔，null 不设置
      * @param gifMaxFrames GIF 最大截帧数，null 不设置
+     * @param type         IMS 审核类型（{@code IMAGE_AIGC}），null 走默认；请求期
+     *                     options.enableAigcDetect=TRUE 时强制覆盖为 {@code IMAGE_AIGC}（与同步操作同语义）
      * @param callbackUrl  回调地址（extra callback-url），官方必填
      */
-    public TencentImageAsyncOperation(ProviderPlan plan, Integer gifInterval, Integer gifMaxFrames,
+    public TencentImageAsyncOperation(ProviderPlan plan, String type, Integer gifInterval, Integer gifMaxFrames,
                                       String callbackUrl, TencentClientInvoker invoker,
                                       TencentAuditResultNormalizer normalizer) {
         this.plan = Asserts.notNull(plan, "plan");
+        this.type = type;
         this.gifInterval = gifInterval;
         this.gifMaxFrames = gifMaxFrames;
         this.callbackUrl = callbackUrl;
@@ -69,6 +73,7 @@ public class TencentImageAsyncOperation implements AuditOperation {
                 .url(true)
                 .base64(true)
                 .bytes(true)
+                .aigcDetect(true)
                 .asyncCallback(callbackUrl != null && !callbackUrl.isBlank())
                 .maxUrlSize(TencentLimits.maxUrlBytes())
                 .maxBase64Size(TencentLimits.maxBase64Bytes())
@@ -114,6 +119,12 @@ public class TencentImageAsyncOperation implements AuditOperation {
         }
         CreateImageModerationAsyncTaskRequest sdkRequest = new CreateImageModerationAsyncTaskRequest();
         sdkRequest.setBizType(plan.service());
+        String effectiveType = request.options().enableAigcDetect() == Boolean.TRUE
+                ? TencentProviderConstants.IMAGE_TYPE_AIGC
+                : type;
+        if (effectiveType != null) {
+            sdkRequest.setType(effectiveType);
+        }
         applyContent(request, sdkRequest);
         sdkRequest.setDataId(request.dataId());
         sdkRequest.setCallbackUrl(callbackUrl);

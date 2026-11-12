@@ -7,6 +7,7 @@ import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskRequest;
 import com.tencentcloudapi.ims.v20201229.models.CreateImageModerationAsyncTaskResponse;
 import com.tencentcloudapi.ims.v20201229.models.ImageModerationResponse;
+import io.github.wrqtec.content.safe.api.AuditOptions;
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.AuditResult;
 import io.github.wrqtec.content.safe.api.CallbackRequest;
@@ -22,6 +23,7 @@ import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
 import io.github.wrqtec.content.safe.model.AsyncTaskRef;
 import io.github.wrqtec.content.safe.provider.tencent.TencentAuditOperationProvider;
+import io.github.wrqtec.content.safe.provider.tencent.TencentProviderConstants;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -45,7 +47,7 @@ class TencentImageAsyncOperationTest {
     private final TencentAuditResultNormalizer normalizer = new TencentAuditResultNormalizer();
 
     private final TencentImageAsyncOperation operation = new TencentImageAsyncOperation(
-            TencentAuditOperationProvider.asyncPlan("ugc-image"), 2, 5, CALLBACK_URL, invoker, normalizer);
+            TencentAuditOperationProvider.asyncPlan("ugc-image"), null, 2, 5, CALLBACK_URL, invoker, normalizer);
 
     @Test
     void declaresAsyncCallbackCapabilitiesWithoutSync() {
@@ -70,7 +72,7 @@ class TencentImageAsyncOperationTest {
     @Test
     void missingCallbackUrlFailsFast() {
         TencentImageAsyncOperation noCallback = new TencentImageAsyncOperation(
-                TencentAuditOperationProvider.asyncPlan("ugc-image"), null, null, null, invoker, normalizer);
+                TencentAuditOperationProvider.asyncPlan("ugc-image"), null, null, null, null, invoker, normalizer);
         assertThatThrownBy(() -> noCallback.submitAsync(
                 imageRequest("img-1", ContentRef.url("https://example.com/a.jpg"))))
                 .isInstanceOf(ConfigInvalidException.class)
@@ -190,5 +192,35 @@ class TencentImageAsyncOperationTest {
         response.setDataId(dataId);
         response.setRequestId("req-1");
         return response;
+    }
+
+    @Test
+    void submitAsyncSetsConfiguredType() throws Exception {
+        TencentImageAsyncOperation aigcOperation = new TencentImageAsyncOperation(
+                TencentAuditOperationProvider.asyncPlan("ugc-image"), TencentProviderConstants.IMAGE_TYPE_AIGC, null, null, CALLBACK_URL,
+                invoker, normalizer);
+        when(invoker.createImageModerationAsyncTask(any())).thenReturn(taskResponse("img-5"));
+        aigcOperation.submitAsync(imageRequest("img-5", ContentRef.url("https://example.com/d.jpg")));
+        ArgumentCaptor<CreateImageModerationAsyncTaskRequest> captor =
+                ArgumentCaptor.forClass(CreateImageModerationAsyncTaskRequest.class);
+        verify(invoker).createImageModerationAsyncTask(captor.capture());
+        assertThat(captor.getValue().getType()).isEqualTo("IMAGE_AIGC");
+    }
+
+    @Test
+    void submitAsyncAigcOptionOverridesConfiguredType() throws Exception {
+        // 场景未按 AIGC BizType 映射（type=null），请求期显式开启 AIGC 检测同样生效
+        when(invoker.createImageModerationAsyncTask(any())).thenReturn(taskResponse("img-6"));
+        AuditRequest request = AuditRequest.builder()
+                .scene("ugc-image").type(ContentType.IMAGE)
+                .content(ContentRef.url("https://example.com/e.jpg"))
+                .dataId("img-6")
+                .options(AuditOptions.defaults().withAigcDetect(true))
+                .build();
+        operation.submitAsync(request);
+        ArgumentCaptor<CreateImageModerationAsyncTaskRequest> captor =
+                ArgumentCaptor.forClass(CreateImageModerationAsyncTaskRequest.class);
+        verify(invoker).createImageModerationAsyncTask(captor.capture());
+        assertThat(captor.getValue().getType()).isEqualTo("IMAGE_AIGC");
     }
 }

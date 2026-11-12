@@ -109,9 +109,6 @@ public class ShumeiVideoQueryResponse {
      */
     public static class FrameDetail {
 
-        /** 截帧图片地址（签名 URL，用户内容衍生，不透传） */
-        private String imgUrl;
-
         /** 数美请求唯一标识 */
         private String requestId;
 
@@ -135,10 +132,6 @@ public class ShumeiVideoQueryResponse {
 
         /** 风险详情（riskSource/matchedLists 等，按需提取） */
         private JsonObject riskDetail;
-
-        public String getImgUrl() {
-            return imgUrl;
-        }
 
         public String getRequestId() {
             return requestId;
@@ -178,9 +171,6 @@ public class ShumeiVideoQueryResponse {
      */
     public static class AudioDetail {
 
-        /** 音频片段地址（签名 URL，用户内容衍生，不透传） */
-        private String audioUrl;
-
         /** 数美请求唯一标识 */
         private String requestId;
 
@@ -204,13 +194,6 @@ public class ShumeiVideoQueryResponse {
 
         /** 风险详情（riskSource 等，按需提取） */
         private JsonObject riskDetail;
-
-        /** 该片段识别的文字内容（转写原文，不透传） */
-        private String audioText;
-
-        public String getAudioUrl() {
-            return audioUrl;
-        }
 
         public String getRequestId() {
             return requestId;
@@ -244,8 +227,5 @@ public class ShumeiVideoQueryResponse {
             return riskDetail;
         }
 
-        public String getAudioText() {
-            return audioText;
-        }
     }
 }

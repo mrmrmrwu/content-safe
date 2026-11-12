@@ -25,7 +25,4 @@ final class BaiduProviderPlanFixture {
                 new OperationLimits(null, null, null, BaiduLimits.maxImageBytes(), 0L, false));
     }
 
-    static AuditMode syncMode() {
-        return AuditMode.SYNC;
-    }
 }

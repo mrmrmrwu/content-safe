@@ -24,8 +24,8 @@ class ShumeiErrorMapperTest {
         ShumeiSyncResponse response = GSON.fromJson(
                 "{\"code\":1100,\"riskLevel\":\"PASS\"}", ShumeiSyncResponse.class);
 
-        assertThatCode(() -> ShumeiErrorMapper.assertSuccess(response)).doesNotThrowAnyException();
-        assertThat(ShumeiErrorMapper.assertSuccess(response)).isSameAs(response);
+        assertThatCode(() -> ShumeiErrorMapper.assertSuccess(response, "detect")).doesNotThrowAnyException();
+        assertThat(ShumeiErrorMapper.assertSuccess(response, "detect")).isSameAs(response);
     }
 
     @Test
@@ -33,7 +33,7 @@ class ShumeiErrorMapperTest {
         ShumeiSyncResponse response = GSON.fromJson(
                 "{\"code\":1901,\"message\":\"请求QPS超过限制\"}", ShumeiSyncResponse.class);
 
-        assertThatThrownBy(() -> ShumeiErrorMapper.assertSuccess(response))
+        assertThatThrownBy(() -> ShumeiErrorMapper.assertSuccess(response, "detect"))
                 .isInstanceOf(ProviderCallException.class)
                 .hasMessageContaining("code=1901");
     }
@@ -42,7 +42,7 @@ class ShumeiErrorMapperTest {
     void nullCodeTreatedAsFailure() {
         ShumeiSyncResponse response = new ShumeiSyncResponse();
 
-        assertThatThrownBy(() -> ShumeiErrorMapper.assertSuccess(response))
+        assertThatThrownBy(() -> ShumeiErrorMapper.assertSuccess(response, "detect"))
                 .isInstanceOf(ProviderCallException.class);
     }
 

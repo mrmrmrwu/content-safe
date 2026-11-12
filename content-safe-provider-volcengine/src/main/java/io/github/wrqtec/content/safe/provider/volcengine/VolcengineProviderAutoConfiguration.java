@@ -50,14 +50,12 @@ public class VolcengineProviderAutoConfiguration {
             VolcengineProviderProperties properties,
             ObjectProvider<List<CredentialsProvider>> credentialsProviders) {
         List<CredentialsProvider> providers = credentialsProviders.getIfAvailable(List::of);
-        if (providers != null) {
-            for (CredentialsProvider provider : providers) {
-                if (VolcengineProviderConstants.PROVIDER.equals(provider.provider())) {
-                    CredentialsProvider.Credentials credentials = provider.resolve(configOf(properties));
-                    return Asserts.notNull(credentials,
-                            "CredentialsProvider " + provider.getClass().getSimpleName()
-                                    + " returned null for volcengine");
-                }
+        for (CredentialsProvider provider : providers) {
+            if (VolcengineProviderConstants.PROVIDER.equals(provider.provider())) {
+                CredentialsProvider.Credentials credentials = provider.resolve(configOf(properties));
+                return Asserts.notNull(credentials,
+                        "CredentialsProvider " + provider.getClass().getSimpleName()
+                                + " returned null for volcengine");
             }
         }
         return CredentialsSupport.resolveStatic(

@@ -1,6 +1,8 @@
 package io.github.wrqtec.content.safe.provider.shumei.internal;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -11,7 +13,6 @@ import io.github.wrqtec.content.safe.api.CallbackResult;
 import io.github.wrqtec.content.safe.api.enums.AuditSource;
 import io.github.wrqtec.content.safe.api.enums.ContentType;
 import io.github.wrqtec.content.safe.api.exception.ContentSafeException;
-import io.github.wrqtec.content.safe.api.exception.ProviderCallException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.api.exception.UnsupportedFeatureException;
 import io.github.wrqtec.content.safe.api.util.Asserts;
@@ -100,7 +101,7 @@ public class ShumeiVideoAsyncOperation implements AuditOperation {
         // btId（官方必传的客户侧请求唯一标识）= 任务关联键，取业务 dataId，缺省生成随机标识
         // （不用 tokenIdOf：userId 对同一用户不唯一，会撞 btId）
         String btId = request.dataId() == null || request.dataId().isBlank()
-                ? java.util.UUID.randomUUID().toString().replace("-", "") : request.dataId();
+                ? UUID.randomUUID().toString().replace("-", "") : request.dataId();
         try {
             client.videoSubmit(plan.service(), imgType, audioType,
                     ShumeiPayloads.videoData(request.content().value(),
@@ -124,11 +125,7 @@ public class ShumeiVideoAsyncOperation implements AuditOperation {
             if (response.isProcessing()) {
                 return inProgress(ref);
             }
-            if (!response.isSuccess()) {
-                throw new ProviderCallException("shumei video query rejected: code="
-                        + response.getCode() + " message="
-                        + ShumeiErrorMapper.sanitize(response.getMessage()));
-            }
+            ShumeiErrorMapper.assertVideoSuccess(response, "video query");
             Duration cost = Duration.ofNanos(System.nanoTime() - startNanos);
             return normalizer.normalizeVideoQuery(response,
                     ShumeiAuditResultNormalizer.context(plan, ref.dataId(), cost));
@@ -180,7 +177,7 @@ public class ShumeiVideoAsyncOperation implements AuditOperation {
                 .service(plan.service())
                 .dataId(ref.dataId())
                 .requestId(ref.providerTaskId())
-                .hits(java.util.List.of())
+                .hits(List.of())
                 .build();
     }
 }

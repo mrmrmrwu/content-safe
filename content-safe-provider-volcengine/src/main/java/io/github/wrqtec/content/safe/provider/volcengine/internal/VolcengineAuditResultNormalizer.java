@@ -105,7 +105,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
             throw new ProviderCallException("volcengine video result returned empty result: requestId="
                     + (result == null ? "" : nullSafe(result.getRequestId())));
         }
-        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context);
+        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context, AuditSource.ASYNC_QUERY);
         builder.suggestion(fromDecision(data.getDecision()));
         List<RiskHit> hits = new ArrayList<>();
         appendFrameHits(hits, data.getVideoResults());
@@ -215,7 +215,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
             throw new ProviderCallException("volcengine text risk returned empty result: requestId="
                     + (result == null ? "" : nullSafe(result.getRequestId())));
         }
-        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context);
+        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context, AuditSource.SYNC);
         builder.suggestion(fromDecision(data.getDecision()));
         List<RiskHit> hits = new ArrayList<>();
         appendTextHits(hits, data.getResult());
@@ -230,7 +230,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
             throw new ProviderCallException("volcengine image content risk returned empty result: requestId="
                     + (result == null ? "" : nullSafe(result.getRequestId())));
         }
-        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context);
+        AuditResult.Builder builder = baseBuilder(result.getRequestId(), context, AuditSource.SYNC);
         builder.suggestion(fromDecision(data.getDecision()));
         List<RiskHit> hits = new ArrayList<>();
         appendImageHits(hits, data.getResults());
@@ -308,7 +308,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
         }
     }
 
-    private AuditResult.Builder baseBuilder(String requestId, Map<String, Object> context) {
+    private AuditResult.Builder baseBuilder(String requestId, Map<String, Object> context, AuditSource source) {
         Map<String, Object> safe = context == null ? Map.of() : context;
         Map<String, Object> raw = new LinkedHashMap<>();
         // raw 会经不可变拷贝（Map.copyOf 语义），null 值一律不放
@@ -322,7 +322,7 @@ public class VolcengineAuditResultNormalizer implements AuditResultNormalizer {
         return AuditResult.builder()
                 .ok(true)
                 .finalResult(true)
-                .source(AuditSource.SYNC)
+                .source(source)
                 .provider(provider())
                 .product(VolcengineProviderConstants.PRODUCT)
                 .service(service)

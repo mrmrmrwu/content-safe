@@ -9,12 +9,12 @@ optional 依赖，不进入使用方编译期传递依赖）。
 
 | 能力 | 状态 |
 | --- | --- |
-| 文本同步检测（text/v4） | ✅ ≤1 万字（UTF-8），data 整体 ≤1MB |
+| 文本同步检测（text/v4） | ✅ ≤1 万字（UTF-8，本地校验；data 整体 ≤1MB 为官方约束，本地不做体积校验） |
 | 图片同步检测（image/v4） | ✅ URL / base64 / bytes 三通道（bytes 自动编码） |
 | 事件（eventId） | ✅ `scenes` 映射，与数美控制台事件约定一致 |
 | region | ✅ 默认 `sh`；文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp；extra 可整体覆盖地址 |
 | 动图截帧（interval/maxFrame） | ✅ 经场景 ext 传入（maxFrame 官方上限 20） |
-| 图片异步（轮询 + 回调） | ✅ 提交 `/v4/saas/async/img`（≤30MB），查询 `/v4/image/query` 按 requestId 轮询；回调地址在数美控制台配置（不经过本库） |
+| 图片异步（轮询 + 回调） | ✅ 提交 `/v4/saas/async/img`（官方约束 ≤30MB，本地不做体积校验），查询 `/v4/image/query` 按 requestId 轮询；回调地址在数美控制台配置（不经过本库） |
 | 视频异步（video/v4，仅 URL） | ✅ 提交回执 + `/video/query/v4` 按 btId 轮询，可选回调；截帧+语音段双通道 |
 | 批量 / 异步文本 | ❌ 数美文本域仅同步接口 |
 
@@ -41,13 +41,14 @@ content:
           read-timeout-ms: "5000"
           # text-type: TEXTRISK                          # 可选：默认 TEXTRISK
           # image-type: POLITY_EROTIC_VIOLENT_QRCODE_ADVERT_IMGTEXTRISK
-          # text-base-url: https://api-text-sh.fengkongcloud.com/text/v4   # 可选：整体覆盖
-          # image-base-url: https://api-img-sh.fengkongcloud.com/image/v4
+          # text-base-url: https://api-text-sh.fengkongcloud.com/text/v4   # 可选：整体覆盖（全 URL 原样使用）
+          # image-base-url: https://api-img-sh.fengkongcloud.com/image/v4   # 可选：取 scheme+host 后重拼固定路径
+          # video-base-url: https://api-video-sh.fengkongcloud.com/video/v4 # 可选：取 scheme+host 后重拼固定路径
 ```
 
 `tokenId`（设备/用户上下文标识，官方强约定必传）解析链：`context.userId` →
 `dataId` → 随机 UUID。场景 ext 中的 `interval`/`maxFrame` 等键会并入请求 data，
-与保留键（`img`/`text`/`tokenId`/`dataId`/`ip`/`deviceId`）撞名即装配期 fail-fast。
+与保留键（`text`/`img`/`url`/`btId`/`screenshotType`/`tokenId`/`dataId`/`ip`/`deviceId`）撞名即装配期 fail-fast。
 未映射的场景不会注册操作（与其他 provider 一致，由路由跳过）。
 
 ## 安全约束
@@ -81,10 +82,10 @@ content:
 
 ## 测试
 
-- 契约样本：`src/test/resources/contracts/shumei/`（text pass/review/reject、
-  image pass/reject、QPS 超限 1901，取自官方文档示例并打码）；
-- 单元测试：normalizer 映射（含 riskSource/命中词过滤、根级 riskDetail 回落）、
-  错误映射（含脱敏）、两个 Operation 的参数装配与限制校验；
+- 契约样本：`src/test/resources/contracts/shumei/`（text pass/review/reject、image pass/reject、
+  video submit/处理中/终态/回调、QPS 超限 1901，取自官方文档示例并打码）；
+- 单元测试：normalizer 映射（含 riskSource/命中词过滤、根级 riskDetail 回落、null 元素防护）、
+  错误映射（含脱敏）、四个 Operation（文本/图片同步、图片异步、视频异步）的参数装配与限制校验；
 - 装配测试：`ApplicationContextRunner`（默认不装配、缺凭证 fail-fast、用户 Bean 覆盖）；
 - ArchUnit：core/starter 隔离；Gson 仅限 `internal` 包。
 

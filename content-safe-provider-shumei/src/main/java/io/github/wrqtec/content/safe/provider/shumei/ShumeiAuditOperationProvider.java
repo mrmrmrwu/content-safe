@@ -3,6 +3,7 @@ package io.github.wrqtec.content.safe.provider.shumei;
 import java.util.List;
 
 import io.github.wrqtec.content.safe.api.enums.ContentType;
+import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import io.github.wrqtec.content.safe.model.enums.AuditMode;
 import io.github.wrqtec.content.safe.api.util.Asserts;
 import io.github.wrqtec.content.safe.model.OperationLimits;
@@ -131,7 +132,7 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
         try {
             return Integer.parseInt(value.trim());
         } catch (NumberFormatException e) {
-            throw new io.github.wrqtec.content.safe.api.exception.ConfigInvalidException(
+            throw new ConfigInvalidException(
                     "shumei extra '" + ShumeiProviderConstants.EXTRA_SCREENSHOT_TYPE
                             + "' must be an integer, got: " + value);
         }

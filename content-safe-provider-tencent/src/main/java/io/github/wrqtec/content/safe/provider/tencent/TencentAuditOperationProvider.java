@@ -93,7 +93,7 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
                 return List.of(
                         new TencentImageModerationOperation(plan, type, gifInterval, gifMaxFrames,
                                 invoker, normalizer),
-                        new TencentImageAsyncOperation(asyncPlan, gifInterval, gifMaxFrames, callbackUrl,
+                        new TencentImageAsyncOperation(asyncPlan, type, gifInterval, gifMaxFrames, callbackUrl,
                                 invoker, normalizer));
             }
             case VIDEO -> {

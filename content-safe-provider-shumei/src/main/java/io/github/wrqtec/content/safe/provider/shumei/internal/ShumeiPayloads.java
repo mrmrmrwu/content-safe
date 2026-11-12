@@ -3,12 +3,14 @@ package io.github.wrqtec.content.safe.provider.shumei.internal;
 import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import io.github.wrqtec.content.safe.api.AuditRequest;
 import io.github.wrqtec.content.safe.api.ContentRef;
 import io.github.wrqtec.content.safe.api.enums.ContentRefType;
 import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
+import io.github.wrqtec.content.safe.api.exception.UnsupportedContentException;
 import io.github.wrqtec.content.safe.model.SceneDefinition;
 
 /**
@@ -23,8 +25,8 @@ public final class ShumeiPayloads {
 
     /** data 内保留键：场景 ext 撞名视为配置错误，fail-fast
      * （url/btId/screenshotType 为视频检测必传字段，ext 撞名会破坏请求语义） */
-    private static final java.util.Set<String> RESERVED_KEYS =
-            java.util.Set.of("text", "img", "url", "btId", "screenshotType",
+    private static final Set<String> RESERVED_KEYS =
+            Set.of("text", "img", "url", "btId", "screenshotType",
                     "tokenId", "dataId", "ip", "deviceId");
 
     private ShumeiPayloads() {
@@ -76,7 +78,7 @@ public final class ShumeiPayloads {
         return switch (image.type()) {
             case URL, BASE64 -> image.value();
             case BYTES -> Base64.getEncoder().encodeToString(image.bytes());
-            default -> throw new ConfigInvalidException(
+            default -> throw new UnsupportedContentException(
                     "shumei image detect unsupported content ref type: " + image.type());
         };
     }

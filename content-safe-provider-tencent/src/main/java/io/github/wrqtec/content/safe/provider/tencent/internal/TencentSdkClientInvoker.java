@@ -37,12 +37,6 @@ public final class TencentSdkClientInvoker implements TencentClientInvoker {
     /** extra 配置键：读取超时（秒，SDK HttpProfile 单位为秒） */
     public static final String EXTRA_READ_TIMEOUT_SECONDS = "read-timeout-seconds";
 
-    /** 默认连接超时（毫秒） */
-    private static final int DEFAULT_CONNECT_TIMEOUT_MS = 3000;
-
-    /** 默认读取超时（秒） */
-    private static final int DEFAULT_READ_TIMEOUT_SECONDS = 10;
-
     private final TmsClient tmsClient;
     private final ImsClient imsClient;
     private final VmClient vmClient;
@@ -65,6 +59,10 @@ public final class TencentSdkClientInvoker implements TencentClientInvoker {
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setEndpoint(endpoint);
         Map<String, String> extra = properties.getExtra();
+        Integer connectTimeout = intExtra(extra, EXTRA_CONNECT_TIMEOUT_MS, null);
+        if (connectTimeout != null) {
+            httpProfile.setConnTimeout(connectTimeout);
+        }
         Integer readTimeout = intExtra(extra, EXTRA_READ_TIMEOUT_SECONDS, null);
         if (readTimeout != null) {
             httpProfile.setReadTimeout(readTimeout);

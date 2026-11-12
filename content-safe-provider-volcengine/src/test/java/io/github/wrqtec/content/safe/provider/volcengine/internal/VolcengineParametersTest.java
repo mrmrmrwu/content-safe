@@ -30,7 +30,7 @@ class VolcengineParametersTest {
     void sceneExtIsPassedThrough() {
         SceneDefinition scene = new SceneDefinition("nickname", ContentType.TEXT, null, null,
                 Map.of("scene", "chat", "ttl", "300"));
-        String json = VolcengineParameters.toJson("text", "hello", scene);
+        String json = VolcengineParameters.toJson(Map.of(), "text", "hello", scene);
         JsonObject payload = JsonParser.parseString(json).getAsJsonObject();
         assertThat(payload.get("scene").getAsString()).isEqualTo("chat");
         assertThat(payload.get("ttl").getAsString()).isEqualTo("300");
@@ -39,10 +39,10 @@ class VolcengineParametersTest {
 
     @Test
     void missingContentKeyFailsFastWithReadableMessage() {
-        assertThatThrownBy(() -> VolcengineParameters.toJson(null, "hello", null))
+        assertThatThrownBy(() -> VolcengineParameters.toJson(Map.of(), null, "hello", null))
                 .isInstanceOf(ConfigInvalidException.class)
                 .hasMessageContaining("parameters-text-key");
-        assertThatThrownBy(() -> VolcengineParameters.toJson("  ", "hello", null))
+        assertThatThrownBy(() -> VolcengineParameters.toJson(Map.of(), "  ", "hello", null))
                 .isInstanceOf(ConfigInvalidException.class);
     }
 

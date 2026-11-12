@@ -3,7 +3,6 @@ package io.github.wrqtec.content.safe.provider.tencent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import io.github.wrqtec.content.safe.api.exception.ConfigInvalidException;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -49,14 +48,10 @@ public class TencentProviderProperties {
     private Map<String, String> extra = new LinkedHashMap<>();
 
     /**
-     * 装配前校验：开启时 secretId/secretKey 必填
+     * 装配前校验（仅结构项）。凭证是否存在不在此校验：
+     * yml 之外还允许 env（CONTENT_SAFE_TENCENT_*）与自定义 CredentialsProvider，
+     * 缺凭证由装配链 resolveCredentials 统一 fail-fast（避免环境变量方式被此处误拒）
      */
     public void validate() {
-        if (!enabled) {
-            return;
-        }
-        if (secretId == null || secretId.isBlank() || secretKey == null || secretKey.isBlank()) {
-            throw new ConfigInvalidException("tencent provider enabled but secretId/secretKey not configured");
-        }
     }
 }

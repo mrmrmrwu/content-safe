@@ -38,7 +38,6 @@ public final class TencentProviderConstants {
     public static final String OPERATION_VIDEO_CREATE = "CreateVideoModerationTask";
 
     /** 视频审核任务结果查询操作（VM，cloud.tencent.com/document/product/1265/80018，查阅 2026-11-11） */
-    public static final String OPERATION_VIDEO_QUERY = "DescribeTaskDetail";
 
     /** extra 配置键：异步任务回调地址（官方 CallbackUrl，必填） */
     public static final String EXTRA_CALLBACK_URL = "callback-url";
