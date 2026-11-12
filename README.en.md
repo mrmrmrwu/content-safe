@@ -9,7 +9,7 @@
 
 > 中文文档：[README.md](README.md)（本项目详细文档为中文，本文件是其英文概览。）
 
-ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starter. It wraps the text/image moderation APIs of major cloud providers behind one unified API, so business code never touches vendor SDKs or scene-ID details again — just add a dependency, write a bit of YAML, and call one method.
+ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starter. It wraps the text/image/video moderation APIs of major cloud providers behind one unified API, so business code never touches vendor SDKs or scene-ID details again — just add a dependency, write a bit of YAML, and call one method.
 
 ## Why ContentSafe?
 
@@ -25,7 +25,7 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 - **Governance built in**: health probing, circuit breaking & rate limiting (operation-level), unified error codes, audit events, Micrometer metrics.
 - **AIGC detection**: request-time switch (`AuditOptions.withAigcDetect`) gated by declared capabilities.
 - **Manual-review loop**: machine `REVIEW` results flow out via `ReviewEvent`, get finalized through `resolveReview` (source=MANUAL, finalResult=true), and are written back through `ReviewResultSink`.
-- **Async & callbacks**: image async submit/query/callback (Aliyun/Tencent/Shumei) with signature verification, idempotency and dead-letter handling.
+- **Async & callbacks**: image/video async submit/query/callback (capability-gated per provider) with signature verification, idempotency and dead-letter handling; operations declare suggested polling parameters, so single-arg `submitAndWait` works out of the box.
 - **Clean dependencies**: zero transitive HTTP/JSON dependencies by default (JDK HttpClient + SPI replaceable); all cloud SDKs are optional.
 
 ## Quick Start
@@ -157,6 +157,14 @@ String taskId = contentSafeTemplate.submitAsync(
     AuditRequest.image("avatar", ContentRef.url(avatarUrl))
 );
 AuditResult result = contentSafeTemplate.query(taskId);
+
+// Async video moderation (since 1.2.0; input is a video URL)
+String videoTaskId = contentSafeTemplate.video("short_video", videoUrl);
+AuditResult videoResult = contentSafeTemplate.query(videoTaskId);
+// or block until final: automatically uses the operation-declared suggested polling parameters (e.g. 30s interval / 30min timeout)
+AuditResult videoFinal = contentSafeTemplate.submitAndWait(
+    AuditRequest.video("short_video", ContentRef.url(videoUrl))
+);
 ```
 
 ## Supported Providers
