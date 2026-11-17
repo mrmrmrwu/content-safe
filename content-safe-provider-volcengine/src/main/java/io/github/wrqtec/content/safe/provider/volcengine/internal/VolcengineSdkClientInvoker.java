@@ -25,14 +25,28 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public final class VolcengineSdkClientInvoker implements VolcengineClientInvoker {
 
+    /** 单例配置互斥锁（构造期同步，运行期只读） */
+    private static final Object SINGLETON_LOCK = new Object();
+
     private final ContentSecurityService service;
 
     public VolcengineSdkClientInvoker(Credentials credentials) {
-        this.service = ContentSecurityServiceImpl.getInstance();
-        this.service.setAccessKey(credentials.accessKeyId());
-        this.service.setSecretKey(credentials.accessKeySecret());
-        if (credentials.securityToken() != null && !credentials.securityToken().isBlank()) {
-            this.service.setSessionToken(credentials.securityToken());
+        ContentSecurityService instance = ContentSecurityServiceImpl.getInstance();
+        synchronized (SINGLETON_LOCK) {
+            String existingAk = instance.getAccessKey();
+            if (existingAk != null && !existingAk.isBlank()
+                    && !existingAk.equals(credentials.accessKeyId())) {
+                throw new io.github.wrqtec.content.safe.api.exception.ConfigInvalidException(
+                        "volcengine SDK ContentSecurityService is a process-wide singleton already configured "
+                                + "with a different account; refusing to overwrite credentials. "
+                                + "Use a custom VolcengineClientInvoker bean or separate processes for multi-account");
+            }
+            this.service = instance;
+            this.service.setAccessKey(credentials.accessKeyId());
+            this.service.setSecretKey(credentials.accessKeySecret());
+            // 空 token 显式置 null：避免残留上一个账号的会话令牌
+            this.service.setSessionToken(credentials.securityToken() == null
+                    || credentials.securityToken().isBlank() ? null : credentials.securityToken());
         }
     }
 

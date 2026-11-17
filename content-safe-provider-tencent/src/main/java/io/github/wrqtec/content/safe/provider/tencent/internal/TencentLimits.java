@@ -41,8 +41,9 @@ public final class TencentLimits {
      * 文本同步操作限额
      */
     public static OperationLimits textSync() {
+        // 文本上限按 Unicode 码点在操作内校验，不填入字节语义字段
         return new OperationLimits(null, TEXT_QPS, DEFAULT_TIMEOUT,
-                MAX_TEXT_CHARS, 0, false);
+                0, 0, false);
     }
 
     /**

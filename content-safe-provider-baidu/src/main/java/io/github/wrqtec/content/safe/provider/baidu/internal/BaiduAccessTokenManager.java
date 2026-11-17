@@ -56,13 +56,21 @@ public class BaiduAccessTokenManager {
      */
     public BaiduAccessTokenManager(String apiKey, String secretKey, String baseUrl,
                                    int connectTimeoutMs, int readTimeoutMs) {
+        this(apiKey, secretKey, baseUrl, connectTimeoutMs, readTimeoutMs, null);
+    }
+
+    /**
+     * 可注入 HttpClient 的构造器（测试或调用方定制传输层）
+     */
+    public BaiduAccessTokenManager(String apiKey, String secretKey, String baseUrl,
+                                   int connectTimeoutMs, int readTimeoutMs, HttpClient httpClient) {
         this.apiKey = Asserts.notBlank(apiKey, "apiKey");
         this.secretKey = Asserts.notBlank(secretKey, "secretKey");
         Asserts.notBlank(baseUrl, "baseUrl");
         this.tokenUri = URI.create(baseUrl + BaiduProviderConstants.TOKEN_PATH);
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = httpClient == null ? HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
-                .build();
+                .build() : httpClient;
         this.requestTimeout = Duration.ofMillis(readTimeoutMs);
     }
 
@@ -85,6 +93,15 @@ public class BaiduAccessTokenManager {
         expiresAtEpochSeconds = 0L;
     }
 
+    /**
+     * 仅当缓存仍是 expectedToken 时失效：旧请求失败不得清掉其他线程刚刷新 token
+     */
+    public synchronized void invalidate(String expectedToken) {
+        if (cachedToken != null && cachedToken.equals(expectedToken)) {
+            invalidate();
+        }
+    }
+
     private String fetchToken() {
         String body = "grant_type=client_credentials"
                 + "&client_id=" + urlEncode(apiKey)
@@ -98,12 +115,20 @@ public class BaiduAccessTokenManager {
         try {
             HttpResponse<InputStream> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            tokenResponse = parse(response.body());
+            if (response.statusCode() != 200) {
+                try (InputStream ignored = response.body()) {
+                    // 关闭连接体；错误页不进入 JSON 解析
+                }
+                throw new ProviderCallException(
+                        "baidu access_token request returned httpStatus=" + response.statusCode());
+            }
+            tokenResponse = parse(new BoundedInputStream(
+                    response.body(), BoundedInputStream.DEFAULT_MAX_RESPONSE_BYTES));
         } catch (IOException e) {
-            throw new ProviderCallException("baidu access_token request failed: " + e.getClass().getSimpleName(), e);
+            throw new ProviderCallException("baidu access_token request failed: " + e.getClass().getSimpleName());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new ProviderCallException("baidu access_token request interrupted", e);
+            throw new ProviderCallException("baidu access_token request interrupted");
         }
         if (tokenResponse == null || tokenResponse.accessToken == null || tokenResponse.accessToken.isBlank()) {
             String reason = tokenResponse == null ? "empty response"

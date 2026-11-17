@@ -20,8 +20,8 @@
 | `CallbackVerifier` | 可替换 | 异步回调验签 |
 | `CredentialsProvider` / `CredentialsSupport` | 业务侧（可选） / 工具 | 自定义凭证注入（如 KMS）；静态解析工具 |
 | `EvidenceRedactor` | 业务侧（可选） | 命中证据脱敏 |
-| `ContentRefNormalizer` | 可扩展 | 内容载体预处理 |
-| `ProviderHealthProbe` | 供应商模块（可选） | 健康探测 |
+| `ContentRefNormalizer` | 预留，当前未接线 | 内容载体预处理抽象；实现 Bean 不会自动进入审核链路 |
+| `ProviderHealthProbe` | 预留，当前未接线 | 健康探测抽象；当前健康端点不执行远程探测 |
 | `SceneDefinitionProvider` | 可扩展（starter 提供 JSON 实现） | 场景定义来源 |
 
 供应商接入清单与安全约束见 [CLAUDE.md](../CLAUDE.md)。

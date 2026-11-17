@@ -124,7 +124,7 @@
 
 **映射**：
 - `Status` 枚举 `PENDING/RUNNING/ERROR/FINISH/CANCELLED`：仅 `PENDING/RUNNING` → in-progress（`finalResult=false, suggestion=null, raw.status`）；`FINISH` → 终态归一化；`ERROR/CANCELLED` → `ProviderCallException`（终态失败，不无限轮询）；
-- `Suggestion`（Pass/Review/Block）→ suggestion，复用 `TencentAuditResultNormalizer` 现有映射（`fromSuggestion` 返回 null 时按 `Label=="Normal"` 回退 PASS/REJECT）；
+- `Suggestion`（Pass/Review/Block）→ suggestion，复用 `TencentAuditResultNormalizer` 现有映射；未知或缺失值统一回退 REVIEW，不再按 `Label=="Normal"` 回退 PASS；
 - hits 三来源：`Labels[]`（`Normal` 段跳过，labelPath=`Label/SubLabel` 用 "/" 连接，confidence=Score 0~100 PERCENTAGE）+ `AudioSegments[]` 命中段（`HitFlag==1`，`OffsetTime` → `hit.raw.offsetTime`）+ `ImageSegments[]` 命中段（同上）；
 - `VideoSegments[]` 不参与 hits（元素模型无标签字段）；`HitSnippetInfo.Snippet`、`AudioText`、`Asrs`、`SegmentCosUrlList`、片段 `Text/Url/VideoUrl/AudioUrl` 一律不透传。
 

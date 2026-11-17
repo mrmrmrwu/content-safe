@@ -76,8 +76,24 @@ public final class ShumeiPayloads {
 
     private static String imgValueOf(ContentRef image) {
         return switch (image.type()) {
-            case URL, BASE64 -> image.value();
-            case BYTES -> Base64.getEncoder().encodeToString(image.bytes());
+            case URL -> image.value();
+            case BASE64 -> {
+                // 请求体上限 1MiB：base64 文本长度近似即编码后大小，调用前拒绝
+                if (image.value() != null && image.value().length() > ShumeiLimits.MAX_BODY_BYTES) {
+                    throw new UnsupportedContentException(
+                            "shumei image base64 payload exceeds " + ShumeiLimits.MAX_BODY_BYTES + " bytes");
+                }
+                yield image.value();
+            }
+            case BYTES -> {
+                // 编码前按 base64 后约 4/3 倍体积校验，避免先分配超大字符串再拒绝
+                if (image.bytes() != null
+                        && image.bytes().length * 4L / 3L > ShumeiLimits.MAX_BODY_BYTES) {
+                    throw new UnsupportedContentException(
+                            "shumei image bytes payload exceeds " + ShumeiLimits.MAX_BODY_BYTES + " bytes after base64");
+                }
+                yield Base64.getEncoder().encodeToString(image.bytes());
+            }
             default -> throw new UnsupportedContentException(
                     "shumei image detect unsupported content ref type: " + image.type());
         };

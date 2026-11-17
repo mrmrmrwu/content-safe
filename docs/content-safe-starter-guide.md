@@ -89,7 +89,7 @@ content:
           read-timeout-ms: "5000"
 ```
 
-能力：文本（URL/base64 不支持，仅原文 ≤600 字）、图片（仅公网 URL，≤20MB，总像素 ≤2.5 亿）。
+能力：文本（URL/base64 不支持，仅原文 ≤600 Unicode 码点）、图片（仅公网 URL，≤20MB，总像素 ≤2.5 亿）。
 未映射到 `scenes` 的场景不会注册 operation，路由自动跳过——不会"先调了再说"。
 
 ### 3.2 腾讯云（content-safe-provider-tencent）
@@ -112,7 +112,7 @@ content:
           gifMaxFrames: "5"
 ```
 
-能力：文本（≤10000 字符，经 Base64 传输）、图片（URL ≤30MB / base64 ≤10MB）、GIF 截帧、AIGC 识别。
+能力：文本（≤10000 Unicode 码点，经 Base64 传输）、图片（URL ≤30MB / base64 ≤10MB）、GIF 截帧、AIGC 识别。
 
 ### 3.3 百度智能云（content-safe-provider-baidu）
 
@@ -132,7 +132,7 @@ content:
           read-timeout-ms: "10000"
 ```
 
-无官方 SDK，模块内置 JDK HttpClient 自研客户端；access_token 自动获取与缓存（30 天，遇 110/111 自动重取重试一次）。能力：文本（≤20000 字节）、图片（URL / base64 ≤4MB）。strategyId 在内容审核平台"策略中心"创建。
+无官方 SDK，模块内置 JDK HttpClient 自研客户端；access_token 自动获取与缓存（30 天，遇 110/111 自动重取重试一次）。能力：文本（≤20000 字节）、图片（URL / base64 ≤4MB）。HTTP 非 200 响应直接拒绝，响应体上限 4MiB。strategyId 在内容审核平台"策略中心"创建。
 
 ### 3.4 火山引擎（content-safe-provider-volcengine）
 
@@ -158,6 +158,7 @@ content:
 suspect→REVIEW、reject→REJECT，未知值保守回退 REVIEW；命中词与 OCR 文本按安全约束
 只进 raw 或丢弃。parameters 内层键名由所配 Service 的控制台文档定义（见
 [provider-feature-matrix.md](provider-feature-matrix.md) volcengine 节），缺失即启动 fail-fast。
+默认 SDK 客户端是进程级单例：已配置不同 AK 时再次初始化会启动失败，防止跨账号覆盖；多账号需自定义 `VolcengineClientInvoker` 或拆进程隔离。
 
 ### 3.5 数美（content-safe-provider-shumei）
 
@@ -176,7 +177,7 @@ content:
 ```
 
 无官方现代 SDK，模块内置 JDK HttpClient 自研客户端。能力：文本（text/v4，≤1 万字）、
-图片（image/v4，URL / base64 / bytes）。riskLevel 归一：PASS/REVIEW/REJECT，未知值
+图片（image/v4，URL / base64 / bytes；同步 base64/bytes 编码后 ≤1MiB）。HTTP 非 200 响应直接拒绝，响应体上限 4MiB。riskLevel 归一：PASS/REVIEW/REJECT，未知值
 保守回退 REVIEW；命中词（matchedLists）只进 `hit.raw`，打码文本/联系方式/人脸等用户
 内容一律不透传。检测类型与动图截帧参数可经 `extra.text-type` / `extra.image-type` /
 场景 ext 配置（见 [provider-feature-matrix.md](provider-feature-matrix.md) shumei 节）。
@@ -188,6 +189,8 @@ content:
 1. 用户自定义 `CredentialsProvider` Bean（`provider()` 匹配者优先）；
 2. yml 直接配置（`ak`/`sk`、`secret-id`/`secret-key`、`access-key`）；
 3. 环境变量 `CONTENT_SAFE_<PROVIDER>_AK` / `_SK` / `_STSTOKEN`。
+
+长期凭证在客户端启动期定型，当前不支持运行中热轮换；更换凭证需重建应用上下文。火山引擎还受官方 SDK 进程单例约束，见 §3.4。
 
 ## 4. 治理配置
 
@@ -255,8 +258,9 @@ content:
 ## 6. 扩展
 
 - **自定义 provider**：实现 `AuditOperationProvider`（一 provider 一类，可出多个 `AuditOperation`）+ 提供 `@AutoConfiguration` 与 `META-INF/spring/...AutoConfiguration.imports`，声明能力（`AuditCapabilities`）与限额（`OperationLimits`）。最小演示见 [../samples/content-safe-samples-basic](../samples/content-safe-samples-basic)。
-- **默认 Bean 全部 `@ConditionalOnMissingBean`**：`AuditRouter`、`AuditArbitrationPolicy`、`AuditTaskStore`、`CredentialsProvider`、`ContentRefNormalizer`、`EvidenceRedactor`、`AuditListener`、`RateLimiterRegistry`、`CircuitBreakerRegistry` 均可覆盖。
-- **Java SPI**：`META-INF/services` 注册 `AuditOperationProvider`/`SceneDefinitionProvider`/`AuditResultNormalizer` 等扩展点。
+- **默认 Bean 全部 `@ConditionalOnMissingBean`**：`AuditRouter`、`AuditArbitrationPolicy`、`AuditTaskStore`、`CredentialsProvider`、`EvidenceRedactor`、`AuditListener`、`RateLimiterRegistry`、`CircuitBreakerRegistry` 均可覆盖。
+- **预留抽象**：`ContentRefNormalizer`、`ProviderHealthProbe` 当前未接入默认执行链；仅声明 Bean 不会自动生效。
+- **扩展发现机制**：当前使用 Spring Boot 自动装配与用户 Bean，不启用 Java `ServiceLoader`，也不会读取 `META-INF/services` 注册扩展。
 
 ## 7. 启动失败诊断（FailureAnalyzer）
 

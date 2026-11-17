@@ -111,8 +111,10 @@ class TencentAuditOperationProviderTest {
         assertThat(asyncOp.capabilities().asyncCallback()).isTrue();
 
         properties.getExtra().remove("callback-url");
+        TencentAuditOperationProvider withoutCallbackProvider = new TencentAuditOperationProvider(
+                properties, invoker, new TencentAuditResultNormalizer());
         List<AuditOperation> withoutCallback =
-                provider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
+                withoutCallbackProvider.operations(SceneDefinition.of("avatar", ContentType.IMAGE, Severity.HIGH));
         assertThat(withoutCallback.get(1).capabilities().asyncCallback()).isFalse();
     }
 

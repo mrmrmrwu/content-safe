@@ -35,6 +35,9 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
     private final ShumeiProviderProperties properties;
     private final ShumeiClientInvoker client;
     private final ShumeiAuditResultNormalizer normalizer;
+    /** 场景操作缓存：配置启动期定型，操作对象不可变，避免每次审核重复分配 */
+    private final java.util.concurrent.ConcurrentMap<String, List<AuditOperation>> operationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public ShumeiAuditOperationProvider(ShumeiProviderProperties properties, ShumeiClientInvoker client) {
         this.properties = Asserts.notNull(properties, "properties");
@@ -55,6 +58,10 @@ public class ShumeiAuditOperationProvider implements AuditOperationProvider {
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
         Asserts.notNull(scene, "scene");
+        return operationCache.computeIfAbsent(scene.code() + ":" + scene.type(), key -> buildOperations(scene));
+    }
+
+    private List<AuditOperation> buildOperations(SceneDefinition scene) {
         String eventId = properties.getScenes().get(scene.code());
         if (eventId == null) {
             return List.of();

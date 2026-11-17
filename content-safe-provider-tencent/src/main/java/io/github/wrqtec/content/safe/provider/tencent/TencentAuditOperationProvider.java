@@ -36,6 +36,9 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
     private final TencentProviderProperties properties;
     private final TencentClientInvoker invoker;
     private final TencentAuditResultNormalizer normalizer;
+    /** 场景操作缓存：配置启动期定型，操作对象不可变，避免每次审核重复分配 */
+    private final java.util.concurrent.ConcurrentMap<String, List<AuditOperation>> operationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public TencentAuditOperationProvider(TencentProviderProperties properties,
                                          TencentClientInvoker invoker,
@@ -58,6 +61,10 @@ public class TencentAuditOperationProvider implements AuditOperationProvider {
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
         Asserts.notNull(scene, "scene");
+        return operationCache.computeIfAbsent(scene.code() + ":" + scene.type(), key -> buildOperations(scene));
+    }
+
+    private List<AuditOperation> buildOperations(SceneDefinition scene) {
         Map<String, String> scenes = properties.getScenes();
         String bizType = scenes.get(scene.code());
         if (bizType != null && !bizType.isBlank()) {

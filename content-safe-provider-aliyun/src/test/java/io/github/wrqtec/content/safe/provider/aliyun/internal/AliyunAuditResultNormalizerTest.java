@@ -52,11 +52,22 @@ class AliyunAuditResultNormalizerTest {
     }
 
     @Test
-    void textNullDataTreatedAsPass() {
+    void textNullDataFailsClosed() {
         TextModerationResponseBody body = new TextModerationResponseBody()
                 .setCode(200).setRequestId("r-1");
+        assertThatThrownBy(() -> NORMALIZER.normalize(body, context()))
+                .isInstanceOf(ProviderCallException.class)
+                .hasMessageContaining("no decision data");
+    }
+
+    @Test
+    void textUnknownRiskLevelWithoutLabelsFallsBackToReview() {
+        TextModerationResponseBody body = new TextModerationResponseBody()
+                .setCode(200).setRequestId("r-review")
+                .setData(new TextModerationResponseBody.TextModerationResponseBodyData()
+                        .setReason("{}"));
         AuditResult result = NORMALIZER.normalize(body, context());
-        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.PASS);
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REVIEW);
         assertThat(result.hits()).isEmpty();
     }
 
@@ -72,11 +83,22 @@ class AliyunAuditResultNormalizerTest {
     }
 
     @Test
-    void imageNullDataTreatedAsPass() {
+    void imageNullDataFailsClosed() {
         ImageModerationResponseBody body = new ImageModerationResponseBody()
                 .setCode(200).setRequestId("r-3");
+        assertThatThrownBy(() -> NORMALIZER.normalize(body, context()))
+                .isInstanceOf(ProviderCallException.class)
+                .hasMessageContaining("no decision data");
+    }
+
+    @Test
+    void imageEmptyResultFallsBackToReview() {
+        ImageModerationResponseBody body = new ImageModerationResponseBody()
+                .setCode(200).setRequestId("r-review-image")
+                .setData(new ImageModerationResponseBody.ImageModerationResponseBodyData()
+                        .setResult(java.util.List.of()));
         AuditResult result = NORMALIZER.normalize(body, context());
-        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.PASS);
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REVIEW);
     }
 
     @Test

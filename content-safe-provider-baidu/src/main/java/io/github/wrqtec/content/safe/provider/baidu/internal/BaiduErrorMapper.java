@@ -82,7 +82,7 @@ public final class BaiduErrorMapper {
      */
     public static ProviderCallException fromException(Exception e) {
         return new ProviderCallException(
-                "baidu censor call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()), e);
+                "baidu censor call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()));
     }
 
     /**

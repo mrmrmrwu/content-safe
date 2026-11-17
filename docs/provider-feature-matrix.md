@@ -22,7 +22,7 @@ SDK：`com.aliyun:green2022032` → 实际坐标 `com.aliyun:green20220302:3.6.6
 | AIGC 检测 | ✅ | 配置期：场景 service 配为 `aigcDetector`/`aigcDetectorFull` 时操作自动声明 aigcDetect 能力位，请求期开关按能力位门控（来源：help.aliyun.com 文档 2642717，查阅日期 2026-11-06） |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
 | 回调验签（CallbackVerifier） | ✅ | `AliyunCallbackVerifier`：SHA256(uid+seed+Content) 恒时比较；uid 经 extra `callback-uid` 配置（须主账号 UID），seed 缺省回退全局 `content.safe.callback-secret`；仅支持 SHA256（不做 SM3） |
-| suggestion 映射 | ✅ | riskLevel 三档：none/low→PASS，medium→REVIEW，high→REJECT；缺失时回退标签判空 |
+| suggestion 映射 | ✅ | riskLevel 三档：none/low→PASS，medium→REVIEW，high→REJECT；未知/缺失 riskLevel 且 labels 为空→REVIEW；Data/Result 缺失抛 `ProviderCallException`，图片空 Result→REVIEW，不做 fail-open |
 
 ### 限额（`AliyunLimits`，声明值，以官方文档为准）
 
@@ -54,7 +54,7 @@ SDK：`com.tencentcloudapi:tencentcloud-sdk-java:3.2.52`（总包，optional 依
 | OCR | ✅ | IMS 响应 OcrResults 命中归一为标签；**文本原文（用户内容）按安全约束丢弃，不进 evidence/raw/日志** |
 | 自定义名单 | ⏳ | 控制台配置，SDK 侧无感 |
 | 回调验签（CallbackVerifier） | ✅ | `TencentCallbackVerifier`：官方回调**无签名机制**，仅做结构校验（ImageModeration 同构 JSON 可解析即通过）；防伪须依赖回调接收侧 IP 白名单等业务手段 |
-| suggestion 映射 | ✅ | Pass→PASS，Review→REVIEW，Block→REJECT；缺失时回退 Label 判 Normal |
+| suggestion 映射 | ✅ | Pass→PASS，Review→REVIEW，Block→REJECT；未知/缺失 Suggestion 统一回退 REVIEW，不再按 Label=Normal 回退 PASS |
 | 用户内容安全 | ✅ | TMS Keywords（敏感词原文）只进 `hit.raw`（raw 按约定不进日志/审计正文） |
 
 ### 限额（`TencentLimits`，声明值，以官方文档为准）
@@ -130,8 +130,8 @@ Service 的控制台文档定义，不进公共抽象）。
 
 ### 约束说明
 
-SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，凭证经 setter 注入；
-同进程多账号需自行隔离。parameters 内层键名（`parameters-text-key` / `parameters-image-key` /
+SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，凭证经 setter 注入；默认实现以锁保护初始化，已配置不同 AK 时再次初始化会抛 `CONFIG_INVALID`，避免跨账号覆盖。多账号需自定义 `VolcengineClientInvoker` 或拆进程隔离；长期凭证在启动期定型，不支持热轮换。
+parameters 内层键名（`parameters-text-key` / `parameters-image-key` /
 `parameters-video-key`）由使用方按其 Service 的控制台文档显式配置，缺失即装配期 fail-fast
 （经 FailureAnalyzer 输出可读报告）。
 
@@ -170,7 +170,7 @@ SDK 客户端 `ContentSecurityServiceImpl.getInstance()` 为进程级单例，�
 | --- | --- | --- | --- |
 | 批量 | 单次单条 | 单次单条 | 单次单条 |
 | 超时 | 5 秒（extra.connect-timeout-ms 默认 3000 / read-timeout-ms 默认 5000） | 同左 | 10 秒（官方建议 7s，取余量）；查询建议 30s 间隔 |
-| 字数 / 体积 | 文本 ≤1 万字；data 整体 ≤1MB（官方约束） | 官方未声明单图大小上限 | 官方未声明；结果保留近三天 |
+| 字数 / 体积 | 文本 ≤1 万字；data 整体 ≤1MB（官方约束） | 同步 base64/bytes 编码后 ≤1MiB（本地前置保护）；异步单图 ≤30MB | 官方未声明；结果保留近三天 |
 
 ### 约束说明
 

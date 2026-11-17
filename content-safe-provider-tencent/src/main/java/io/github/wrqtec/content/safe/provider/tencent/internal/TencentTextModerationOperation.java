@@ -76,9 +76,10 @@ public class TencentTextModerationOperation implements AuditOperation {
                     + request.type() + "/" + request.content().type());
         }
         String content = request.content().value();
-        if (content.length() > TencentLimits.maxTextChars()) {
+        int contentLength = content.codePointCount(0, content.length());
+        if (contentLength > TencentLimits.maxTextChars()) {
             throw new UnsupportedContentException("tencent text moderation supports at most "
-                    + TencentLimits.maxTextChars() + " chars, got " + content.length());
+                    + TencentLimits.maxTextChars() + " chars, got " + contentLength);
         }
         TextModerationRequest sdkRequest = new TextModerationRequest();
         sdkRequest.setContent(Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8)));

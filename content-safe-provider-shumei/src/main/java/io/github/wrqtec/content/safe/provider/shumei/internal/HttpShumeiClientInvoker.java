@@ -62,6 +62,14 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
      */
     public HttpShumeiClientInvoker(String accessKey, String appId, ShumeiProviderProperties properties,
                                    int connectTimeoutMs, int readTimeoutMs) {
+        this(accessKey, appId, properties, connectTimeoutMs, readTimeoutMs, null);
+    }
+
+    /**
+     * 可注入 HttpClient 的构造器（测试或调用方定制传输层）
+     */
+    public HttpShumeiClientInvoker(String accessKey, String appId, ShumeiProviderProperties properties,
+                                   int connectTimeoutMs, int readTimeoutMs, HttpClient httpClient) {
         this.accessKey = Asserts.notBlank(accessKey, "accessKey");
         this.appId = Asserts.notBlank(appId, "appId");
         this.textUri = parseUri(textBaseUrlOf(properties), ShumeiProviderConstants.EXTRA_TEXT_BASE_URL);
@@ -72,9 +80,9 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         String videoAuthority = videoAuthorityOf(properties);
         this.videoUri = parseUri(videoAuthority + ShumeiProviderConstants.VIDEO_PATH, null);
         this.videoQueryUri = parseUri(videoAuthority + ShumeiProviderConstants.VIDEO_QUERY_PATH, null);
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = httpClient == null ? HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
-                .build();
+                .build() : httpClient;
         this.requestTimeout = Duration.ofMillis(readTimeoutMs);
     }
 
@@ -173,7 +181,15 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         try {
             HttpResponse<InputStream> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            T parsed = parse(response.body(), responseType);
+            if (response.statusCode() != 200) {
+                try (InputStream ignored = response.body()) {
+                    // 关闭连接体；错误页不进入 JSON 解析
+                }
+                throw new ProviderCallException(
+                        "shumei " + op + " returned httpStatus=" + response.statusCode());
+            }
+            T parsed = parse(new BoundedInputStream(
+                    response.body(), BoundedInputStream.DEFAULT_MAX_RESPONSE_BYTES), responseType);
             if (parsed == null) {
                 throw new ProviderCallException(
                         "shumei " + op + " returned empty body, httpStatus=" + response.statusCode());
@@ -182,11 +198,11 @@ public class HttpShumeiClientInvoker implements ShumeiClientInvoker {
         } catch (IOException e) {
             throw ShumeiErrorMapper.fromException(e, op);
         } catch (JsonSyntaxException e) {
-            // 报文非合法 JSON：归一为调用异常；message 不携带报文原文
-            throw new ProviderCallException("shumei " + op + " returned invalid json body", e);
+            // 报文非合法 JSON：归一为调用异常；message/cause 不携带报文原文
+            throw new ProviderCallException("shumei " + op + " returned invalid json body");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new ProviderCallException("shumei " + op + " call interrupted", e);
+            throw new ProviderCallException("shumei " + op + " call interrupted");
         }
     }
 

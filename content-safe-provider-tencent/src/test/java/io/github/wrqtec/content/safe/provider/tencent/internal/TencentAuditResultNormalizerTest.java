@@ -38,18 +38,19 @@ class TencentAuditResultNormalizerTest {
     }
 
     @Test
-    void fallsBackToLabelWhenSuggestionMissing() {
+    void unknownOrMissingSuggestionFallsBackToReview() {
         TextModerationResponse normal = new TextModerationResponse();
         normal.setRequestId("r1");
+        normal.setSuggestion("future-value");
         normal.setLabel("Normal");
-        assertThat(normalizer.normalize(normal, context()).suggestion()).isEqualTo(RiskSuggestion.PASS);
+        assertThat(normalizer.normalize(normal, context()).suggestion()).isEqualTo(RiskSuggestion.REVIEW);
 
         TextModerationResponse risky = new TextModerationResponse();
         risky.setRequestId("r2");
         risky.setLabel("Porn");
         risky.setScore(88L);
         AuditResult result = normalizer.normalize(risky, context());
-        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REJECT);
+        assertThat(result.suggestion()).isEqualTo(RiskSuggestion.REVIEW);
         assertThat(result.hits()).hasSize(1);
     }
 

@@ -106,13 +106,14 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
         TextModerationResponseBody.TextModerationResponseBodyData data = body.getData();
         if (data == null) {
-            return builder.suggestion(RiskSuggestion.PASS).build();
+            // 成功码但无决策数据：响应结构异常，按供应商调用失败处理，禁止默认放行
+            throw new ProviderCallException("aliyun text moderation returned no decision data");
         }
         String reason = data.getReason();
         RiskSuggestion byRiskLevel = fromRiskLevel(extractGroup(RISK_LEVEL_PATTERN, reason));
         List<String> labels = splitLabels(data.getLabels());
         RiskSuggestion suggestion = byRiskLevel != null ? byRiskLevel
-                : labels.isEmpty() ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+                : labels.isEmpty() ? RiskSuggestion.REVIEW : RiskSuggestion.REJECT;
         builder.suggestion(suggestion);
         if (RiskSuggestion.PASS != suggestion && !labels.isEmpty()) {
             Double confidence = extractConfidence(reason);
@@ -131,8 +132,12 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
     private AuditResult normalizeImage(ImageModerationResponseBody body, Map<String, Object> context) {
         AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
         ImageModerationResponseBody.ImageModerationResponseBodyData data = body.getData();
-        if (data == null || data.getResult() == null || data.getResult().isEmpty()) {
-            return builder.suggestion(RiskSuggestion.PASS).build();
+        if (data == null || data.getResult() == null) {
+            throw new ProviderCallException("aliyun image moderation returned no decision data");
+        }
+        if (data.getResult().isEmpty()) {
+            // 结果集为空无法判定，保守回退人审而非默认放行
+            return builder.suggestion(RiskSuggestion.REVIEW).build();
         }
         List<RiskHit> hits = new ArrayList<>();
         for (ImageModerationResponseBody.ImageModerationResponseBodyDataResult item : data.getResult()) {
@@ -186,12 +191,16 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         return imageAsyncResultOf(data, builder);
     }
 
-    /** 图片异步结果提取（查询与回调共用；result 为空时视为 PASS） */
+    /** 图片异步结果提取（查询与回调共用；result 为空时保守回退 REVIEW） */
     private AuditResult imageAsyncResultOf(DescribeImageModerationResultResponseBody
                                                    .DescribeImageModerationResultResponseBodyData data,
                                            AuditResult.Builder builder) {
-        if (data == null || data.getResult() == null || data.getResult().isEmpty()) {
-            return builder.suggestion(RiskSuggestion.PASS).build();
+        if (data == null || data.getResult() == null) {
+            throw new ProviderCallException("aliyun image moderation returned no decision data");
+        }
+        if (data.getResult().isEmpty()) {
+            // 结果集为空无法判定，保守回退人审而非默认放行
+            return builder.suggestion(RiskSuggestion.REVIEW).build();
         }
         List<RiskHit> hits = new ArrayList<>();
         for (DescribeImageModerationResultResponseBody.DescribeImageModerationResultResponseBodyDataResult item
@@ -234,7 +243,7 @@ public class AliyunAuditResultNormalizer implements AuditResultNormalizer {
         AuditResult.Builder builder = baseBuilder(body.getCode(), body.getRequestId(), context);
         VideoModerationResultResponseBody.VideoModerationResultResponseBodyData data = body.getData();
         if (data == null) {
-            return builder.suggestion(RiskSuggestion.PASS).build();
+            throw new ProviderCallException("aliyun video moderation returned no decision data");
         }
         List<RiskHit> hits = new ArrayList<>();
         appendVideoFrameHits(data.getFrameResult(), hits);

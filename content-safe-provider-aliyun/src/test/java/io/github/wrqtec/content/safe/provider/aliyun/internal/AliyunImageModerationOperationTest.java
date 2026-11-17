@@ -64,7 +64,10 @@ class AliyunImageModerationOperationTest {
         ImageModerationResponseBody body = new ImageModerationResponseBody()
                 .setCode(200).setRequestId("r-img-1")
                 .setData(new ImageModerationResponseBody.ImageModerationResponseBodyData()
-                        .setRiskLevel("none"));
+                        .setRiskLevel("none")
+                        .setResult(java.util.List.of(
+                                new ImageModerationResponseBody.ImageModerationResponseBodyDataResult()
+                                        .setLabel("nonLabel"))));
         when(invoker.imageModeration(eq("baselineCheck"), anyMap())).thenReturn(body);
 
         AuditRequest request = AuditRequest.builder()

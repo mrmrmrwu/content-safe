@@ -77,7 +77,7 @@ public final class ShumeiErrorMapper {
      */
     public static ProviderCallException fromException(Exception e, String op) {
         return new ProviderCallException(
-                "shumei " + op + " call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()), e);
+                "shumei " + op + " call failed: " + e.getClass().getSimpleName() + " " + sanitize(e.getMessage()));
     }
 
     /**

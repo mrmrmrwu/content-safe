@@ -37,7 +37,7 @@ import io.github.wrqtec.content.safe.spi.AuditResultNormalizer;
  * 只允许由 Normalizer 翻译）
  *
  * <p>suggestion 映射：Pass → PASS，Review → REVIEW，Block → REJECT；
- * 未知值回退按 Label 判 Normal（Normal → PASS，其余 → REJECT）
+ * 未知或缺失值一律保守回退 REVIEW，避免无法判定时默认放行
  *
  * <p>安全约束（铁律 §5.6/§9）：raw 只保留 {RequestId, BizType}；
  * OCR 文本原文（OcrResults.Text）、TMS ContextText 属用户内容，
@@ -54,7 +54,6 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
 
     /** 通过标签 */
     private static final String PASS_LABEL = "Normal";
-
     /** 标签路径连接符 */
     private static final String LABEL_PATH_SEPARATOR = "/";
 
@@ -165,7 +164,8 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
                 .source(source);
         RiskSuggestion suggestion = fromSuggestion(response.getSuggestion());
         if (suggestion == null) {
-            suggestion = PASS_LABEL.equals(response.getLabel()) ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+            // 决策缺失或未知时保守回退人审，禁止按 Label=Normal 默认放行
+            suggestion = RiskSuggestion.REVIEW;
         }
         builder.suggestion(suggestion);
         if (RiskSuggestion.PASS == suggestion) {
@@ -283,7 +283,8 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
         AuditResult.Builder builder = baseBuilder(response.getRequestId(), response.getBizType(), context);
         RiskSuggestion suggestion = fromSuggestion(response.getSuggestion());
         if (suggestion == null) {
-            suggestion = PASS_LABEL.equals(response.getLabel()) ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+            // 决策缺失或未知时保守回退人审，禁止按 Label=Normal 默认放行
+            suggestion = RiskSuggestion.REVIEW;
         }
         builder.suggestion(suggestion);
         if (RiskSuggestion.PASS != suggestion) {
@@ -322,7 +323,8 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
                 .source(source);
         RiskSuggestion suggestion = fromSuggestion(response.getSuggestion());
         if (suggestion == null) {
-            suggestion = PASS_LABEL.equals(response.getLabel()) ? RiskSuggestion.PASS : RiskSuggestion.REJECT;
+            // 决策缺失或未知时保守回退人审，禁止按 Label=Normal 默认放行
+            suggestion = RiskSuggestion.REVIEW;
         }
         builder.suggestion(suggestion);
         if (RiskSuggestion.PASS == suggestion) {
@@ -496,7 +498,7 @@ public class TencentAuditResultNormalizer implements AuditResultNormalizer {
 
     /**
      * Suggestion 三档映射：Pass → PASS，Review → REVIEW，Block → REJECT；
-     * 未知值返回 null（调用方回退 Label 判定）
+     * 未知值返回 null，由调用方统一回退 REVIEW
      */
     static RiskSuggestion fromSuggestion(String suggestion) {
         if (suggestion == null) {

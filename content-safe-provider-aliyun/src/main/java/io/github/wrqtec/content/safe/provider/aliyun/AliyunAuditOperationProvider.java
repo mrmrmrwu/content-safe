@@ -34,6 +34,9 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
     private final GreenClientInvoker invoker;
     private final AliyunProviderProperties properties;
     private final AliyunAuditResultNormalizer normalizer;
+    /** 场景操作缓存：配置启动期定型，操作对象不可变，避免每次审核重复分配 */
+    private final java.util.concurrent.ConcurrentMap<String, List<AuditOperation>> operationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public AliyunAuditOperationProvider(GreenClientInvoker invoker, AliyunProviderProperties properties) {
         this.invoker = Asserts.notNull(invoker, "invoker");
@@ -54,6 +57,10 @@ public class AliyunAuditOperationProvider implements AuditOperationProvider {
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
         Asserts.notNull(scene, "scene");
+        return operationCache.computeIfAbsent(scene.code() + ":" + scene.type(), key -> buildOperations(scene));
+    }
+
+    private List<AuditOperation> buildOperations(SceneDefinition scene) {
         String service = properties.getScenes().get(scene.code());
         if (service == null) {
             return List.of();

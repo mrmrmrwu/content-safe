@@ -50,15 +50,23 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
      */
     public HttpBaiduCensorClient(BaiduAccessTokenManager tokenManager, String baseUrl,
                                  int connectTimeoutMs, int readTimeoutMs) {
+        this(tokenManager, baseUrl, connectTimeoutMs, readTimeoutMs, null);
+    }
+
+    /**
+     * 可注入 HttpClient 的构造器（测试或调用方定制传输层）
+     */
+    public HttpBaiduCensorClient(BaiduAccessTokenManager tokenManager, String baseUrl,
+                                 int connectTimeoutMs, int readTimeoutMs, HttpClient httpClient) {
         this.tokenManager = Asserts.notNull(tokenManager, "tokenManager");
         Asserts.notBlank(baseUrl, "baseUrl");
         this.textUri = URI.create(baseUrl + BaiduProviderConstants.TEXT_CENSOR_PATH);
         this.imageUri = URI.create(baseUrl + BaiduProviderConstants.IMAGE_CENSOR_PATH);
         this.videoSubmitUri = URI.create(baseUrl + BaiduProviderConstants.VIDEO_SUBMIT_PATH);
         this.videoPullUri = URI.create(baseUrl + BaiduProviderConstants.VIDEO_PULL_PATH);
-        this.httpClient = HttpClient.newBuilder()
+        this.httpClient = httpClient == null ? HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMillis(connectTimeoutMs))
-                .build();
+                .build() : httpClient;
         this.requestTimeout = Duration.ofMillis(readTimeoutMs);
     }
 
@@ -109,12 +117,13 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
 
     private BaiduCensorResponse callWithTokenRetry(URI uri, FormBody form) {
         for (int attempt = 0; ; attempt++) {
+            String accessToken = tokenManager.getToken();
             BaiduCensorResponse response = send(
-                    uri, form, tokenManager.getToken(), BaiduCensorResponse.class, "censor");
+                    uri, form, accessToken, BaiduCensorResponse.class, "censor");
             if (!BaiduErrorMapper.isTokenError(response.getErrorCode()) || attempt >= TOKEN_RETRY_TIMES) {
                 return BaiduErrorMapper.assertSuccess(response);
             }
-            tokenManager.invalidate();
+            tokenManager.invalidate(accessToken);
         }
     }
 
@@ -128,7 +137,15 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
         try {
             HttpResponse<InputStream> response =
                     httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            T parsed = parse(response.body(), type);
+            if (response.statusCode() != 200) {
+                try (InputStream ignored = response.body()) {
+                    // 关闭连接体；错误页不进入 JSON 解析
+                }
+                throw new ProviderCallException(
+                        "baidu " + api + " returned httpStatus=" + response.statusCode());
+            }
+            T parsed = parse(new BoundedInputStream(
+                    response.body(), BoundedInputStream.DEFAULT_MAX_RESPONSE_BYTES), type);
             if (parsed == null) {
                 throw new ProviderCallException(
                         "baidu " + api + " returned empty body, httpStatus=" + response.statusCode());
@@ -137,11 +154,11 @@ public class HttpBaiduCensorClient implements BaiduCensorClient {
         } catch (IOException e) {
             throw BaiduErrorMapper.fromException(e);
         } catch (JsonSyntaxException e) {
-            // 报文非合法 JSON：归一为调用异常；message 不携带报文原文
-            throw new ProviderCallException("baidu " + api + " returned invalid json body", e);
+            // 报文非合法 JSON：归一为调用异常；message/cause 不携带报文原文
+            throw new ProviderCallException("baidu " + api + " returned invalid json body");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new ProviderCallException("baidu " + api + " call interrupted", e);
+            throw new ProviderCallException("baidu " + api + " call interrupted");
         }
     }
 

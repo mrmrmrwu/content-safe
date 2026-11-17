@@ -32,6 +32,9 @@ public class BaiduAuditOperationProvider implements AuditOperationProvider {
     private final BaiduProviderProperties properties;
     private final BaiduCensorClient client;
     private final BaiduAuditResultNormalizer normalizer;
+    /** 场景操作缓存：配置启动期定型，操作对象不可变，避免每次审核重复分配 */
+    private final java.util.concurrent.ConcurrentMap<String, List<AuditOperation>> operationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     public BaiduAuditOperationProvider(BaiduProviderProperties properties, BaiduCensorClient client) {
         this.properties = Asserts.notNull(properties, "properties");
@@ -52,6 +55,10 @@ public class BaiduAuditOperationProvider implements AuditOperationProvider {
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
         Asserts.notNull(scene, "scene");
+        return operationCache.computeIfAbsent(scene.code() + ":" + scene.type(), key -> buildOperations(scene));
+    }
+
+    private List<AuditOperation> buildOperations(SceneDefinition scene) {
         String strategyId = properties.getScenes().get(scene.code());
         if (strategyId == null) {
             return List.of();

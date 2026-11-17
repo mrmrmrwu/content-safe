@@ -36,6 +36,9 @@ public class VolcengineAuditOperationProvider implements AuditOperationProvider 
     private final VolcengineProviderProperties properties;
     private final VolcengineClientInvoker invoker;
     private final VolcengineAuditResultNormalizer normalizer;
+    /** 场景操作缓存：配置启动期定型，操作对象不可变，避免每次审核重复分配 */
+    private final java.util.concurrent.ConcurrentMap<String, List<AuditOperation>> operationCache =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private final Integer appId;
 
     public VolcengineAuditOperationProvider(VolcengineProviderProperties properties,
@@ -60,6 +63,10 @@ public class VolcengineAuditOperationProvider implements AuditOperationProvider 
     @Override
     public List<AuditOperation> operations(SceneDefinition scene) {
         Asserts.notNull(scene, "scene");
+        return operationCache.computeIfAbsent(scene.code() + ":" + scene.type(), key -> buildOperations(scene));
+    }
+
+    private List<AuditOperation> buildOperations(SceneDefinition scene) {
         Map<String, String> scenes = properties.getScenes();
         String service = scenes.get(scene.code());
         if (service == null || service.isBlank()) {
