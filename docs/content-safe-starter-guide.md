@@ -6,6 +6,7 @@
 - 错误码：[error-code-table.md](error-code-table.md)
 - 供应商能力矩阵：[provider-feature-matrix.md](provider-feature-matrix.md)
 - 可运行样例：[../samples](../samples)
+- 未接线能力、生产边界与后续候选工作：[design-roadmap.md](design-roadmap.md)
 
 ## 1. 快速开始
 
@@ -251,7 +252,7 @@ content:
 | `content.safe.provider.throttled` | provider, operation | 本地限流拒绝 |
 | `content.safe.callback.deadletter` | provider | 回调死信 |
 
-**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）、场景到供应商映射表（`sceneMappings` detail，排查"场景无供应商映射"首查此处）、供应商构建操作失败表（`providerErrors` detail，provider → 净化后的异常消息；构建失败按未映射处理不拖垮健康端点）；`health()` 不做远程探测。
+**健康检查**：`ContentSafeHealthIndicator`（引入 actuator 后自动装配）——UP/OPEN 熔断器明细、限流器快照（`rateLimiters` detail）、场景到供应商映射表（`sceneMappings` detail，排查"场景无供应商映射"首查此处）、供应商构建操作失败表（`providerErrors` detail，provider → 净化后的异常消息；构建失败按未映射处理不拖垮健康端点）；`health()` 不做远程探测。UP 仅表示本地检查通过，不代表云端账号、网络或接口可用。
 
 **事件**：实现 `AuditListener` Bean 即可订阅全部事件（`AuditEvent`、`RiskHitEvent`、`ReviewEvent`、`ProviderDegradedEvent`、`ProviderThrottledEvent`、`CallbackDeadLetterEvent`），订阅异常不影响主流程。多个 listener 聚合派发，Spring 容器中的 Bean 会被自动收集。
 
@@ -259,8 +260,10 @@ content:
 
 - **自定义 provider**：实现 `AuditOperationProvider`（一 provider 一类，可出多个 `AuditOperation`）+ 提供 `@AutoConfiguration` 与 `META-INF/spring/...AutoConfiguration.imports`，声明能力（`AuditCapabilities`）与限额（`OperationLimits`）。最小演示见 [../samples/content-safe-samples-basic](../samples/content-safe-samples-basic)。
 - **默认 Bean 全部 `@ConditionalOnMissingBean`**：`AuditRouter`、`AuditArbitrationPolicy`、`AuditTaskStore`、`CredentialsProvider`、`EvidenceRedactor`、`AuditListener`、`RateLimiterRegistry`、`CircuitBreakerRegistry` 均可覆盖。
-- **预留抽象**：`ContentRefNormalizer`、`ProviderHealthProbe` 当前未接入默认执行链；仅声明 Bean 不会自动生效。
+- **预留且已弃用的抽象**：`ContentRefNormalizer`、`ProviderHealthProbe` 当前未接入默认执行链；仅声明 Bean 不会自动生效。后续移除或替代方案见 [设计边界与后续路线](design-roadmap.md)。
 - **扩展发现机制**：当前使用 Spring Boot 自动装配与用户 Bean，不启用 Java `ServiceLoader`，也不会读取 `META-INF/services` 注册扩展。
+- **集群部署**：默认任务存储、限流器和熔断器只有单实例语义；共享任务与全局限流需通过现有扩展点对接外部实现。
+- **配置与超时**：场景映射、operation 和长期凭证在启动期定型，不支持热刷新；`OperationLimits.timeout` 不会由 core 统一中断调用，实际硬超时以各 provider 的客户端配置为准。
 
 ## 7. 启动失败诊断（FailureAnalyzer）
 

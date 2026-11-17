@@ -7,7 +7,7 @@
 
 ```
 io.github.wrqtec.content.safe.core
-├── DefaultContentSafeTemplate     # ContentSafeTemplate 默认实现：audit/submitAsync/query/handleCallback/resolveReview
+├── DefaultContentSafeTemplate     # ContentSafeTemplate 默认实现：audit/auditMulti/异步提交查询/回调/人审回写
 ├── SceneRegistry                  # 场景注册表（内置 7 场景 + scenes.json 合并）
 ├── router/                        # AuditRouter、PriorityAuditRouter（按 order 升序选主）
 ├── arbitration/                   # AuditArbitrationPolicy、ArbitrationPolicyRegistry（多场景汇总策略）
@@ -31,7 +31,8 @@ audit(request)
        3. 能力门控（AuditCapabilities.supports，不通过 → UNSUPPORTED_CONTENT）
        4. operation.audit() 调用
        5. EvidenceRedactor 脱敏命中证据
-       6. 成功 → AuditEvent/RiskHitEvent/ReviewEvent；失败 → ProviderDegradedEvent + 熔断记账 + failover
+       6. 成功 → AuditEvent/RiskHitEvent/ReviewEvent；供应商调用失败 → ProviderDegradedEvent + 熔断记账 + failover
+       （配置/客户端类异常直接抛出，不误记熔断、不降级）
   └─ 全部失败 → AllProvidersFailedException（message 携带各 planKey 失败原因）
 ```
 
@@ -55,6 +56,8 @@ core 的全部治理组件都是可替换的接口/registry 注入，生产环�
 - `AuditTaskStore`：换成 Redis/DB 实现（异步任务跨实例共享）；
 - `RateLimiterRegistry` 工厂：对接配置中心动态额度；
 - `AuditListener`：接审计日志、告警、数据埋点。
+
+默认任务存储、限流器和熔断器均为单实例实现；`OperationLimits.timeout` 也不会由 core 统一强制中断调用。未接线抽象、集群部署边界与后续候选工作见 [设计边界与后续路线](../docs/design-roadmap.md)。
 
 Spring Boot 使用方无需直接构造本模块，见 [content-safe-spring-boot-starter](../content-safe-spring-boot-starter)
 与[接入指南](../docs/content-safe-starter-guide.md)。

@@ -19,14 +19,14 @@ ContentSafe is a **content moderation toolkit** packaged as a Spring Boot Starte
 ## Features
 
 - **Unified audit API**: one integration, multi-cloud routing; business code is unaware of provider differences.
-- **Scene decoupling**: built-in common scenes; extensible via YAML / Java / SPI without code changes.
+- **Scene decoupling**: built-in common scenes; extensible through YAML, `SceneRegistry` beans, or a custom `SceneDefinitionProvider`, without putting vendor scene IDs in business code.
 - **Capability declaration**: providers declare what they support (URL/Base64/batch/OCR/AIGC...); unsupported combinations fail fast instead of silently degrading.
 - **Multi-cloud routing**: primary/backup failover, cost-first routing, multi-result arbitration (e.g. `FIRST_NON_PASS`).
-- **Governance built in**: health probing, circuit breaking & rate limiting (operation-level), unified error codes, audit events, Micrometer metrics.
+- **Local health view**: operation-level circuit breaking and rate limiting, unified error codes, audit events, and Micrometer metrics. The health endpoint reports local state only; it does not perform remote provider probes.
 - **AIGC detection**: request-time switch (`AuditOptions.withAigcDetect`) gated by declared capabilities.
 - **Manual-review loop**: machine `REVIEW` results flow out via `ReviewEvent`, get finalized through `resolveReview` (source=MANUAL, finalResult=true), and are written back through `ReviewResultSink`.
 - **Async & callbacks**: image/video async submit/query/callback (capability-gated per provider) with signature verification, idempotency and dead-letter handling; operations declare suggested polling parameters, so single-arg `submitAndWait` works out of the box.
-- **Clean dependencies**: zero transitive HTTP/JSON dependencies by default (JDK HttpClient + SPI replaceable); all cloud SDKs are optional.
+- **Dependency isolation**: cloud SDKs are optional and providers are added as needed; HTTP/JSON and cloud SDK types stay out of public api/spi signatures.
 
 ## Quick Start
 
@@ -191,6 +191,7 @@ AuditResult videoFinal = contentSafeTemplate.submitAndWait(
 - [Provider feature matrix](docs/provider-feature-matrix.md)
 - [Error code table](docs/error-code-table.md)
 - [Release guide](docs/release-guide.md) / [Compatibility policy](docs/compatibility-policy.md)
+- [Design boundaries and future roadmap](docs/design-roadmap.md): disconnected abstractions, single-instance governance, credential rotation, timeout and callback-security boundaries
 
 ## Contributing
 

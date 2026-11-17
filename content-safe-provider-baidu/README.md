@@ -59,11 +59,13 @@ content:
 - 命中关键词（`hits[].words`）进入 `RiskHit.evidence`，由 core `EvidenceRedactor` 统一脱敏；
 - `AuditResult.raw` 只放 `{log_id}`，不回传任何用户内容或策略详情；
 - 日志与异常消息不含 apiKey/secretKey/access_token（长 token 一律掩码）。
+- 自研 HTTP 客户端先拒绝非 200 响应，再解析 JSON；响应体硬上限 4MiB，防止异常页面或无界响应被读入内存。
+- OAuth token 采用“仅失效仍匹配的缓存值”策略，避免并发请求把其他线程刚刷新的 token 清掉。
 
 ## 测试
 
 - 契约样本：`src/test/resources/contracts/baidu/`（pass / review / reject / token 过期）；
-- 单元测试：normalizer 映射、错误映射（含脱敏）、两个 Operation 的参数装配与限制校验；
+- 单元测试：normalizer 映射、错误映射（含脱敏）、Operation 参数装配与限制校验、token 条件失效、本地 HttpServer 非 200 拒绝；
 - 装配测试：`ApplicationContextRunner`（默认不装配、缺凭证 fail-fast、用户 Bean 覆盖）；
 - ArchUnit：core/starter 隔离；Gson 仅限 `internal` 包。
 

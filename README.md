@@ -7,11 +7,11 @@
 [![JDK](https://img.shields.io/badge/JDK-17%2B-orange.svg)]()
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen.svg)]()
 
-帮助文档：见 `docs/` 目录（接入指南 / 供应商能力矩阵 / 错误码表 / 发布与兼容政策）
+帮助文档：见 `docs/` 目录（接入指南 / 供应商能力矩阵 / 错误码表 / 发布与兼容政策 / [设计边界与后续路线](docs/design-roadmap.md)）
 
 ContentSafe，如你所见，它仅仅是一个 **内容安全审核** 的 **工具类库（Spring Boot Starter）**，它可以让我们脱离繁琐的各家云厂商内容安全 SDK 与场景 ID 细节，让文本、图片和视频审核变得 **So easy!**
 
-ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎、数美等主流内容安全供应商。更多请参考 [已支持的供应商](#已支持的供应商)。
+ContentSafe 已集成阿里云、腾讯云、百度智能云、火山引擎、数美等主流内容安全供应商。更多请参考 [已支持的供应商](#已支持的供应商)。
 
 ## 有哪些特点？
 
@@ -21,14 +21,14 @@ ContentSafe 计划集成阿里云、腾讯云、百度智能云、火山引擎�
 ## 有哪些功能？
 
 - 统一审核 API：一次接入，多云可用，业务代码不感知供应商差异。
-- 场景解耦：内置常用业务场景，支持通过 yml / Java / SPI 自定义扩展。
+- 场景解耦：内置常用业务场景，支持通过 yml、`SceneRegistry` Bean / `SceneDefinitionProvider` 自定义扩展；这里不依赖 Java `ServiceLoader`。
 - 能力声明：审核前按供应商能力（URL/Base64/批量/OCR/AIGC...）过滤，不支持快速失败。
 - 多云路由：主备切换、成本优先、多结果仲裁（如 `FIRST_NON_PASS`）。
 - 异步任务：图片/视频异步提交/查询/回调（按供应商能力位），回调验签、幂等、死信处理；操作自声明建议轮询参数，单参 `submitAndWait` 开箱即用。
-- 治理内建：健康探测、熔断限流（operation 级）、统一错误码、审计事件、Micrometer 指标。
+- 治理内建：本地健康状态视图、熔断限流（operation 级）、统一错误码、审计事件、Micrometer 指标；健康端点不主动远程探测供应商。
 - AIGC 识别：请求期开关（`AuditOptions.withAigcDetect`），按能力位单向门控，不支持的供应商快速失败而非静默降级。
 - 人审闭环：机审 REVIEW 经 `ReviewEvent` 出口、`resolveReview` 终态归一（source=MANUAL、finalResult=true）、`ReviewResultSink` 回写，异步任务幂等迁移。
-- 依赖干净：默认零 HTTP/JSON 传递依赖（JDK HttpClient + SPI 可替换），云 SDK 全部 optional。
+- 依赖隔离：云 SDK 全部 optional，供应商按需引入；HTTP/JSON 与云 SDK 类型不进入 api/spi 公共签名。
 - 更多... 见 [供应商能力矩阵](docs/provider-feature-matrix.md)
 
 ## 快速开始
@@ -229,6 +229,7 @@ contentSafeTemplate.audit(AuditRequest.text("resume_title", title));
 - [供应商能力矩阵](docs/provider-feature-matrix.md)
 - [错误码表](docs/error-code-table.md)
 - [发布指南](docs/release-guide.md) / [兼容政策](docs/compatibility-policy.md)
+- [设计边界与后续路线](docs/design-roadmap.md)：未接线抽象、单实例治理、凭证轮换、超时与回调安全边界
 - [编码规范](CLAUDE.md)
 
 ## 贡献

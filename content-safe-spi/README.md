@@ -20,8 +20,10 @@
 | `CallbackVerifier` | 可替换 | 异步回调验签 |
 | `CredentialsProvider` / `CredentialsSupport` | 业务侧（可选） / 工具 | 自定义凭证注入（如 KMS）；静态解析工具 |
 | `EvidenceRedactor` | 业务侧（可选） | 命中证据脱敏 |
-| `ContentRefNormalizer` | 预留，当前未接线 | 内容载体预处理抽象；实现 Bean 不会自动进入审核链路 |
-| `ProviderHealthProbe` | 预留，当前未接线 | 健康探测抽象；当前健康端点不执行远程探测 |
+| `ContentRefNormalizer` | **预留且已弃用，未接线** | 自 1.1.0 标记移除计划；core/provider 不调用，声明 Bean 不会改变内容处理流程 |
+| `ProviderHealthProbe` | **预留且已弃用，未接线** | 自 1.1.0 标记移除计划；当前健康端点只展示本地状态，不执行远程探测 |
+| `ArbitrationStrategy` | **已弃用，未接线** | 实际仲裁使用 `AuditArbitrationPolicy`、注册表与场景选择器 |
 | `SceneDefinitionProvider` | 可扩展（starter 提供 JSON 实现） | 场景定义来源 |
 
 供应商接入清单与安全约束见 [CLAUDE.md](../CLAUDE.md)。
+弃用抽象、单实例治理与其他生产边界见 [设计边界与后续路线](../docs/design-roadmap.md)。

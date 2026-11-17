@@ -33,7 +33,7 @@ content:
         scenes:                                # 场景 code → BizType（普通审核）
           nickname: your-nickname-biztype
           comment: your-comment-biztype
-        aigc-scenes:                           # 场景 code → BizType（AIGC 识别，Type=IMAGE_AIGC，仅 IMAGE 场景）
+        aigc-scenes:                           # 场景 code → BizType（AIGC 识别，TEXT/IMAGE 场景分别使用 TEXT_AIGC/IMAGE_AIGC）
           ai-art: your-aigc-biztype
         extra:
           gifInterval: 2                       # GIF 截帧间隔（可选）
@@ -71,6 +71,10 @@ content:
 | 默认 QPS | 1000 | 100 |
 
 完整能力矩阵见 [docs/provider-feature-matrix.md](../docs/provider-feature-matrix.md)。
+
+## suggestion 归一
+
+文本、图片与视频的未知或缺失 `Suggestion` 均保守回退 `REVIEW`，不再根据 `Label=Normal` 默认 PASS。文本长度按 Unicode 码点校验（上限 10000），避免代理对字符被重复计数。
 
 ## 安全约束（CLAUDE.md §5.6 / §9）
 

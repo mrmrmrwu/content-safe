@@ -1,6 +1,6 @@
 # 视频审核设计（1.2.0）
 
-> 状态：设计定稿（2026-11-11）。所有接缝签名、SDK 类、官方接口均已核实，来源与查阅日期见各节。
+> 状态：**已在 1.2.0 实现**；本文保留 2026-11-11 的设计决策与当时增量记录。当前使用方式以源码和 [接入指南](content-safe-starter-guide.md) 为准。
 > 定版依据：SemVer 按兼容性影响判定——本设计 100% 增量（新工厂方法、新常量、新 provider 分支、新场景常量），零删除零签名变更，japicmp 对 1.1.0 基线零不兼容 → **minor：v1.2.0**。
 
 ## 0. 决策记录
@@ -8,7 +8,7 @@
 | # | 决策 | 理由 |
 |---|------|------|
 | D-1 | 同步视频不做 | 各供应商视频本质都是"任务提交+回调/轮询"，无真实同步语义；`audit()` 对 VIDEO 请求自然路由不到同步操作，不封禁 |
-| D-2 | 直播流出 1.2.0 范围 | 流式审核有 start/close 生命周期，现有 `AuditOperation` 模型装不下；1.3.0 单独立项 |
+| D-2 | 直播流出 1.2.0 范围 | 流式审核有 start/close 生命周期，现有 `AuditOperation` 模型装不下；后续版本单独立项，当前 1.3.0 未承诺支持 |
 | D-3 | 交付顺序：aliyun → tencent（P1）→ baidu → shumei（P2）→ volcengine（P3） | 阿里与现有 image async 同构成本最低；腾讯覆盖"轮询+回调双模式"路径；火山需先核实文档 |
 | D-4 | 视频入参只承诺 URL（capabilities url=true） | 视频文件过大不声明 BYTES/base64；OSS/COS bucket 引用各家私有，走 extra 透传 |
 | D-5 | 视频场景建议 `arbitration=OFF` | 仲裁=多候选全量采集，视频单价高会放大成本；写进接入指南 |
@@ -25,11 +25,11 @@
 | `audit()` 路由 | 过滤 `mode != ASYNC_QUERY && != ASYNC_CALLBACK`（DefaultContentSafeTemplate.java:222） | VIDEO 请求无同步候选 → `ProviderNotAvailableException`，预期语义（D-1） |
 | `submitAsync()` 路由 | 过滤 `asyncQuery() \|\| asyncCallback()` + `supports()` → router → `AuditTask.pending(taskId, ref, scene.code(), provider, planKey)` | 透明复用 |
 | `query(taskId)` | planKey 精确路由 + `asyncQuery()` 能力位过滤（DefaultContentSafeTemplate.java:552） | 透明复用 |
-| 回调链路 | verifier → 限流 → `findCallbackOperation`（`_callback` 占位场景探测，取首个 `asyncCallback()` 操作）→ `handleCallback` → 脱敏 → `findByRef(providerTaskId, dataId)` → `markTerminal` + AuditEvent/ReviewEvent | 透明复用，provider 实现 `handleCallback` |
+| 回调链路 | verifier → 限流 → `findCallbackOperation`（通过场景无关的 `operations()` 查找 `asyncCallback()` 操作，不使用占位场景）→ `handleCallback` → 脱敏 → `findByRef(providerTaskId, dataId)` → `markTerminal` + AuditEvent/ReviewEvent | 透明复用，provider 实现 `handleCallback` |
 | in-progress 契约 | `AuditResult{ok=true, suggestion=null, finalResult=false}`（阿里图片异步 280 同款） | 沿用；业务轮询 `query(taskId)` 至 `finalResult=true` |
 | starter | 场景 `type: VIDEO` 是枚举绑定，现在就能配 | 零改动 |
 
-模板没有 `awaitResult` 阻塞轮询 API——业务自己循环 `query()`，接入指南 §9 已文档化，不新增。
+当前模板提供 `submitAndWait` 阻塞等待便捷方法；operation 可声明建议轮询间隔与等待上限，业务也可以自行循环 `query()`。等待超时只结束本地等待，不取消云端任务。
 
 ## 2. 契约增量（api/core 唯一改动，T-026）
 

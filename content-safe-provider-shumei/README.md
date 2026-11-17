@@ -10,7 +10,7 @@ optional 依赖，不进入使用方编译期传递依赖）。
 | 能力 | 状态 |
 | --- | --- |
 | 文本同步检测（text/v4） | ✅ ≤1 万字（UTF-8，本地校验；data 整体 ≤1MB 为官方约束，本地不做体积校验） |
-| 图片同步检测（image/v4） | ✅ URL / base64 / bytes 三通道（bytes 自动编码） |
+| 图片同步检测（image/v4） | ✅ URL / base64 / bytes 三通道（bytes 自动编码；base64/bytes 在编码前校验编码后 ≤1MiB） |
 | 事件（eventId） | ✅ `scenes` 映射，与数美控制台事件约定一致 |
 | region | ✅ 默认 `sh`；文本 bj/sh/fjny/xjp，图片 bj/sh/gg/xjp；extra 可整体覆盖地址 |
 | 动图截帧（interval/maxFrame） | ✅ 经场景 ext 传入（maxFrame 官方上限 20） |
@@ -60,6 +60,7 @@ content:
 - `AuditResult.raw` 只放 `{code, finalResult, resultType}`；命中 raw 只放
   `{riskLevel, riskSource, matchedWords}`；
 - 日志与异常消息不含 accessKey 与请求原文（长 token 一律掩码，message 截断 120 字符）。
+- 自研 HTTP 客户端先拒绝非 200 响应，再解析 JSON；响应体硬上限 4MiB，避免异常页面或无界响应耗尽内存。
 
 ## 异步与回调
 
@@ -85,7 +86,8 @@ content:
 - 契约样本：`src/test/resources/contracts/shumei/`（text pass/review/reject、image pass/reject、
   video submit/处理中/终态/回调、QPS 超限 1901，取自官方文档示例并打码）；
 - 单元测试：normalizer 映射（含 riskSource/命中词过滤、根级 riskDetail 回落、null 元素防护）、
-  错误映射（含脱敏）、四个 Operation（文本/图片同步、图片异步、视频异步）的参数装配与限制校验；
+  错误映射（含脱敏）、四个 Operation（文本/图片同步、图片异步、视频异步）的参数装配与限制校验、
+  本地 HttpServer 非 200/响应超限拒绝与自定义 HttpClient 注入；
 - 装配测试：`ApplicationContextRunner`（默认不装配、缺凭证 fail-fast、用户 Bean 覆盖）；
 - ArchUnit：core/starter 隔离；Gson 仅限 `internal` 包。
 

@@ -2,7 +2,7 @@
 
 火山引擎内容安全（Volcengine Content Security）接入：文本风险检测
 （TextRisk，Version `2022-01-26`）与图片风险检测（ImageContentRiskV2，Version
-`2021-11-29`），走官方 `volcengine-java-sdk-contentsecurity`（optional，隔离在
+`2021-11-29`），走官方 `volc-sdk-java`（optional，隔离在
 `internal` 包，ArchUnit 强制不外泄）。
 
 签名参数：host `riskcontrol.volcengineapi.com`，签名服务 `BusinessSecurity`，
@@ -54,9 +54,8 @@ content:
 
 ## 注意
 
-- 官方 SDK 的 `ContentSecurityServiceImpl` 为单例持有凭证，多凭证场景请隔离部署
-  （`internal/VolcengineSdkClientInvoker` 已在 javadoc 说明）。
-- SDK 不暴露连接/读超时设置，超时由 `OperationLimits`（5s）驱动调用层治理。
+- 官方 SDK 的 `ContentSecurityServiceImpl` 是持有凭证的进程级单例。默认 invoker 使用全局锁保护初始化；已有不同 AK 时直接抛出 `ConfigInvalidException`，不会覆盖其他客户端凭证。多账号请自定义 `VolcengineClientInvoker` 或拆进程。
+- SDK 不暴露连接/读超时设置；`OperationLimits` 中的超时是元数据，不会被 core 转换为该 SDK 的强制传输超时。业务需要硬超时时，应在自定义 invoker 或外层调用中明确实现。
 
 来源：官方 volc-sdk-java（1.0.290）反编译 + volc-sdk-python `ContentSecurityService.py`
 交叉验证，查阅日期 2026-11-06，详见 [provider-feature-matrix.md](../docs/provider-feature-matrix.md)。

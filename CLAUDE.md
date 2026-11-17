@@ -59,7 +59,7 @@ api  ←  spi  ←  model  ←  core  ←  provider-*  ←  spring-boot-starter
 4. **结果归一化**：provider 返回结构只允许由 `AuditResultNormalizer` 翻译为统一模型；禁止在 core 写 `if (aliyun) {...}` 供应商分支。
 5. **错误码**：对外只抛 `ContentSafeException` 子类，必须携带稳定 `code`；新增错误码先更新错误码表文档。
 6. **证据脱敏**：`raw` 默认不进日志、不进审计事件正文；命中证据经 `EvidenceRedactor` 处理。
-7. **启动轻量**：构造器/ `@PostConstruct` 禁止远程同步探测；健康探测只走后台 `ProviderHealthProbe`。
+7. **启动轻量**：构造器/ `@PostConstruct` 禁止远程同步探测；当前 `ProviderHealthProbe` 已弃用且未接线，不得为了“补齐功能”直接启用。未来若重新设计健康探测，只能走默认关闭的后台异步机制。
 8. **异步幂等**：回调处理必须验签 + 幂等；重复回调、乱序回调不得产生副作用。
 9. **Spring 装配**：对外 Bean 默认 `@ConditionalOnMissingBean`；条件类用 `@ConditionalOnClass(name=...)` 避免硬引用可选 SDK。
 

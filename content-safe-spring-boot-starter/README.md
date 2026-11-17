@@ -11,7 +11,7 @@ Spring Boot 3.x 自动装配：业务方引依赖 + 写配置即可获得 `Conte
 | `JsonSceneDefinitionProvider` | `classpath:content-safe/scenes.json` 自定义场景导入（schema-version 校验） |
 | `ContentSafeConfigValidator` | 启动期校验 `content.safe.schema-version`；凭证缺失在 provider 装配链快速失败 |
 | `ContentSafeFailureAnalyzer` | 启动失败人性化诊断（缺哪项配置、怎么改） |
-| `ContentSafeActuatorAutoConfiguration` | Actuator `health` 融合供应商健康 + `ContentSafeMetrics`（Micrometer 指标） |
+| `ContentSafeActuatorAutoConfiguration` | Actuator `health` 展示本地熔断/限流与操作构建状态 + `ContentSafeMetrics`（Micrometer 指标）；不执行远程健康探测 |
 
 ## 配置骨架
 
@@ -42,3 +42,4 @@ content:
 - AIGC：请求期 `AuditOptions.defaults().withAigcDetect(true)`，能力位单向门控。
 
 完整配置项、场景 schema、诊断示例见 [接入指南](../docs/content-safe-starter-guide.md)。
+未接线抽象、健康检查语义、配置热刷新限制与后续路线见 [设计边界与后续路线](../docs/design-roadmap.md)。

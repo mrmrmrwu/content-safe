@@ -62,7 +62,7 @@ offset/timestamp/riskLevel 等元数据，截帧地址 `tempUrl` 与语音转写
 ## 结构
 
 - `AliyunProviderAutoConfiguration`：`@ConditionalOnClass(com.aliyun.green20220302.Client)` + `enabled=true` 才装配；Bean 均可被用户覆盖（`@ConditionalOnMissingBean`）。
-- `AliyunAuditOperationProvider`：按 `scenes` 映射生成同步 operation。
+- `AliyunAuditOperationProvider`：按 `scenes` 映射生成并缓存各场景的同步/异步 operation（场景与操作配置在启动期定型）。
 - `internal` 包：唯一允许出现 SDK 类型的地方（ArchUnit 强制）——
   `GreenClientInvoker`（可测试接缝）/ `TeaGreenClientInvoker`（SDK 客户端）/
   `AliyunAuditResultNormalizer`（响应归一化）/ `AliyunErrorMapper`（错误映射与消息脱敏）/
@@ -77,4 +77,5 @@ offset/timestamp/riskLevel 等元数据，截帧地址 `tempUrl` 与语音转写
 ## suggestion 归一
 
 riskLevel 三档：`none/low → PASS`，`medium → REVIEW`，`high → REJECT`；
-riskLevel 缺失时回退标签判空（空 → PASS，非空 → REJECT）。
+riskLevel 缺失或未知时，标签非空 → REJECT、标签为空 → REVIEW（不会默认 PASS）。
+同步文本/图片及异步查询响应缺失必要决策数据时抛 `ProviderCallException`，按调用失败处理。

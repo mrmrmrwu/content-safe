@@ -10,9 +10,9 @@
 | `SceneDefinition` | 业务场景定义：code / type / 严重级别默认值 / 供应商绑定 / ext 透传 |
 | `ProviderPlan` | 供应商操作计划：provider / product / apiVersion / operation / service / mode / limits / lifecycle |
 | `AuditCapabilities` | 能力声明：内容通道（URL/Base64/bytes/objectKey）、批量、同步/异步、OCR、**aigcDetect**、manualReview；`supports(request)` 是审核前单向门控（AIGC 开关开启而无能力位 → 不支持快速失败） |
-| `OperationLimits` | 操作级限额（批量大小 / QPS / 超时 / 内容字节），驱动限流与超时治理 |
+| `OperationLimits` | 操作级限额（批量大小 / QPS / 并发 / 超时 / 内容大小）。QPS 与并发驱动限流；`timeout` 是元数据，core 不用它统一中断供应商调用，实际传输超时由 provider 客户端配置决定 |
 | `AuditTask` / `AsyncTaskRef` / `TaskStatus` | 异步任务与状态机（PENDING 唯一非终态，`markTerminal` 幂等迁移） |
-| `ProviderHealth` / `HealthStatus` / `ProviderLifecycle` | 健康探测结果与供应商生命周期（ACTIVE / DEPRECATED / EOL） |
+| `ProviderHealth` / `HealthStatus` / `ProviderLifecycle` | 前两者服务于已弃用、未接线的健康探测抽象；`ProviderLifecycle` 独立用于供应商生命周期（ACTIVE / DEPRECATED / EOL），三者不要混用 |
 
 ## 事件体系（`model.event`）
 
@@ -25,3 +25,5 @@
 | `CallbackDeadLetterEvent` | 回调验签失败或解析死信 |
 
 事件全部经 `AuditListener` 派发，订阅异常不影响主流程。
+
+已弃用模型与未接线能力的处理计划见 [设计边界与后续路线](../docs/design-roadmap.md)。
